@@ -1,0 +1,214 @@
+local _, ns = ...
+
+local SearchDialog = {}
+ns.SearchDialog = SearchDialog
+
+local frame = nil
+local editBox = nil
+local resultButtons = {}
+local currentResults = {}
+local selectedIndex = 1
+local MAX_VISIBLE_RESULTS = 7
+local ROW_HEIGHT = 42
+
+-- 创建结果项按钮
+local function CreateResultButton(parent, index)
+    local btn = CreateFrame("Button", nil, parent)
+    btn:SetHeight(ROW_HEIGHT)
+    btn:SetPoint("LEFT", parent, "LEFT", 16, 0)
+    btn:SetPoint("RIGHT", parent, "RIGHT", -16, 0)
+    btn:SetPoint("TOP", parent, "TOP", 0, -85 - (index - 1) * (ROW_HEIGHT + 4))
+
+    -- 背景高亮纹理
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0.2, 0.25, 0.35, 0.3)
+    btn.bg = bg
+
+    local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints()
+    highlight:SetColorTexture(0.0, 0.8, 1.0, 0.2)
+
+    -- 名称文字
+    local nameText = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
+    nameText:SetPoint("LEFT", btn, "LEFT", 12, 0)
+    nameText:SetJustifyH("LEFT")
+    btn.nameText = nameText
+
+    -- 分类标签与所在区域
+    local metaText = btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    metaText:SetPoint("RIGHT", btn, "RIGHT", -12, 0)
+    metaText:SetJustifyH("RIGHT")
+    btn.metaText = metaText
+
+    -- 点击选择
+    btn:SetScript("OnClick", function()
+        SearchDialog:SelectIndex(index)
+        SearchDialog:ConfirmSelection()
+    end)
+
+    return btn
+end
+
+-- 刷新结果列表渲染
+local function RenderResults()
+    for i = 1, MAX_VISIBLE_RESULTS do
+        local btn = resultButtons[i]
+        local item = currentResults[i]
+
+        if item then
+            btn:Show()
+            btn.nameText:SetText(item.name)
+            btn.metaText:SetText(string.format("%s[%s]|r  |cff888888%s|r", item.color or "|cffffffff", item.tag or "地点", item.zoneName or ""))
+
+            if i == selectedIndex then
+                btn.bg:SetColorTexture(0.0, 0.5, 0.8, 0.45)
+            else
+                btn.bg:SetColorTexture(0.15, 0.18, 0.22, 0.4)
+            end
+        else
+            btn:Hide()
+        end
+    end
+end
+
+-- 初始化主窗口
+local function InitFrame()
+    if frame then return end
+
+    frame = CreateFrame("Frame", "PortaSearchFrame", UIParent, "BackdropTemplate")
+    frame:SetSize(520, 430)
+    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
+    frame:SetFrameStrata("DIALOG")
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", frame.StartMoving)
+    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+
+    -- 背景与边框
+    frame:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    frame:SetBackdropColor(0.08, 0.1, 0.13, 0.94)
+    frame:SetBackdropBorderColor(0.0, 0.8, 1.0, 0.8)
+
+    -- 品牌标志
+    local logo = frame:CreateTexture(nil, "ARTWORK")
+    logo:SetSize(28, 28)
+    logo:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -12)
+    logo:SetTexture("Interface\\AddOns\\Porta\\Images\\Logo")
+
+    -- 标题
+    local title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, 2)
+    title:SetText("|cff00ccffPorta|r |cffffffff导航检索|r")
+
+    local subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
+    subtitle:SetText("输入副本或区域名称（支持拼音简拼如 ahdx）")
+
+    -- 关闭按钮
+    local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
+    closeBtn:SetScript("OnClick", function() frame:Hide() end)
+
+    -- 搜索输入框容器
+    local inputContainer = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    inputContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -46)
+    inputContainer:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -46)
+    inputContainer:SetHeight(32)
+    inputContainer:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+    inputContainer:SetBackdropColor(0.05, 0.05, 0.07, 0.8)
+    inputContainer:SetBackdropBorderColor(0.2, 0.6, 0.9, 0.6)
+
+    -- 输入框
+    editBox = CreateFrame("EditBox", nil, inputContainer)
+    editBox:SetAllPoints()
+    editBox:SetFontObject("GameFontHighlightMedium")
+    editBox:SetAutoFocus(false)
+    editBox:SetTextInsets(10, 10, 0, 0)
+
+    editBox:SetScript("OnTextChanged", function(self)
+        local text = self:GetText()
+        currentResults = ns.SearchEngine:Search(text, MAX_VISIBLE_RESULTS)
+        selectedIndex = 1
+        RenderResults()
+    end)
+
+    editBox:SetScript("OnKeyDown", function(self, key)
+        if key == "UP" then
+            SearchDialog:SelectIndex(selectedIndex - 1)
+        elseif key == "DOWN" then
+            SearchDialog:SelectIndex(selectedIndex + 1)
+        elseif key == "ENTER" then
+            SearchDialog:ConfirmSelection()
+        elseif key == "ESCAPE" then
+            frame:Hide()
+        end
+    end)
+
+    -- 底部提示栏
+    local footer = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
+    footer:SetText("[↑ / ↓] 切换项    [Enter] 开始导航    [Esc] 关闭")
+
+    -- 创建结果条目
+    for i = 1, MAX_VISIBLE_RESULTS do
+        resultButtons[i] = CreateResultButton(frame, i)
+    end
+
+    -- 初始显示推荐/热搜目的地
+    frame:SetScript("OnShow", function()
+        editBox:SetText("")
+        editBox:SetFocus()
+        currentResults = ns.SearchEngine:Search("", MAX_VISIBLE_RESULTS)
+        selectedIndex = 1
+        RenderResults()
+    end)
+end
+
+-- 选中指定索引
+function SearchDialog:SelectIndex(idx)
+    if #currentResults == 0 then return end
+    if idx < 1 then
+        selectedIndex = #currentResults
+    elseif idx > #currentResults then
+        selectedIndex = 1
+    else
+        selectedIndex = idx
+    end
+    RenderResults()
+end
+
+-- 确认选中的目的地并启动导航
+function SearchDialog:ConfirmSelection()
+    local item = currentResults[selectedIndex]
+    if not item then return end
+
+    if frame then frame:Hide() end
+
+    -- 调用寻路引擎算路
+    local route = ns.Pathfinder:CalculateRoute(item)
+    if route then
+        ns.Navigation:StartRoute(route)
+    end
+end
+
+-- 呼出/隐藏搜索浮窗
+function SearchDialog:Toggle()
+    InitFrame()
+    if frame:IsShown() then
+        frame:Hide()
+    else
+        frame:Show()
+    end
+end

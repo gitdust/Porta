@@ -1,0 +1,27 @@
+## Interface: 110007, 110100, 110200
+## Title: |cff00ccffPorta|r - 传送与路线导航
+## Notes: 游戏内快速搜索目标地点与副本，提供最优前往步骤与导航
+## Notes-zhCN: 游戏内快速搜索目标地点与副本，提供最优前往步骤与导航
+## Notes-enUS: Fast in-game search for destinations and dungeons, step-by-step route planning.
+## Author: PORTA Team
+## Version: 1.0.0
+## SavedVariables: PortaDB
+## IconTexture: Interface\AddOns\Porta\Images\Logo
+
+# 数据表 (由本地脚本自动生成)
+Data\MapNotesData.lua
+
+# 核心系统
+Core\Init.lua
+Core\Pinyin.lua
+Core\PlayerTeleports.lua
+Core\SearchEngine.lua
+Core\Pathfinder.lua
+Core\Navigation.lua
+
+# 用户界面
+UI\SearchDialog.lua
+UI\NavigationHUD.lua
+
+# 主入口
+Porta.lua

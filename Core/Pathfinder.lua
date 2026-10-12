@@ -103,19 +103,27 @@ function Pathfinder:CalculateRoute(destination)
     local steps = {}
 
     -- =====================================================================
-    -- 0. 优先检测：玩家是否拥有该副本的【英雄之路大秘境直达传送门】
+    -- 0. 优先检测：玩家是否拥有该目的地的直达传送手段（英雄之路门、团本门或专属直达道具）
     -- =====================================================================
-    if destination.id and destination.id > 0 and ns.PlayerTeleports then
-        local directPortal = ns.PlayerTeleports:GetDirectDungeonPortal(destination.id)
-        if directPortal then
-            local cdText = directPortal.isReady and "|cff00ff00[就绪]|r" or string.format("|cffff4040[CD: %d秒]|r", directPortal.cdSeconds)
+    if ns.PlayerTeleports then
+        local direct = ns.PlayerTeleports:GetDirectDestinationTeleport(destination)
+        if direct then
+            local cdText = direct.isReady and "|cff00ff00[就绪]|r" or string.format("|cffff4040[CD: %d秒]|r", direct.cdSeconds)
+            local desc
+            if direct.type == "SPELL" then
+                desc = string.format("施放传送技能【%s】%s 直达门口", direct.name, cdText)
+            else
+                local noteSuffix = direct.note and (" (" .. direct.note .. ")") or ""
+                desc = string.format("使用传送物品【%s】%s 直达目的地%s", direct.name, cdText, noteSuffix)
+            end
+
             table.insert(steps, {
                 stepIndex = 1,
                 mapID = destination.mapID,
                 x = destination.x,
                 y = destination.y,
-                action = "SPELL",
-                description = string.format("施放传送技能【%s】%s 直达副本门口", directPortal.spellName, cdText),
+                action = direct.type,
+                description = desc,
                 isFinal = true,
             })
             return {

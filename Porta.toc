@@ -13,7 +13,6 @@ Data\MapNotesData.lua
 
 # 核心系统
 Core\Init.lua
-Core\Pinyin.lua
 Core\PlayerTeleports.lua
 Core\SearchEngine.lua
 Core\Pathfinder.lua

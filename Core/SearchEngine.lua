@@ -161,7 +161,50 @@ function SearchEngine:Initialize()
     isInitialized = true
 end
 
--- 模糊搜索核心方法
+-- 纯地名文本模糊匹配
+local function MatchText(targetText, queryLower)
+    if not targetText or not queryLower or queryLower == "" then return false, 0 end
+
+    local targetLower = string.lower(targetText)
+
+    -- 1. 完全一致
+    if targetLower == queryLower then
+        return true, 100
+    end
+
+    -- 2. 前缀匹配
+    local s = string.find(targetLower, queryLower, 1, true)
+    if s == 1 then
+        return true, 80
+    end
+
+    -- 3. 子串模糊包含
+    if s then
+        return true, 60
+    end
+
+    -- 4. 多关键词分词包含 (支持空格分隔，如 "奥格 门" 匹配 "奥格瑞玛传送门")
+    local words = {}
+    for word in string.gmatch(queryLower, "%S+") do
+        table.insert(words, word)
+    end
+    if #words > 1 then
+        local allMatch = true
+        for _, w in ipairs(words) do
+            if not string.find(targetLower, w, 1, true) then
+                allMatch = false
+                break
+            end
+        end
+        if allMatch then
+            return true, 50
+        end
+    end
+
+    return false, 0
+end
+
+-- 模糊搜索核心方法（精确地名模糊检索）
 function SearchEngine:Search(query, limit)
     limit = limit or 10
     if not isInitialized then
@@ -170,21 +213,27 @@ function SearchEngine:Search(query, limit)
 
     local queryTrimmed = string.trim and string.trim(query) or query
     if not queryTrimmed or queryTrimmed == "" then
-        return {}
+        -- 默认展示前 limit 个推荐目的地
+        local defaultList = {}
+        for i = 1, math.min(#searchIndex, limit) do
+            table.insert(defaultList, searchIndex[i])
+        end
+        return defaultList
     end
 
+    local queryLower = string.lower(queryTrimmed)
     local matched = {}
 
     for _, item in ipairs(searchIndex) do
-        local isMatch, score = ns.Pinyin:Match(item.name, queryTrimmed)
-        
+        local isMatch, score = MatchText(item.name, queryLower)
+
         -- 也可以匹配所属地图名或备注
         if not isMatch and item.zoneName then
-            isMatch, score = ns.Pinyin:Match(item.zoneName, queryTrimmed)
+            isMatch, score = MatchText(item.zoneName, queryLower)
             if isMatch then score = score - 20 end
         end
         if not isMatch and item.comment and item.comment ~= "" then
-            isMatch, score = ns.Pinyin:Match(item.comment, queryTrimmed)
+            isMatch, score = MatchText(item.comment, queryLower)
             if isMatch then score = score - 30 end
         end
 
@@ -196,7 +245,7 @@ function SearchEngine:Search(query, limit)
         end
     end
 
-    -- 按匹配分数和名字长短排序
+    -- 按匹配分数高低与名字长短排序
     table.sort(matched, function(a, b)
         if a.score ~= b.score then
             return a.score > b.score

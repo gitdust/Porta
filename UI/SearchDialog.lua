@@ -109,7 +109,7 @@ local function InitFrame()
 
     local subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
-    subtitle:SetText("输入副本或区域名称（支持拼音简拼如 ahdx）")
+    subtitle:SetText("输入准确的副本或区域地名（支持模糊匹配）")
 
     -- 关闭按钮
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")

@@ -32,77 +32,124 @@ local MAJOR_CONTINENTS = {
     947,  -- 艾泽拉斯全局 (Azeroth)
 }
 
+-- 剔除多余首尾空白（兼容魔兽世界内置 strtrim 与标准 Lua）
+local function TrimText(str)
+    if type(str) ~= "string" then return "" end
+    if strtrim then
+        return strtrim(str)
+    end
+    return (string.gsub(str, "^%s*(.-)%s*$", "%1"))
+end
+
+-- 旧位面/重复底层地图黑名单（优先使用主位面与主层地图）
+local DEPRECATED_PHASE_MAPS = {
+    [249]  = true, -- 奥丹姆旧位面（优先使用 1527）
+    [1530] = true, -- 锦绣谷突袭位面（优先使用 390）
+    [2070] = true, -- 提瑞斯法林地历史位面（优先使用 18）
+    [2256] = true, -- 艾基-卡赫特下层重复图（优先使用 2255）
+    [2216] = true, -- 千丝之城下层重复图（优先使用 2213）
+}
+
 -- 初始化搜索索引（在 PLAYER_LOGIN 时调用）
 function SearchEngine:Initialize()
     if isInitialized then return end
     wipe(searchIndex)
 
     local seenMapIDs = {}
+    local seenDestIDs = {}
+    local seenDestTypeNames = {}
+    local seenInstanceNames = {}
+    local seenContinentZoneNames = {}
+    local seenGlobalZoneNames = {}
 
     -- 1. 建立副本目的地索引 (地下城、团队副本、地下堡)
     if ns.PortaData and ns.PortaData.destinations then
         for _, dest in ipairs(ns.PortaData.destinations) do
-            local instanceName = nil
-            -- 尝试通过暴雪原生 Journal API 获取对应语言的名称
-            if dest.id and dest.id > 0 and EJ_GetInstanceInfo then
-                local name = EJ_GetInstanceInfo(dest.id)
-                if name and name ~= "" then
-                    instanceName = name
+            if not (dest.id and seenDestIDs[dest.id]) then
+                local instanceName = nil
+                -- 尝试通过暴雪原生 Journal API 获取对应语言的名称
+                if dest.id and dest.id > 0 and EJ_GetInstanceInfo then
+                    local name = EJ_GetInstanceInfo(dest.id)
+                    if name and name ~= "" then
+                        instanceName = name
+                    end
+                end
+
+                -- 回退到 comment
+                if not instanceName or instanceName == "" then
+                    instanceName = dest.comment or ("未知目的地 #" .. tostring(dest.id))
+                end
+
+                instanceName = TrimText(instanceName)
+                local nameLower = string.lower(instanceName)
+                local destType = dest.type or "dungeon"
+                local typeNameKey = destType .. ":" .. nameLower
+
+                if not seenDestTypeNames[typeNameKey] then
+                    if dest.id then
+                        seenDestIDs[dest.id] = true
+                    end
+                    seenDestTypeNames[typeNameKey] = true
+                    seenInstanceNames[nameLower] = true
+
+                    -- 获取所属地图名称
+                    local zoneName = "未知区域"
+                    if dest.mapID and C_Map and C_Map.GetMapInfo then
+                        local mapInfo = C_Map.GetMapInfo(dest.mapID)
+                        if mapInfo and mapInfo.name then
+                            zoneName = mapInfo.name
+                        end
+                    end
+
+                    local typeMeta = TYPE_INFO[destType] or TYPE_INFO.dungeon
+
+                    table.insert(searchIndex, {
+                        id = dest.id,
+                        name = instanceName,
+                        zoneName = zoneName,
+                        mapID = dest.mapID,
+                        x = dest.x,
+                        y = dest.y,
+                        type = destType,
+                        tag = typeMeta.tag,
+                        color = typeMeta.color,
+                        comment = dest.comment or "",
+                    })
                 end
             end
-
-            -- 回退到 comment
-            if not instanceName or instanceName == "" then
-                instanceName = dest.comment or ("未知目的地 #" .. tostring(dest.id))
-            end
-
-            -- 获取所属地图名称
-            local zoneName = "未知区域"
-            if dest.mapID and C_Map and C_Map.GetMapInfo then
-                local mapInfo = C_Map.GetMapInfo(dest.mapID)
-                if mapInfo and mapInfo.name then
-                    zoneName = mapInfo.name
-                end
-            end
-
-            local typeMeta = TYPE_INFO[dest.type] or TYPE_INFO.dungeon
-
-            table.insert(searchIndex, {
-                id = dest.id,
-                name = instanceName,
-                zoneName = zoneName,
-                mapID = dest.mapID,
-                x = dest.x,
-                y = dest.y,
-                type = dest.type,
-                tag = typeMeta.tag,
-                color = typeMeta.color,
-                comment = dest.comment or "",
-            })
         end
     end
 
     -- 2. 动态枚举暴雪全版本各大洲与野外区域 (无需人工整理，原生多语言适配)
     local zoneType = (Enum and Enum.UIMapType and Enum.UIMapType.Zone) or 3
+    local dungeonMapType = (Enum and Enum.UIMapType and Enum.UIMapType.Dungeon) or 4
+    local microMapType = (Enum and Enum.UIMapType and Enum.UIMapType.Micro) or 5
+    local orphanMapType = (Enum and Enum.UIMapType and Enum.UIMapType.Orphan) or 6
 
     for _, contID in ipairs(MAJOR_CONTINENTS) do
+        local contName = "野外地图"
         -- 索引大洲自身
         if C_Map and C_Map.GetMapInfo then
             local contInfo = C_Map.GetMapInfo(contID)
-            if contInfo and contInfo.name and contInfo.name ~= "" and not seenMapIDs[contID] then
-                seenMapIDs[contID] = true
-                table.insert(searchIndex, {
-                    id = 0,
-                    name = contInfo.name,
-                    zoneName = "世界大洲",
-                    mapID = contID,
-                    x = 0.5,
-                    y = 0.5,
-                    type = "zone",
-                    tag = TYPE_INFO.continent.tag,
-                    color = TYPE_INFO.continent.color,
-                    comment = "",
-                })
+            if contInfo and contInfo.name and contInfo.name ~= "" then
+                contName = TrimText(contInfo.name)
+                local contNameLower = string.lower(contName)
+                if not seenMapIDs[contID] and not seenGlobalZoneNames[contNameLower] then
+                    seenMapIDs[contID] = true
+                    seenGlobalZoneNames[contNameLower] = true
+                    table.insert(searchIndex, {
+                        id = 0,
+                        name = contName,
+                        zoneName = "世界大洲",
+                        mapID = contID,
+                        x = 0.5,
+                        y = 0.5,
+                        type = "zone",
+                        tag = TYPE_INFO.continent.tag,
+                        color = TYPE_INFO.continent.color,
+                        comment = "",
+                    })
+                end
             end
         end
 
@@ -111,47 +158,63 @@ function SearchEngine:Initialize()
             local children = C_Map.GetMapChildrenInfo(contID, zoneType, true)
             if children then
                 for _, child in ipairs(children) do
-                    if child.mapID and child.name and child.name ~= "" and not seenMapIDs[child.mapID] then
-                        seenMapIDs[child.mapID] = true
-                        table.insert(searchIndex, {
-                            id = 0,
-                            name = child.name,
-                            zoneName = "野外地图",
-                            mapID = child.mapID,
-                            x = 0.5,
-                            y = 0.5,
-                            type = "zone",
-                            tag = TYPE_INFO.zone.tag,
-                            color = TYPE_INFO.zone.color,
-                            comment = "",
-                        })
+                    local childMapID = child.mapID
+                    local childName = child.name and TrimText(child.name) or ""
+                    if childMapID and childName ~= "" and not DEPRECATED_PHASE_MAPS[childMapID] and not seenMapIDs[childMapID] then
+                        local childNameLower = string.lower(childName)
+                        local contZoneKey = tostring(contID) .. ":" .. childNameLower
+                        -- 同一大洲内同名多楼层/多相位区域仅保留一条，且不与同名副本冲突
+                        if not seenContinentZoneNames[contZoneKey] and not seenInstanceNames[childNameLower] then
+                            seenMapIDs[childMapID] = true
+                            seenContinentZoneNames[contZoneKey] = true
+                            seenGlobalZoneNames[childNameLower] = true
+                            table.insert(searchIndex, {
+                                id = 0,
+                                name = childName,
+                                zoneName = contName,
+                                mapID = childMapID,
+                                x = 0.5,
+                                y = 0.5,
+                                type = "zone",
+                                tag = TYPE_INFO.zone.tag,
+                                color = TYPE_INFO.zone.color,
+                                comment = "",
+                            })
+                        end
                     end
                 end
             end
         end
     end
 
-    -- 3. 补充交通图中直接连通的所有目标地图（如主城传送大厅、特殊枢纽）
+    -- 3. 补充交通图中直接连通的特殊枢纽地图（排除地下城内部图层、洞穴微缩图与已收录同名区域）
     if ns.PortaData and ns.PortaData.transports then
         for _, edge in ipairs(ns.PortaData.transports) do
             local targetMapID = edge.to
-            if targetMapID and targetMapID > 0 and not seenMapIDs[targetMapID] then
+            if targetMapID and targetMapID > 0 and not DEPRECATED_PHASE_MAPS[targetMapID] and not seenMapIDs[targetMapID] then
                 if C_Map and C_Map.GetMapInfo then
                     local mapInfo = C_Map.GetMapInfo(targetMapID)
                     if mapInfo and mapInfo.name and mapInfo.name ~= "" then
-                        seenMapIDs[targetMapID] = true
-                        table.insert(searchIndex, {
-                            id = 0,
-                            name = mapInfo.name,
-                            zoneName = "交通枢纽",
-                            mapID = targetMapID,
-                            x = 0.5,
-                            y = 0.5,
-                            type = "zone",
-                            tag = TYPE_INFO.zone.tag,
-                            color = TYPE_INFO.zone.color,
-                            comment = edge.note or "",
-                        })
+                        local mType = mapInfo.mapType
+                        local isIgnoredMapType = (mType == dungeonMapType or mType == microMapType or mType == orphanMapType)
+                        local mapName = TrimText(mapInfo.name)
+                        local mapNameLower = string.lower(mapName)
+                        if not isIgnoredMapType and not seenGlobalZoneNames[mapNameLower] and not seenInstanceNames[mapNameLower] then
+                            seenMapIDs[targetMapID] = true
+                            seenGlobalZoneNames[mapNameLower] = true
+                            table.insert(searchIndex, {
+                                id = 0,
+                                name = mapName,
+                                zoneName = "交通枢纽",
+                                mapID = targetMapID,
+                                x = 0.5,
+                                y = 0.5,
+                                type = "zone",
+                                tag = TYPE_INFO.zone.tag,
+                                color = TYPE_INFO.zone.color,
+                                comment = "",
+                            })
+                        end
                     end
                 end
             end
@@ -161,11 +224,12 @@ function SearchEngine:Initialize()
     isInitialized = true
 end
 
--- 纯地名文本模糊匹配
+-- 纯地名文本匹配
 local function MatchText(targetText, queryLower)
     if not targetText or not queryLower or queryLower == "" then return false, 0 end
 
-    local targetLower = string.lower(targetText)
+    local targetLower = string.lower(TrimText(targetText))
+    if targetLower == "" then return false, 0 end
 
     -- 1. 完全一致
     if targetLower == queryLower then
@@ -178,12 +242,12 @@ local function MatchText(targetText, queryLower)
         return true, 80
     end
 
-    -- 3. 子串模糊包含
+    -- 3. 子串包含
     if s then
         return true, 60
     end
 
-    -- 4. 多关键词分词包含 (支持空格分隔，如 "奥格 门" 匹配 "奥格瑞玛传送门")
+    -- 4. 多关键词分词包含 (支持空格分隔，如 "永恒 王宫" 匹配 "永恒王宫")
     local words = {}
     for word in string.gmatch(queryLower, "%S+") do
         table.insert(words, word)
@@ -204,15 +268,15 @@ local function MatchText(targetText, queryLower)
     return false, 0
 end
 
--- 模糊搜索核心方法（精确地名模糊检索）
+-- 搜索核心方法（优先精确匹配，杜绝无关项与重复项）
 function SearchEngine:Search(query, limit)
     limit = limit or 10
     if not isInitialized then
         self:Initialize()
     end
 
-    local queryTrimmed = string.trim and string.trim(query) or query
-    if not queryTrimmed or queryTrimmed == "" then
+    local queryTrimmed = TrimText(query)
+    if queryTrimmed == "" then
         -- 默认展示前 limit 个推荐目的地
         local defaultList = {}
         for i = 1, math.min(#searchIndex, limit) do
@@ -222,22 +286,23 @@ function SearchEngine:Search(query, limit)
     end
 
     local queryLower = string.lower(queryTrimmed)
+    local isAsciiQuery = not string.find(queryLower, "[\128-\255]")
     local matched = {}
+    local hasExactMatch = false
 
     for _, item in ipairs(searchIndex) do
         local isMatch, score = MatchText(item.name, queryLower)
 
-        -- 也可以匹配所属地图名或备注
-        if not isMatch and item.zoneName then
-            isMatch, score = MatchText(item.zoneName, queryLower)
-            if isMatch then score = score - 20 end
-        end
-        if not isMatch and item.comment and item.comment ~= "" then
+        -- 仅当玩家输入纯英文时才回退匹配副本的英文原名备注
+        if not isMatch and isAsciiQuery and item.type ~= "zone" and item.comment and item.comment ~= "" then
             isMatch, score = MatchText(item.comment, queryLower)
-            if isMatch then score = score - 30 end
+            if isMatch then score = score - 25 end
         end
 
         if isMatch then
+            if score == 100 then
+                hasExactMatch = true
+            end
             table.insert(matched, {
                 item = item,
                 score = score,
@@ -245,18 +310,46 @@ function SearchEngine:Search(query, limit)
         end
     end
 
-    -- 按匹配分数高低与名字长短排序
+    -- 如果存在名称完全一致的精确匹配（如输入“永恒王宫”），只保留完全匹配项，过滤掉其他模糊/前缀结果
+    if hasExactMatch then
+        local exactMatches = {}
+        for _, entry in ipairs(matched) do
+            if entry.score == 100 then
+                table.insert(exactMatches, entry)
+            end
+        end
+        matched = exactMatches
+    end
+
+    -- 按匹配分数高低、类别优先级（副本优先于普通地图）与名字长短排序
     table.sort(matched, function(a, b)
         if a.score ~= b.score then
             return a.score > b.score
         end
-        return #a.item.name < #b.item.name
+        local aIsInstance = (a.item.type ~= "zone")
+        local bIsInstance = (b.item.type ~= "zone")
+        if aIsInstance ~= bIsInstance then
+            return aIsInstance
+        end
+        if #a.item.name ~= #b.item.name then
+            return #a.item.name < #b.item.name
+        end
+        return (a.item.id or 0) < (b.item.id or 0)
     end)
 
-    -- 截取前 limit 个结果
+    -- 截取前 limit 个结果并做最终去重保护
     local results = {}
-    for i = 1, math.min(#matched, limit) do
-        table.insert(results, matched[i].item)
+    local seenResultKeys = {}
+    for _, entry in ipairs(matched) do
+        local item = entry.item
+        local resultKey = tostring(item.type or "") .. ":" .. string.lower(item.name or "") .. ":" .. tostring(item.zoneName or "")
+        if not seenResultKeys[resultKey] then
+            seenResultKeys[resultKey] = true
+            table.insert(results, item)
+            if #results >= limit then
+                break
+            end
+        end
     end
 
     return results

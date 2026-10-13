@@ -8,6 +8,8 @@ local editBox = nil
 local resultButtons = {}
 local currentResults = {}
 local selectedIndex = 1
+local lastQueryText = nil
+local pollElapsed = 0
 local MAX_VISIBLE_RESULTS = 7
 local ROW_HEIGHT = 42
 
@@ -70,6 +72,19 @@ local function RenderResults()
             btn:Hide()
         end
     end
+end
+
+-- 同步输入框文本并刷新搜索结果（兼容中文输入法内联上屏）
+local function UpdateSearchResults(force)
+    if not editBox then return end
+    local text = editBox:GetText() or ""
+    if not force and text == lastQueryText then
+        return
+    end
+    lastQueryText = text
+    currentResults = ns.SearchEngine:Search(text, MAX_VISIBLE_RESULTS)
+    selectedIndex = 1
+    RenderResults()
 end
 
 -- 初始化主窗口
@@ -135,24 +150,39 @@ local function InitFrame()
     editBox:SetAllPoints()
     editBox:SetFontObject("GameFontHighlightMedium")
     editBox:SetAutoFocus(false)
+    editBox:SetAltArrowKeyMode(false)
     editBox:SetTextInsets(10, 10, 0, 0)
 
-    editBox:SetScript("OnTextChanged", function(self)
-        local text = self:GetText()
-        currentResults = ns.SearchEngine:Search(text, MAX_VISIBLE_RESULTS)
-        selectedIndex = 1
-        RenderResults()
+    editBox:SetScript("OnTextChanged", function()
+        UpdateSearchResults(false)
     end)
 
-    editBox:SetScript("OnKeyDown", function(self, key)
+    editBox:SetScript("OnChar", function()
+        UpdateSearchResults(false)
+    end)
+
+    editBox:SetScript("OnEnterPressed", function()
+        SearchDialog:ConfirmSelection()
+    end)
+
+    editBox:SetScript("OnEscapePressed", function()
+        frame:Hide()
+    end)
+
+    editBox:SetScript("OnArrowPressed", function(_, key)
         if key == "UP" then
             SearchDialog:SelectIndex(selectedIndex - 1)
         elseif key == "DOWN" then
             SearchDialog:SelectIndex(selectedIndex + 1)
-        elseif key == "ENTER" then
-            SearchDialog:ConfirmSelection()
-        elseif key == "ESCAPE" then
-            frame:Hide()
+        end
+    end)
+
+    -- 轮询兜底：解决部分 Windows 中文输入法内联词组上屏时不触发 OnTextChanged 的问题
+    frame:SetScript("OnUpdate", function(_, elapsed)
+        pollElapsed = pollElapsed + (elapsed or 0)
+        if pollElapsed >= 0.05 then
+            pollElapsed = 0
+            UpdateSearchResults(false)
         end
     end)
 
@@ -166,13 +196,15 @@ local function InitFrame()
         resultButtons[i] = CreateResultButton(frame, i)
     end
 
+    -- 初始处于隐藏状态（避免 CreateFrame 默认为 Shown 导致首次 Toggle 误判为关闭）
+    frame:Hide()
+
     -- 初始显示推荐/热搜目的地
     frame:SetScript("OnShow", function()
+        pollElapsed = 0
         editBox:SetText("")
         editBox:SetFocus()
-        currentResults = ns.SearchEngine:Search("", MAX_VISIBLE_RESULTS)
-        selectedIndex = 1
-        RenderResults()
+        UpdateSearchResults(true)
     end)
 end
 
@@ -191,6 +223,7 @@ end
 
 -- 确认选中的目的地并启动导航
 function SearchDialog:ConfirmSelection()
+    UpdateSearchResults(false)
     local item = currentResults[selectedIndex]
     if not item then return end
 
@@ -204,8 +237,15 @@ function SearchDialog:ConfirmSelection()
 end
 
 -- 呼出/隐藏搜索浮窗
-function SearchDialog:Toggle()
+function SearchDialog:Toggle(initialQuery)
     InitFrame()
+    if initialQuery and initialQuery ~= "" then
+        frame:Show()
+        editBox:SetText(initialQuery)
+        editBox:SetFocus()
+        UpdateSearchResults(true)
+        return
+    end
     if frame:IsShown() then
         frame:Hide()
     else

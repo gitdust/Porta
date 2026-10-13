@@ -3,7 +3,9 @@ local _, ns = ...
 local Pathfinder = {}
 ns.Pathfinder = Pathfinder
 
--- 交通方式文本与图标
+-- =========================================================================
+-- 1. 交通方式显示文本与基础代价权重
+-- =========================================================================
 local TRANSPORT_TEXT = {
     PORTAL        = "穿过传送门",
     ZEPPELIN      = "乘坐飞艇",
@@ -13,8 +15,157 @@ local TRANSPORT_TEXT = {
     MOLE_MACHINE  = "使用钻地机",
     TRAM          = "乘坐矿道地铁",
     CLASS_PORTAL  = "使用职业传送门",
-    TRANSPORT     = "搭乘交通设施",
+    TRANSPORT     = "穿过通道",
+    FLY           = "召唤飞行坐骑飞行",
 }
+
+local EDGE_COSTS = {
+    PORTAL        = 1.0,
+    WAYGATE       = 1.0,
+    MIRROR        = 1.0,
+    CLASS_PORTAL  = 1.0,
+    MOLE_MACHINE  = 1.5,
+    TRANSPORT     = 1.2,
+    FLY           = 2.0,
+    TRAM          = 3.0,
+    ZEPPELIN      = 8.0,
+    SHIP          = 8.0,
+}
+
+-- 核心位面传送门的前置任务解锁补充清单
+-- (用于补全 HandyNotes_MapNotes 未标注在入口侧的跨资料片镜像开门任务)
+local PORTAL_QUEST_GATES = {
+    -- 纳沙塔尔 (1355)
+    [1355] = {
+        HORDE = {
+            questIDs = { 55095, 55122, 56043 }, -- 发送舰队 / 新生家园 / 下潜
+            questName = "《发送舰队》/《新生家园》",
+            startNPC = "达萨罗大封印【纳萨诺斯·凋零者】",
+            unlockGuide = "当前角色尚未完成纳沙塔尔开启任务！请在达萨罗大封印找【纳萨诺斯·凋零者】接取《发送舰队》完成短剧情开启传送门；或请队友在副本门口集合石直接拉人。",
+        },
+        ALLIANCE = {
+            questIDs = { 54022, 55121, 56044, 55175 }, -- 发送舰队 / 麦扎梅尔
+            questName = "《发送舰队》/《麦扎梅尔》",
+            startNPC = "伯拉勒斯港口【吉恩·格雷迈恩】",
+            unlockGuide = "当前角色尚未完成纳沙塔尔开启任务！请在伯拉勒斯港口找【吉恩·格雷迈恩】接取《发送舰队》完成短剧情开启传送门；或请队友在副本门口集合石直接拉人。",
+        },
+    },
+    -- 阿古斯维迪卡尔 (971 / 885 / 882)
+    [971] = {
+        HORDE = { questIDs = { 47221, 47835, 48440 }, questName = "《命运之手》", startNPC = "达拉然克拉苏斯平台【卡德加】", unlockGuide = "需在达拉然克拉苏斯平台找【卡德加】完成阿古斯序幕任务《命运之手》开启维迪卡尔圣光信标。" },
+        ALLIANCE = { questIDs = { 47221, 47835, 48440 }, questName = "《命运之手》", startNPC = "达拉然克拉苏斯平台【卡德加】", unlockGuide = "需在达拉然克拉苏斯平台找【卡德加】完成阿古斯序幕任务《命运之手》开启维迪卡尔圣光信标。" },
+    },
+    -- 麦卡贡 (1462)
+    [1462] = {
+        HORDE = { questIDs = { 55651, 55609 }, questName = "《麦卡贡的传说》", startNPC = "达萨罗大封印旁边【加兹鲁维】", unlockGuide = "需先解锁纳沙塔尔并在达萨罗接取《麦卡贡的传说》开启麦卡贡航线；或直接从库尔提拉斯飞行前往。" },
+        ALLIANCE = { questIDs = { 54992, 55609 }, questName = "《麦卡贡的传说》", startNPC = "伯拉勒斯【吉尔宾·梅卡托克】侍从", unlockGuide = "需先解锁纳沙塔尔并在伯拉勒斯接取《麦卡贡的传说》开启麦卡贡航线；或直接在库尔提拉斯飞行前往。" },
+    },
+    -- 深岩之洲 (207)
+    [207] = {
+        HORDE = { questIDs = { 27727 }, questName = "《大地的裂变：深岩之洲》", startNPC = "奥格瑞玛西部大地神殿", unlockGuide = "需在奥格瑞玛西部大地神殿接取大地的裂变引导任务开启深岩之洲传送门。" },
+        ALLIANCE = { questIDs = { 27722 }, questName = "《大地的裂变：深岩之洲》", startNPC = "暴风城东部大地神殿", unlockGuide = "需在暴风城东部大地神殿接取大地的裂变引导任务开启深岩之洲传送门。" },
+    },
+    -- 暮光高地 (241)
+    [241] = {
+        HORDE = { questIDs = { 28716, 26798 }, questName = "《暮光高地前序任务》", startNPC = "奥格瑞玛大地神殿/力量谷", unlockGuide = "需完成大地的裂变暮光高地前置任务开启传送门，或直接从东部王国飞行前往。" },
+        ALLIANCE = { questIDs = { 28717, 26797 }, questName = "《暮光高地前序任务》", startNPC = "暴风城大地神殿/暴风要塞", unlockGuide = "需完成大地的裂变暮光高地前置任务开启传送门，或直接从东部王国飞行前往。" },
+    },
+    -- 刻希亚 (1961)
+    [1961] = {
+        NEUTRAL = { questIDs = { 63662, 63902 }, questName = "《统御之链：骑乘暗影》", startNPC = "奥利波斯【伯瓦尔·弗塔根】", unlockGuide = "需在奥利波斯完成 9.1 统御之链序幕开启刻希亚传送门。" },
+    },
+    -- 扎雷殁提斯 (1970)
+    [1970] = {
+        NEUTRAL = { questIDs = { 64957, 64942 }, questName = "《永恒的终结：破晓行动》", startNPC = "奥利波斯【塔尔-伊纳拉】", unlockGuide = "需在奥利波斯完成 9.2 永恒的终结序幕任务开启扎雷殁提斯传送门。" },
+    },
+    -- 雷神岛 (504)
+    [504] = {
+        HORDE = { questIDs = { 32680 }, questName = "《雷电王座：风暴聚集》", startNPC = "螳螂高原影踪卫戍营【洛瑟玛·塞隆】", unlockGuide = "需在螳螂高原影踪卫戍营接取《风暴聚集》任务开启雷神岛传送门。" },
+        ALLIANCE = { questIDs = { 32681 }, questName = "《雷电王座：风暴聚集》", startNPC = "螳螂高原影踪卫戍营【温蕾萨·风行者】", unlockGuide = "需在螳螂高原影踪卫戍营接取《风暴聚集》任务开启雷神岛传送门。" },
+    },
+}
+
+-- 检测特定目标传送门/交通节点是否已被当前角色解锁
+-- 数据获取三层机制：
+--   1. HandyNotes_MapNotes 节点原生携带的 questID / achievementID（由 _parser 自动提取至 MapNotesData.lua）
+--   2. 跨资料片主城镜像传送门补充表 PORTAL_QUEST_GATES（补全 MapNotes 未标注的资料片开门任务）
+--   3. 魔兽客户端原生 API 动态查询：C_QuestLog.IsQuestFlaggedCompleted / C_QuestLog.GetTitleForQuestID / GetAchievementInfo
+function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
+    local edge = type(edgeOrToMapID) == "table" and edgeOrToMapID or nil
+    local toMapID = edge and edge.to or edgeOrToMapID
+    if not toMapID then return true, nil end
+
+    -- 1. 优先检测 HandyNotes_MapNotes 自动提取的节点级前置成就 (achievementID)
+    if edge and edge.achievementID and GetAchievementInfo then
+        local ok, _, achName, _, completed, _, _, _, description = pcall(GetAchievementInfo, edge.achievementID)
+        if ok and completed == false then
+            local displayAch = (achName and achName ~= "") and ("【" .. achName .. "】") or ("成就 #" .. tostring(edge.achievementID))
+            local descHint = (description and description ~= "") and ("（" .. description .. "）") or ""
+            return false, {
+                achievementID = edge.achievementID,
+                questName = "成就" .. displayAch,
+                startNPC = "当前版本战役/探索成就",
+                unlockGuide = string.format("该传送门需达成前置成就%s%s方可开启；或请队友在副本集合石直接拉人。", displayAch, descHint),
+            }
+        end
+    end
+
+    -- 2. 检测 HandyNotes_MapNotes 自动提取的节点级前置任务 (questID)
+    if edge and edge.questID and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+        local isCompleted = C_QuestLog.IsQuestFlaggedCompleted(edge.questID)
+        if not isCompleted then
+            if C_QuestLog.RequestLoadQuestByID then
+                pcall(C_QuestLog.RequestLoadQuestByID, edge.questID)
+            end
+            local dynamicTitle = C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(edge.questID)
+            local displayQuest = (dynamicTitle and dynamicTitle ~= "") and ("《" .. dynamicTitle .. "》") or ("任务 #" .. tostring(edge.questID))
+            return false, {
+                questIDs = { edge.questID },
+                questName = displayQuest,
+                startNPC = "对应区域主线引导 NPC",
+                unlockGuide = string.format("该传送通道需先完成前置任务%s（任务ID: %d）后开启；或请队友在副本集合石直接拉人。", displayQuest, edge.questID),
+            }
+        end
+    end
+
+    -- 3. 检测跨资料片镜像位面传送门补充表 (PORTAL_QUEST_GATES)
+    local gateConfig = PORTAL_QUEST_GATES[toMapID]
+    if not gateConfig then return true, nil end
+
+    local factionConfig = gateConfig[playerFaction] or gateConfig.NEUTRAL or gateConfig.HORDE
+    if not factionConfig then return true, nil end
+
+    if not C_QuestLog or not C_QuestLog.IsQuestFlaggedCompleted then
+        return true, factionConfig
+    end
+
+    local isUnlocked = false
+    local dynamicTitle = nil
+    for _, qID in ipairs(factionConfig.questIDs) do
+        if C_QuestLog.IsQuestFlaggedCompleted(qID) then
+            isUnlocked = true
+            break
+        end
+        if not dynamicTitle and C_QuestLog.GetTitleForQuestID then
+            if C_QuestLog.RequestLoadQuestByID then
+                pcall(C_QuestLog.RequestLoadQuestByID, qID)
+            end
+            local t = C_QuestLog.GetTitleForQuestID(qID)
+            if t and t ~= "" then
+                dynamicTitle = "《" .. t .. "》"
+            end
+        end
+    end
+
+    if not isUnlocked and dynamicTitle then
+        local enriched = {}
+        for k, v in pairs(factionConfig) do enriched[k] = v end
+        enriched.questName = dynamicTitle
+        return false, enriched
+    end
+
+    return isUnlocked, factionConfig
+end
 
 -- 获取友好的地图名称
 local function GetMapDisplayName(mapID)
@@ -28,68 +179,523 @@ local function GetMapDisplayName(mapID)
     return "地图 #" .. tostring(mapID)
 end
 
--- 构建基于阵营过滤的邻接表图
-local function BuildGraph(playerFaction)
-    local graph = {}
-    if not ns.PortaData or not ns.PortaData.transports then return graph end
+-- =========================================================================
+-- 2. 真实物理距离计算器 (支持计算玩家当前位置到起点的真实码数)
+-- =========================================================================
+function Pathfinder:GetDistanceInYards(mapID, targetX, targetY)
+    if not mapID or not targetX or not targetY then return nil end
+    if not C_Map or not C_Map.GetPlayerMapPosition then return nil end
 
-    for _, edge in ipairs(ns.PortaData.transports) do
-        -- 阵营过滤：中立或匹配本阵营
-        local factionMatch = (edge.faction == "NEUTRAL") or (edge.faction == playerFaction)
-        if factionMatch and edge.from and edge.to and edge.from ~= edge.to then
-            if not graph[edge.from] then
-                graph[edge.from] = {}
-            end
-            table.insert(graph[edge.from], edge)
-        end
-    end
+    local playerPos = C_Map.GetPlayerMapPosition(mapID, "player")
+    if not playerPos then return nil end
 
-    return graph
-end
+    -- 方案 A：通过暴雪原生世界空间坐标计算绝对真实码数 (Yards)
+    if C_Map.GetWorldPosFromMapPos and CreateVector2D then
+        local ok1, playerWorld = pcall(function()
+            local _, pos = C_Map.GetWorldPosFromMapPos(mapID, playerPos)
+            return pos
+        end)
+        local ok2, targetWorld = pcall(function()
+            local targetVec = CreateVector2D(targetX, targetY)
+            local _, pos = C_Map.GetWorldPosFromMapPos(mapID, targetVec)
+            return pos
+        end)
 
--- 广度优先搜索 (BFS) 计算从当前地图到达目标地图的最少跳数路径
-function Pathfinder:FindShortestPath(startMapID, targetMapID, playerFaction)
-    if not startMapID or not targetMapID then return nil end
-    if startMapID == targetMapID then return {} end
-
-    local graph = BuildGraph(playerFaction or ns.GetPlayerFaction())
-    local queue = { { mapID = startMapID, edges = {} } }
-    local visited = { [startMapID] = true }
-
-    while #queue > 0 do
-        local current = table.remove(queue, 1)
-        local neighbors = graph[current.mapID]
-
-        if neighbors then
-            for _, edge in ipairs(neighbors) do
-                local nextMap = edge.to
-                if nextMap == targetMapID then
-                    -- 找到目标！
-                    local finalEdges = {}
-                    for _, e in ipairs(current.edges) do
-                        table.insert(finalEdges, e)
-                    end
-                    table.insert(finalEdges, edge)
-                    return finalEdges
-                end
-
-                if not visited[nextMap] then
-                    visited[nextMap] = true
-                    local nextEdges = {}
-                    for _, e in ipairs(current.edges) do
-                        table.insert(nextEdges, e)
-                    end
-                    table.insert(nextEdges, edge)
-                    table.insert(queue, { mapID = nextMap, edges = nextEdges })
-                end
+        if ok1 and ok2 and playerWorld and targetWorld then
+            local dx = playerWorld.x - targetWorld.x
+            local dy = playerWorld.y - targetWorld.y
+            local dist = math.sqrt(dx * dx + dy * dy)
+            if dist and dist >= 0 then
+                return math.floor(dist)
             end
         end
     end
 
-    return nil -- 未找到可行连通路径
+    -- 方案 B：回退机制：根据地图归一化坐标欧氏距离折算（魔兽野外区域宽约 3500 码）
+    local px, py = playerPos:GetXY()
+    if px and py and px > 0 and py > 0 then
+        local dx = (px - targetX)
+        local dy = (py - targetY)
+        local coordDist = math.sqrt(dx * dx + dy * dy)
+        return math.floor(coordDist * 3500)
+    end
+
+    return nil
 end
 
--- 计算完整导航步骤序列
+-- 格式化距离文本 (例如 "450码" 或 "1.8千码")
+local function FormatDistanceText(yards)
+    if not yards then return "" end
+    if yards >= 1000 then
+        return string.format("%.1f千码", yards / 1000)
+    else
+        return string.format("%d码", yards)
+    end
+end
+
+-- =========================================================================
+-- 3. 真实物理连通的陆地大陆划分 (仅收录可物理直飞的开阔地表区域)
+-- =========================================================================
+local CONTIGUOUS_CONTINENTS = {
+    [12] = {
+        1, 7, 10, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 74, 76, 77, 78, 80,
+        81, 83, 85, 88, 198, 199, 1527
+    },
+    [13] = {
+        14, 15, 17, 18, 21, 22, 23, 25, 26, 27, 32, 33, 36, 37, 42, 48, 50,
+        51, 52, 55, 56, 84, 87, 217, 224, 241, 2070
+    },
+    [113] = {
+        114, 115, 116, 117, 118, 119, 120, 121, 123, 125, 127
+    },
+    [424] = {
+        371, 376, 379, 388, 390, 391, 392, 393, 394, 418, 422, 433, 554, 1530
+    },
+    [572] = {
+        525, 534, 535, 539, 542, 543, 550, 582, 588, 590, 622, 624
+    },
+    [101] = {
+        100, 102, 104, 105, 107, 108, 109, 111
+    },
+    [619] = {
+        627, 630, 634, 641, 646, 650, 680, 790
+    },
+    [875] = {
+        862, 863, 864, 1163, 1165
+    },
+    [876] = {
+        895, 896, 942, 1161, 1462
+    },
+    [1978] = {
+        2022, 2023, 2024, 2025, 2112, 2133, 2151
+    },
+    [2274] = {
+        2248, 2339, 2213, 2214, 2215, 2216, 2255, 2256
+    },
+}
+
+local ZONE_TO_CONTINENT = {}
+for contID, zones in pairs(CONTIGUOUS_CONTINENTS) do
+    for _, zID in ipairs(zones) do
+        ZONE_TO_CONTINENT[zID] = contID
+    end
+end
+
+local CONTINENT_CAPITAL_HUBS = {
+    [12] = { HORDE = { 85, 88 }, ALLIANCE = {} },
+    [13] = { HORDE = { 18, 50 }, ALLIANCE = { 84, 87 } },
+    [113] = { HORDE = { 125 }, ALLIANCE = { 125 } },
+    [424] = { HORDE = { 390, 393 }, ALLIANCE = { 390, 392 } },
+    [572] = { HORDE = { 624, 590 }, ALLIANCE = { 622, 582 } },
+    [101] = { HORDE = { 111 }, ALLIANCE = { 111 } },
+    [619] = { HORDE = { 627 }, ALLIANCE = { 627 } },
+    [875] = { HORDE = { 1163, 862 }, ALLIANCE = {} },
+    [876] = { HORDE = {}, ALLIANCE = { 1161 } },
+    [1978] = { HORDE = { 2112 }, ALLIANCE = { 2112 } },
+    [2274] = { HORDE = { 2339 }, ALLIANCE = { 2339 } },
+}
+
+-- =========================================================================
+-- 4. 核心子区域、主城传送大厅互通与孤立地下城通道拓扑
+-- =========================================================================
+local SUBZONE_CONNECTIONS = {
+    -- 【主城传送大厅直达枢纽】
+    { from = 85, to = 1163, x = 0.58, y = 0.90, type = "PORTAL", faction = "HORDE", note = "传送大厅：达萨罗传送门", cost = 1.0 },
+    { from = 1163, to = 85, x = 0.74, y = 0.70, type = "PORTAL", faction = "HORDE", note = "大封印：奥格瑞玛传送门", cost = 1.0 },
+    { from = 84, to = 1161, x = 0.41, y = 0.93, type = "PORTAL", faction = "ALLIANCE", note = "法师圣所：伯拉勒斯传送门", cost = 1.0 },
+    { from = 1161, to = 84, x = 0.70, y = 0.17, type = "PORTAL", faction = "ALLIANCE", note = "贤者要塞：暴风城传送门", cost = 1.0 },
+
+    -- 祖达萨野外 (862) <-> 达萨罗巨石印章 (1163)
+    { from = 862, to = 1163, x = 0.58, y = 0.44, type = "TRANSPORT", faction = "HORDE", note = "前往达萨罗巨石印章", cost = 1.2 },
+    { from = 1163, to = 862, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "HORDE", note = "前往祖达萨野外", cost = 1.2 },
+
+    -- 提拉加德海峡野外 (895) <-> 伯拉勒斯城内 (1161)
+    { from = 895, to = 1161, x = 0.67, y = 0.15, type = "TRANSPORT", faction = "ALLIANCE", note = "进入伯拉勒斯城内", cost = 1.2 },
+    { from = 1161, to = 895, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "ALLIANCE", note = "前往提拉加德海峡野外", cost = 1.2 },
+
+    -- 【纳沙塔尔 & 永恒王宫专属通道】
+    { from = 1355, to = 1528, x = 0.48, y = 0.24, type = "TRANSPORT", faction = "NEUTRAL", note = "永恒王宫入口通道", cost = 1.0 },
+    { from = 1528, to = 1355, x = 0.47, y = 0.32, type = "TRANSPORT", faction = "NEUTRAL", note = "永恒王宫出口通道", cost = 1.0 },
+
+    -- 【黑石山完整体系】
+    { from = 36, to = 33, x = 0.21, y = 0.33, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石山大门入口", cost = 1.0 },
+    { from = 33, to = 36, x = 0.50, y = 0.85, type = "TRANSPORT", faction = "NEUTRAL", note = "走出黑石山前往燃烧平原", cost = 1.0 },
+    { from = 32, to = 33, x = 0.35, y = 0.84, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石山大门入口", cost = 1.0 },
+    { from = 33, to = 32, x = 0.45, y = 0.15, type = "TRANSPORT", faction = "NEUTRAL", note = "走出黑石山前往灼热峡谷", cost = 1.0 },
+    { from = 33, to = 35, x = 0.45, y = 0.47, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石深渊入口通道", cost = 1.0 },
+    { from = 35, to = 33, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石深渊出口", cost = 1.0 },
+
+    -- 奥达曼 / 玛拉顿 / 诺莫瑞根
+    { from = 15, to = 16, x = 0.58, y = 0.43, type = "TRANSPORT", faction = "NEUTRAL", note = "奥达曼洞穴入口", cost = 1.0 },
+    { from = 16, to = 15, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "走出奥达曼洞穴", cost = 1.0 },
+    { from = 66, to = 67, x = 0.28, y = 0.62, type = "TRANSPORT", faction = "NEUTRAL", note = "玛拉顿毒菇洞穴入口", cost = 1.0 },
+    { from = 67, to = 66, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "走出玛拉顿洞穴", cost = 1.0 },
+    { from = 27, to = 469, x = 0.30, y = 0.37, type = "TRANSPORT", faction = "NEUTRAL", note = "诺莫瑞根升降梯入口", cost = 1.0 },
+    { from = 469, to = 27, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "乘升降梯返回丹莫罗", cost = 1.0 },
+
+    -- 锦绣谷突袭位面 / 提瑞斯法历史位面 / 托达戈尔
+    { from = 390, to = 1530, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "锦绣谷突袭位面", cost = 1.0 },
+    { from = 1530, to = 390, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "常规锦绣谷位面", cost = 1.0 },
+    { from = 390, to = 433, x = 0.67, y = 0.43, type = "TRANSPORT", faction = "NEUTRAL", note = "永春台入口", cost = 1.0 },
+    { from = 18, to = 2070, x = 0.60, y = 0.67, type = "TRANSPORT", faction = "NEUTRAL", note = "提瑞斯法林地历史位面", cost = 1.0 },
+    { from = 2070, to = 18, x = 0.60, y = 0.67, type = "TRANSPORT", faction = "NEUTRAL", note = "现代提瑞斯法林地位面", cost = 1.0 },
+    { from = 895, to = 1169, x = 0.68, y = 0.58, type = "SHIP", faction = "NEUTRAL", note = "托达戈尔渡口", cost = 3.0 },
+    { from = 1169, to = 895, x = 0.50, y = 0.50, type = "SHIP", faction = "NEUTRAL", note = "返回提拉加德海峡", cost = 3.0 },
+
+    -- 【暗影界诸界连接】
+    { from = 1671, to = 1533, x = 0.63, y = 0.49, type = "PORTAL", faction = "NEUTRAL", note = "晋升堡垒之门/飞行路线", cost = 2.5 },
+    { from = 1533, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
+    { from = 1671, to = 1536, x = 0.49, y = 0.64, type = "PORTAL", faction = "NEUTRAL", note = "玛卓克萨斯之门/飞行路线", cost = 2.5 },
+    { from = 1536, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
+    { from = 1671, to = 1565, x = 0.37, y = 0.49, type = "PORTAL", faction = "NEUTRAL", note = "炽蓝仙野之门/飞行路线", cost = 2.5 },
+    { from = 1565, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
+    { from = 1671, to = 1525, x = 0.49, y = 0.35, type = "PORTAL", faction = "NEUTRAL", note = "雷文德斯之门/飞行路线", cost = 2.5 },
+    { from = 1525, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
+    { from = 1670, to = 1543, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "跃入噬渊", cost = 1.2 },
+    { from = 1670, to = 2016, x = 0.34, y = 0.66, type = "TRANSPORT", faction = "NEUTRAL", note = "塔扎维什飞艇渡口", cost = 2.0 },
+    { from = 2016, to = 1670, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.0 },
+
+    -- 【阿古斯诸界连接】
+    { from = 627, to = 971, x = 0.69, y = 0.43, type = "PORTAL", faction = "NEUTRAL", note = "维迪卡尔圣光信标 (前往阿古斯)", cost = 1.0 },
+    { from = 971, to = 627, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "维迪卡尔返回达拉然传送门", cost = 1.0 },
+    { from = 971, to = 885, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "圣光矩阵：前往玛凯雷", cost = 1.0 },
+    { from = 971, to = 882, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "圣光矩阵：前往安托兰废土", cost = 1.0 },
+
+    -- 【银月城萨拉斯之门 / 秘蓝岛 / 查拉雷克洞窟 / 千丝之城】
+    { from = 23, to = 95, x = 0.55, y = 0.12, type = "PORTAL", faction = "NEUTRAL", note = "萨拉斯之门 (进入幽魂之地)", cost = 1.0 },
+    { from = 95, to = 23, x = 0.44, y = 0.90, type = "PORTAL", faction = "NEUTRAL", note = "萨拉斯之门 (进入东瘟疫之地)", cost = 1.0 },
+    { from = 95, to = 110, x = 0.50, y = 0.10, type = "TRANSPORT", faction = "HORDE", note = "银月城正门", cost = 1.0 },
+    { from = 110, to = 95, x = 0.50, y = 0.90, type = "TRANSPORT", faction = "HORDE", note = "离开银月城前往幽魂之地", cost = 1.0 },
+    { from = 62, to = 97, x = 0.56, y = 0.92, type = "PORTAL", faction = "ALLIANCE", note = "黑海岸渡口传送门 (前往秘蓝岛)", cost = 1.0 },
+    { from = 97, to = 103, x = 0.34, y = 0.21, type = "TRANSPORT", faction = "ALLIANCE", note = "埃索达正门", cost = 1.0 },
+    { from = 2112, to = 2133, x = 0.36, y = 0.51, type = "FLY", faction = "NEUTRAL", note = "查拉雷克洞窟穿孔入口", cost = 2.0 },
+    { from = 2133, to = 2112, x = 0.50, y = 0.50, type = "FLY", faction = "NEUTRAL", note = "飞出查拉雷克洞窟", cost = 2.0 },
+    { from = 2216, to = 2256, x = 0.56, y = 0.38, type = "TRANSPORT", faction = "NEUTRAL", note = "千丝之城 / 尼鲁巴尔王宫下层通道", cost = 1.0 },
+    { from = 2256, to = 2216, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回艾基-卡赫特", cost = 1.0 },
+    { from = 2339, to = 2371, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "生态圆顶通道", cost = 1.0 },
+    { from = 2339, to = 2437, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "纳洛拉克之穴通道", cost = 1.0 },
+    { from = 2339, to = 2444, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "虚痕竞技场通道", cost = 1.0 },
+    { from = 2339, to = 2509, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "毒渊通道", cost = 1.0 },
+    { from = 2339, to = 2512, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "尖牙祭坛通道", cost = 1.0 },
+}
+
+-- =========================================================================
+-- 5. 最小优先队列 (Min-Heap 实现)
+-- =========================================================================
+local function CreateMinHeap()
+    local heap = {}
+
+    local function push(item)
+        table.insert(heap, item)
+        local idx = #heap
+        while idx > 1 do
+            local parent = math.floor(idx / 2)
+            if heap[idx].cost < heap[parent].cost then
+                heap[idx], heap[parent] = heap[parent], heap[idx]
+                idx = parent
+            else
+                break
+            end
+        end
+    end
+
+    local function pop()
+        if #heap == 0 then return nil end
+        local top = heap[1]
+        local last = table.remove(heap)
+        if #heap > 0 then
+            heap[1] = last
+            local idx = 1
+            local size = #heap
+            while true do
+                local left = idx * 2
+                local right = idx * 2 + 1
+                local smallest = idx
+                if left <= size and heap[left].cost < heap[smallest].cost then
+                    smallest = left
+                end
+                if right <= size and heap[right].cost < heap[smallest].cost then
+                    smallest = right
+                end
+                if smallest ~= idx then
+                    heap[idx], heap[smallest] = heap[smallest], heap[idx]
+                    idx = smallest
+                else
+                    break
+                end
+            end
+        end
+        return top
+    end
+
+    local function empty()
+        return #heap == 0
+    end
+
+    return { push = push, pop = pop, empty = empty }
+end
+
+-- =========================================================================
+-- 6. 构建双向拓扑图 (支持正向与反向遍历)
+-- =========================================================================
+local function BuildGraphData(playerFaction)
+    local revAdj = {}
+    local fwdAdj = {}
+    playerFaction = playerFaction or ns.GetPlayerFaction()
+
+    local _, _, playerRaceID = UnitRace("player")
+    local isDarkIron = (playerRaceID == 34)
+
+    local function addEdge(fromNode, toNode, x, y, edgeType, faction, note, cost, questID, achievementID)
+        if not fromNode or not toNode or fromNode == toNode then return end
+        if edgeType == "MOLE_MACHINE" and not isDarkIron then return end
+
+        local fMatch = (faction == "NEUTRAL") or (faction == playerFaction)
+        if not fMatch then return end
+
+        local edge = {
+            from = fromNode,
+            to = toNode,
+            x = x or 0.5,
+            y = y or 0.5,
+            type = edgeType or "TRANSPORT",
+            faction = faction or "NEUTRAL",
+            note = note or "",
+            cost = cost or (EDGE_COSTS[edgeType] or 1.5),
+            questID = questID,
+            achievementID = achievementID,
+        }
+
+        if not revAdj[toNode] then revAdj[toNode] = {} end
+        table.insert(revAdj[toNode], edge)
+
+        if not fwdAdj[fromNode] then fwdAdj[fromNode] = {} end
+        table.insert(fwdAdj[fromNode], edge)
+    end
+
+    if ns.PortaData and ns.PortaData.transports then
+        for _, t in ipairs(ns.PortaData.transports) do
+            addEdge(t.from, t.to, t.x, t.y, t.type, t.faction, t.note, EDGE_COSTS[t.type], t.questID, t.achievementID)
+        end
+    end
+
+    for _, s in ipairs(SUBZONE_CONNECTIONS) do
+        addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID)
+    end
+
+    return revAdj, fwdAdj
+end
+
+-- =========================================================================
+-- 7. 核心反推算法：从目的地逆向 Dijkstra 求解全局到达成本与后继指针
+-- =========================================================================
+function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
+    if not destMapID then return {}, {}, {} end
+
+    local revAdj, fwdAdj = BuildGraphData(playerFaction)
+    local dist = {}
+    local nextEdge = {}
+
+    local heap = CreateMinHeap()
+    dist[destMapID] = 0
+    heap.push({ node = destMapID, cost = 0 })
+
+    while not heap.empty() do
+        local top = heap.pop()
+        local curr = top.node
+        local currCost = top.cost
+
+        if currCost <= dist[curr] then
+            -- 1. 沿所有真实物理入边 (u -> curr) 逆向回溯
+            local incoming = revAdj[curr]
+            if incoming then
+                for _, edge in ipairs(incoming) do
+                    local u = edge.from
+                    local edgeCost = edge.cost or (EDGE_COSTS[edge.type] or 1.5)
+                    local newCost = currCost + edgeCost
+
+                    if not dist[u] or newCost < dist[u] then
+                        dist[u] = newCost
+                        nextEdge[u] = edge
+                        heap.push({ node = u, cost = newCost })
+                    end
+                end
+            end
+
+            -- 2. 同大陆物理飞行连通扩展
+            local contID = ZONE_TO_CONTINENT[curr]
+            if contID then
+                local hubs = CONTINENT_CAPITAL_HUBS[contID] and CONTINENT_CAPITAL_HUBS[contID][playerFaction] or {}
+                for _, h in ipairs(hubs) do
+                    if h ~= curr then
+                        local flyCost = currCost + (EDGE_COSTS.FLY or 2.0)
+                        if not dist[h] or flyCost < dist[h] then
+                            dist[h] = flyCost
+                            nextEdge[h] = {
+                                from = h,
+                                to = curr,
+                                x = 0.5,
+                                y = 0.5,
+                                type = "FLY",
+                                faction = "NEUTRAL",
+                                cost = EDGE_COSTS.FLY or 2.0,
+                                note = "跨区域飞行前往",
+                            }
+                            heap.push({ node = h, cost = flyCost })
+                        end
+                    end
+                end
+
+                if currentMapID and (ZONE_TO_CONTINENT[currentMapID] == contID) and (currentMapID ~= curr) then
+                    local flyCost = currCost + (EDGE_COSTS.FLY or 2.0)
+                    if not dist[currentMapID] or flyCost < dist[currentMapID] then
+                        dist[currentMapID] = flyCost
+                        nextEdge[currentMapID] = {
+                            from = currentMapID,
+                            to = curr,
+                            x = 0.5,
+                            y = 0.5,
+                            type = "FLY",
+                            faction = "NEUTRAL",
+                            cost = EDGE_COSTS.FLY or 2.0,
+                            note = "召唤飞行坐骑飞行前往",
+                        }
+                        heap.push({ node = currentMapID, cost = flyCost })
+                    end
+                end
+            end
+        end
+    end
+
+    return dist, nextEdge, fwdAdj
+end
+
+-- =========================================================================
+-- 8. 辅助：根据一条起始边与后继指针生成完整步骤序列
+-- =========================================================================
+local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, playerFaction)
+    local steps = {}
+    local stepCount = 0
+
+    local currNode = startEdge.to
+    stepCount = stepCount + 1
+
+    local fromName = GetMapDisplayName(startEdge.from)
+    local toName = GetMapDisplayName(startEdge.to)
+    local verb = TRANSPORT_TEXT[startEdge.type] or "前往"
+    local distYards = Pathfinder:GetDistanceInYards(startEdge.from, startEdge.x, startEdge.y)
+    local distTag = distYards and (" [距离: " .. FormatDistanceText(distYards) .. "]") or ""
+
+    local firstUnlocked, firstGate = Pathfinder:CheckPortalQuestStatus(startEdge, playerFaction)
+
+    local firstDesc
+    if startEdge.type == "FLY" then
+        firstDesc = string.format("在【%s】召唤飞行坐骑，飞行前往【%s】", fromName, toName)
+    elseif startEdge.type == "PORTAL" then
+        firstDesc = string.format("在【%s】前往坐标 (%.1f, %.1f)%s，穿过传送门前往【%s】", fromName, startEdge.x * 100, startEdge.y * 100, distTag, toName)
+    elseif startEdge.type == "SHIP" then
+        firstDesc = string.format("在【%s】前往码头坐标 (%.1f, %.1f)%s，乘坐轮船前往【%s】", fromName, startEdge.x * 100, startEdge.y * 100, distTag, toName)
+    elseif startEdge.type == "ZEPPELIN" then
+        firstDesc = string.format("在【%s】前往飞艇塔坐标 (%.1f, %.1f)%s，乘坐飞艇前往【%s】", fromName, startEdge.x * 100, startEdge.y * 100, distTag, toName)
+    elseif startEdge.type == "TRANSPORT" then
+        firstDesc = string.format("在【%s】前往坐标 (%.1f, %.1f)%s，穿过通道进入【%s】", fromName, startEdge.x * 100, startEdge.y * 100, distTag, toName)
+    else
+        firstDesc = string.format("在【%s】前往坐标 (%.1f, %.1f)%s，%s前往【%s】", fromName, startEdge.x * 100, startEdge.y * 100, distTag, verb, toName)
+    end
+    if not firstUnlocked and firstGate then
+        firstDesc = firstDesc .. " |cffff4444[需解锁前置条件]|r"
+    end
+
+    table.insert(steps, {
+        stepIndex = stepCount,
+        mapID = startEdge.from,
+        x = startEdge.x,
+        y = startEdge.y,
+        toMapID = startEdge.to,
+        action = startEdge.type,
+        description = firstDesc,
+        isFinal = false,
+        distanceYards = distYards,
+        isQuestGated = (not firstUnlocked and firstGate ~= nil),
+        questGateInfo = (not firstUnlocked and firstGate ~= nil) and firstGate or nil,
+    })
+
+    -- 沿后继指针继续推导
+    local visitedMaps = { [startEdge.from] = true }
+    local guard = 0
+    while currNode ~= destMapID and nextEdge[currNode] and guard < 20 do
+        guard = guard + 1
+        if visitedMaps[currNode] then
+            -- 环路检测：如果在到达目的地前重复访问了某地图，直接废弃此分支
+            return nil
+        end
+        visitedMaps[currNode] = true
+
+        local edge = nextEdge[currNode]
+        stepCount = stepCount + 1
+
+        local fName = GetMapDisplayName(edge.from)
+        local tName = GetMapDisplayName(edge.to)
+        local v = TRANSPORT_TEXT[edge.type] or "搭乘交通设施"
+
+        -- 检查该传送门/节点是否有前置任务或成就限制
+        local isUnlocked, gateConfig = Pathfinder:CheckPortalQuestStatus(edge, playerFaction)
+        local desc = string.format("在【%s】前往坐标 (%.1f, %.1f)，%s前往【%s】", fName, edge.x * 100, edge.y * 100, v, tName)
+        if not isUnlocked and gateConfig then
+            desc = desc .. " |cffff4444[需解锁前置条件]|r"
+        end
+
+        table.insert(steps, {
+            stepIndex = stepCount,
+            mapID = edge.from,
+            x = edge.x,
+            y = edge.y,
+            toMapID = edge.to,
+            action = edge.type,
+            description = desc,
+            isFinal = false,
+            isQuestGated = (not isUnlocked and gateConfig ~= nil),
+            questGateInfo = (not isUnlocked and gateConfig ~= nil) and gateConfig or nil,
+        })
+
+        currNode = edge.to
+    end
+
+    -- 必须确实到达了目标地图，否则路径无效
+    if currNode ~= destMapID then
+        return nil
+    end
+
+    -- 最终终点
+    stepCount = stepCount + 1
+    local finalDesc
+    local isMoltenCore = (destination.id == 741) or (destination.name and destination.name:find("熔火之心"))
+
+    if destination.type == "zone" or destination.type == "continent" then
+        finalDesc = string.format("抵达【%s】，已成功进入目标区域！", destination.name)
+    else
+        finalDesc = string.format("抵达【%s】，前往【%s】入口 (%.1f, %.1f)", GetMapDisplayName(destination.mapID), destination.name, destination.x * 100, destination.y * 100)
+        if isMoltenCore then
+            finalDesc = finalDesc .. "\n\n|cff00ff00[便捷提示]|r 在黑石山坐标 (54.3, 84.8) 亦可直接与【洛索斯·天痕】对话传送进入！"
+        end
+    end
+
+    table.insert(steps, {
+        stepIndex = stepCount,
+        mapID = destination.mapID,
+        x = destination.x,
+        y = destination.y,
+        action = "ARRIVE",
+        description = finalDesc,
+        isFinal = true,
+    })
+
+    return steps
+end
+
+-- =========================================================================
+-- 9. 智能路线计算主引擎 (支持多起始点感知、距离择优与多备选方案列表)
+-- =========================================================================
 function Pathfinder:CalculateRoute(destination)
     if not destination or not destination.mapID then return nil end
 
@@ -100,10 +706,10 @@ function Pathfinder:CalculateRoute(destination)
     end
 
     local playerFaction = ns.GetPlayerFaction()
-    local steps = {}
+    local destMapID = destination.mapID
 
     -- =====================================================================
-    -- 0. 优先检测：玩家是否拥有该目的地的直达传送手段（英雄之路门、团本门或专属直达道具）
+    -- 0. 优先检测：玩家是否拥有该目的地的专属直达传送
     -- =====================================================================
     if ns.PlayerTeleports then
         local direct = ns.PlayerTeleports:GetDirectDestinationTeleport(destination)
@@ -117,15 +723,17 @@ function Pathfinder:CalculateRoute(destination)
                 desc = string.format("使用传送物品【%s】%s 直达目的地%s", direct.name, cdText, noteSuffix)
             end
 
-            table.insert(steps, {
-                stepIndex = 1,
-                mapID = destination.mapID,
-                x = destination.x,
-                y = destination.y,
-                action = direct.type,
-                description = desc,
-                isFinal = true,
-            })
+            local steps = {
+                {
+                    stepIndex = 1,
+                    mapID = destMapID,
+                    x = destination.x,
+                    y = destination.y,
+                    action = direct.type,
+                    description = desc,
+                    isFinal = true,
+                }
+            }
             return {
                 destination = destination,
                 steps = steps,
@@ -136,160 +744,402 @@ function Pathfinder:CalculateRoute(destination)
     end
 
     -- =====================================================================
-    -- 1. 同一地图：直接前往
+    -- 1. 已在同一地图：直接前往目标点
     -- =====================================================================
-    if currentMapID == destination.mapID then
+    if currentMapID == destMapID then
         local arriveDesc
         if destination.type == "zone" or destination.type == "continent" then
             arriveDesc = string.format("你当前已在【%s】，已抵达目标区域！", destination.name)
         else
             arriveDesc = string.format("你已在该地图，直接前往【%s】入口 (%.1f, %.1f)", destination.name, destination.x * 100, destination.y * 100)
         end
-        table.insert(steps, {
-            stepIndex = 1,
-            mapID = destination.mapID,
-            x = destination.x,
-            y = destination.y,
-            action = "DIRECT",
-            description = arriveDesc,
-            isFinal = true,
-        })
         return {
             destination = destination,
-            steps = steps,
+            steps = {
+                {
+                    stepIndex = 1,
+                    mapID = destMapID,
+                    x = destination.x,
+                    y = destination.y,
+                    action = "DIRECT",
+                    description = arriveDesc,
+                    isFinal = true,
+                }
+            },
             totalSteps = 1,
         }
     end
 
     -- =====================================================================
-    -- 2. 跨地图寻路：结合玩家个人传送物品/玩具/技能，寻找全局最优路径
+    -- 2. 特判：同大陆直飞 (若玩家与目标同在真实开阔陆地大陆，直接召唤坐骑直飞)
     -- =====================================================================
-    -- 2.1 先算从当前位置出发的纯物理交通路径
-    local directEdges = self:FindShortestPath(currentMapID, destination.mapID, playerFaction)
-    local bestEdges = directEdges
-    local bestTeleportPrefix = nil
-    local minHops = directEdges and #directEdges or 9999
+    local curContID = ZONE_TO_CONTINENT[currentMapID]
+    local destContID = ZONE_TO_CONTINENT[destMapID]
+    if curContID and destContID and (curContID == destContID) then
+        local destName = GetMapDisplayName(destMapID)
+        local steps = {
+            {
+                stepIndex = 1,
+                mapID = currentMapID,
+                x = destination.x,
+                y = destination.y,
+                toMapID = destMapID,
+                action = "FLY",
+                description = string.format("在【%s】召唤飞行坐骑，直接飞行前往【%s】", GetMapDisplayName(currentMapID), destName),
+                isFinal = false,
+            },
+            {
+                stepIndex = 2,
+                mapID = destMapID,
+                x = destination.x,
+                y = destination.y,
+                action = "ARRIVE",
+                description = (destination.type == "zone" or destination.type == "continent")
+                    and string.format("抵达【%s】，已成功进入目标区域！", destination.name)
+                    or string.format("抵达【%s】，前往【%s】入口 (%.1f, %.1f)", destName, destination.name, destination.x * 100, destination.y * 100),
+                isFinal = true,
+            }
+        }
+        return {
+            destination = destination,
+            steps = steps,
+            totalSteps = 2,
+        }
+    end
 
-    -- 2.2 扫描玩家拥有的传送物品、玩具、职业技能（达拉然炉石、公会披风、虫洞、法师开门等）
-    if ns.PlayerTeleports then
-        local availableTeleports = ns.PlayerTeleports:GetAvailableTeleports()
-        for _, tp in ipairs(availableTeleports) do
-            -- 如果该传送直接到达目标地图
-            if tp.toMap == destination.mapID then
-                bestEdges = {}
-                bestTeleportPrefix = tp
-                minHops = 0
-                break
-            else
-                -- 计算从传送目的地到最终目标的跳数
-                local tpEdges = self:FindShortestPath(tp.toMap, destination.mapID, playerFaction)
-                if tpEdges then
-                    -- 评估代价：使用传送道具相当于 1 跳，且如果是达拉然炉石/主城披风通常比长途跋涉更快捷
-                    local costHops = #tpEdges + 1
-                    if costHops < minHops or (costHops == minHops and tp.priority > 8) then
-                        minHops = costHops
-                        bestEdges = tpEdges
-                        bestTeleportPrefix = tp
+    -- =====================================================================
+    -- 3. 核心逆向反推 (Reverse Dijkstra)
+    -- =====================================================================
+    local dist, nextEdge, fwdAdj = self:ReverseDijkstra(destMapID, playerFaction, currentMapID)
+    if not dist[currentMapID] and not (#(fwdAdj[currentMapID] or {}) > 0) then
+        ns.Print("未能找到前往【" .. destination.name .. "】的有效交通路径")
+        return nil
+    end
+
+    local curContID = ZONE_TO_CONTINENT[currentMapID]
+    local destContID = ZONE_TO_CONTINENT[destMapID]
+    local isSameContinent = curContID and destContID and (curContID == destContID)
+
+    -- 判断当前是否已处于目的地前置集结大区 (如纳沙塔尔/永恒王宫对应部落达萨罗、联盟伯拉勒斯)
+    local isAtDestinationStaging = (destMapID == 1528 or destMapID == 1355) and
+        ((playerFaction == "HORDE" and curContID == 875) or (playerFaction == "ALLIANCE" and curContID == 876))
+
+    -- =====================================================================
+    -- 4. 物理出发路线收集与严格去重过滤 (Multiple Starting Alternatives)
+    -- =====================================================================
+    local physicalCandidates = {}
+    local outEdges = fwdAdj[currentMapID] or {}
+
+    -- 若当前地图无固定交通设施边，但有跨大陆/区域飞行后继，加入候选
+    if #outEdges == 0 and nextEdge[currentMapID] then
+        table.insert(outEdges, nextEdge[currentMapID])
+    end
+
+    for _, edge in ipairs(outEdges) do
+        if dist[edge.to] then
+            local branchSteps = BuildStepsFromStart(edge, destMapID, destination, nextEdge, playerFaction)
+            if branchSteps then
+                -- 大陆折返环路检测：离开当前大陆又绕回当前大陆，判定为无效绕路
+                local isContinentLoop = false
+                if curContID then
+                    local edgeToCont = ZONE_TO_CONTINENT[edge.to]
+                    if edgeToCont and edgeToCont ~= curContID then
+                        for _, s in ipairs(branchSteps) do
+                            if s.toMapID and ZONE_TO_CONTINENT[s.toMapID] == curContID then
+                                isContinentLoop = true
+                                break
+                            end
+                        end
                     end
+                end
+
+                if not isContinentLoop then
+                    local distYards = self:GetDistanceInYards(currentMapID, edge.x, edge.y)
+                    local distText = FormatDistanceText(distYards)
+                    local distanceScore = distYards and (distYards / 500.0) or 1.5
+                    local totalScore = distanceScore + (edge.cost or 1.5) + dist[edge.to]
+
+                    local branchName
+                    if edge.type == "PORTAL" then
+                        branchName = "经【" .. GetMapDisplayName(edge.to) .. "】传送门"
+                    elseif edge.type == "SHIP" then
+                        branchName = "经【" .. GetMapDisplayName(edge.to) .. "】轮船"
+                    elseif edge.type == "ZEPPELIN" then
+                        branchName = "经【" .. GetMapDisplayName(edge.to) .. "】飞艇"
+                    elseif edge.type == "FLY" then
+                        branchName = "飞行前往【" .. GetMapDisplayName(edge.to) .. "】"
+                    else
+                        branchName = "前往【" .. GetMapDisplayName(edge.to) .. "】"
+                    end
+
+                    table.insert(physicalCandidates, {
+                        edge = edge,
+                        name = branchName,
+                        viaDesc = string.format("前往坐标 (%.1f, %.1f)%s", edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or "")),
+                        distanceYards = distYards,
+                        distanceText = distText,
+                        score = totalScore,
+                        steps = branchSteps,
+                        totalSteps = #branchSteps,
+                    })
                 end
             end
         end
     end
 
-    -- 2.3 兜底：若前两者都找不到路（如身处偏远孤立副本），尝试回主城传送大厅
-    local hubMapID = (playerFaction == "HORDE") and 85 or 84
-    local needFallbackHearthstone = false
+    -- 物理候选方案按评分排序
+    table.sort(physicalCandidates, function(a, b)
+        return a.score < b.score
+    end)
 
-    if not bestEdges and not bestTeleportPrefix then
-        bestEdges = self:FindShortestPath(hubMapID, destination.mapID, playerFaction)
-        if bestEdges then
-            needFallbackHearthstone = true
+    local validPhysical = {}
+    if #physicalCandidates > 0 then
+        local best = physicalCandidates[1]
+        table.insert(validPhysical, best)
+
+        -- 寻找具有独立意义的第 2 物理备选方案 (如杜隆塔尔去奥格瑞玛大门 vs 去回音群岛坐船)
+        for i = 2, #physicalCandidates do
+            local cand = physicalCandidates[i]
+            local dx = math.abs(cand.edge.x - best.edge.x)
+            local dy = math.abs(cand.edge.y - best.edge.y)
+            -- 独立起点判断：坐标相差显著，且目标地图不同
+            local isDistinctLoc = (dx > 0.08 or dy > 0.08) and (cand.edge.to ~= best.edge.to)
+
+            -- 冗余子区域检测：如果第 2 个方案在下一步就汇合到了最优方案的起点，属于无意义绕路 (如 1165 绕回 1163)
+            local isSubzoneDetour = false
+            if cand.steps[2] and best.steps[1] and cand.steps[2].toMapID == best.steps[1].toMapID then
+                isSubzoneDetour = true
+            end
+
+            -- 竞争力筛选：总耗费不得显著劣于最优方案
+            local isCompetitive = (cand.score <= best.score + 3.5) and (cand.score <= best.score * 1.6)
+
+            if isDistinctLoc and not isSubzoneDetour and isCompetitive then
+                table.insert(validPhysical, cand)
+                break -- 物理备选方案最多保留 1 个（总共最多 2 个物理方案）
+            end
         end
     end
 
-    if not bestEdges and not bestTeleportPrefix then
-        ns.Print("未能找到前往【" .. destination.name .. "】的有效交通路径")
-        return nil
+    local alternatives = {}
+    for _, p in ipairs(validPhysical) do
+        table.insert(alternatives, p)
     end
 
-    -- =====================================================================
-    -- 3. 构造完整步骤链条
-    -- =====================================================================
-    local stepCount = 0
+    local bestPhysicalScore = (#validPhysical > 0) and validPhysical[1].score or (dist[currentMapID] or 999)
 
-    -- 步骤 A：使用了个人专属传送手段（玩具/物品/法术）
-    if bestTeleportPrefix then
-        stepCount = stepCount + 1
-        local cdTag = bestTeleportPrefix.isReady and "" or string.format(" |cffff4040[CD: %d秒]|r", bestTeleportPrefix.cdSeconds)
-        local toMapName = GetMapDisplayName(bestTeleportPrefix.toMap)
-        local actionDesc = string.format("使用【%s】%s传送前往【%s】", bestTeleportPrefix.name, cdTag, toMapName)
+    -- =====================================================================
+    -- 5. 个人专属传送道具方案 (背包/玩具传送)
+    -- 严格规则：
+    -- 1) 若玩家已在目的地同一大陆，或已在目的地前置集结区域 (如祖达萨对应纳沙塔尔)，绝不推荐无关传送道具！
+    -- 2) 最多仅推荐 1 款最契合、最迅速的专属传送道具。
+    -- 3) 传送道具评分必须不劣于物理跑图耗费，方可作为方案展示。
+    -- =====================================================================
+    if ns.PlayerTeleports and not isSameContinent and not isAtDestinationStaging then
+        local availableTeleports = ns.PlayerTeleports:GetAvailableTeleports()
+        local tpCandidates = {}
+        local seenTpTarget = {}
 
-        table.insert(steps, {
-            stepIndex = stepCount,
-            mapID = bestTeleportPrefix.toMap,
-            x = bestTeleportPrefix.x or 0.5,
-            y = bestTeleportPrefix.y or 0.5,
-            action = bestTeleportPrefix.type,
-            description = actionDesc,
-            isFinal = (bestTeleportPrefix.toMap == destination.mapID and (destination.type == "zone" or destination.type == "continent")),
-        })
-    elseif needFallbackHearthstone then
-        stepCount = stepCount + 1
-        local hubName = GetMapDisplayName(hubMapID)
-        table.insert(steps, {
-            stepIndex = stepCount,
-            mapID = hubMapID,
-            x = 0.5,
-            y = 0.5,
-            action = "HEARTHSTONE",
-            description = string.format("使用炉石或常规手段前往【%s】传送门大厅", hubName),
-            isFinal = false,
-        })
+        for _, tp in ipairs(availableTeleports) do
+            if tp.toMap and dist[tp.toMap] and not seenTpTarget[tp.toMap] then
+                seenTpTarget[tp.toMap] = true
+
+                local itemCost = tp.isReady and 1.0 or (1.0 + math.min(tp.cdSeconds / 30, 8.0))
+                if tp.priority and tp.priority > 8 then
+                    itemCost = itemCost - 0.5
+                end
+                local totalScore = itemCost + dist[tp.toMap]
+
+                table.insert(tpCandidates, {
+                    tp = tp,
+                    score = totalScore,
+                })
+            end
+        end
+
+        table.sort(tpCandidates, function(a, b)
+            return a.score < b.score
+        end)
+
+        -- 仅选择最优的 1 个道具
+        if #tpCandidates > 0 then
+            local bestTpCand = tpCandidates[1]
+            local tp = bestTpCand.tp
+            -- 仅当道具耗费与物理跑图相比具有竞争力时才加入
+            if bestTpCand.score <= bestPhysicalScore + 0.5 then
+                local tpSteps = {}
+                local cdTag = tp.isReady and "" or string.format(" |cffff4040[CD: %d秒]|r", tp.cdSeconds)
+                local toMapName = GetMapDisplayName(tp.toMap)
+                table.insert(tpSteps, {
+                    stepIndex = 1,
+                    mapID = tp.toMap,
+                    x = tp.x or 0.5,
+                    y = tp.y or 0.5,
+                    action = tp.type,
+                    description = string.format("使用【%s】%s 传送前往【%s】", tp.name, cdTag, toMapName),
+                    isFinal = false,
+                })
+
+                local curr = tp.toMap
+                local guard = 0
+                local validTpPath = true
+                local visitedTpMaps = { [tp.toMap] = true }
+                while curr ~= destMapID and nextEdge[curr] and guard < 20 do
+                    guard = guard + 1
+                    local edge = nextEdge[curr]
+                    if visitedTpMaps[edge.to] then
+                        validTpPath = false
+                        break
+                    end
+                    visitedTpMaps[edge.to] = true
+
+                    local fName = GetMapDisplayName(edge.from)
+                    local tName = GetMapDisplayName(edge.to)
+                    local v = TRANSPORT_TEXT[edge.type] or "搭乘交通设施"
+                    local isUnlocked, gateConfig = Pathfinder:CheckPortalQuestStatus(edge, playerFaction)
+                    local questTag = (not isUnlocked and gateConfig) and " |cffff4444[需解锁前置条件]|r" or ""
+
+                    table.insert(tpSteps, {
+                        stepIndex = #tpSteps + 1,
+                        mapID = edge.from,
+                        x = edge.x,
+                        y = edge.y,
+                        toMapID = edge.to,
+                        action = edge.type,
+                        description = string.format("在【%s】前往坐标 (%.1f, %.1f)，%s前往【%s】%s", fName, edge.x * 100, edge.y * 100, v, tName, questTag),
+                        isFinal = false,
+                        isQuestGated = (not isUnlocked and gateConfig ~= nil),
+                        questGateInfo = (not isUnlocked and gateConfig ~= nil) and gateConfig or nil,
+                    })
+                    curr = edge.to
+                end
+
+                if validTpPath and curr == destMapID then
+                    table.insert(tpSteps, {
+                        stepIndex = #tpSteps + 1,
+                        mapID = destination.mapID,
+                        x = destination.x,
+                        y = destination.y,
+                        action = "ARRIVE",
+                        description = string.format("抵达【%s】，前往【%s】入口 (%.1f, %.1f)", GetMapDisplayName(destination.mapID), destination.name, destination.x * 100, destination.y * 100),
+                        isFinal = true,
+                    })
+
+                    table.insert(alternatives, {
+                        name = "使用【" .. tp.name .. "】",
+                        viaDesc = "背包/玩具传送",
+                        distanceYards = 0,
+                        distanceText = "直接使用",
+                        score = bestTpCand.score,
+                        steps = tpSteps,
+                        totalSteps = #tpSteps,
+                    })
+                end
+            end
+        end
     end
 
-    -- 步骤 B：中间公共交通（传送门/飞艇/船只）
-    if bestEdges then
-        for _, edge in ipairs(bestEdges) do
-            stepCount = stepCount + 1
-            local fromName = GetMapDisplayName(edge.from)
-            local toName = GetMapDisplayName(edge.to)
-            local verb = TRANSPORT_TEXT[edge.type] or "搭乘交通设施"
-
-            table.insert(steps, {
-                stepIndex = stepCount,
-                mapID = edge.from,
-                x = edge.x,
-                y = edge.y,
-                toMapID = edge.to,
-                action = edge.type,
-                description = string.format("在【%s】前往坐标 (%.1f, %.1f)，%s前往【%s】", fromName, edge.x * 100, edge.y * 100, verb, toName),
+    -- 6. 若没有找到任何当前地图出口且没有道具，尝试常规主城炉石兜底
+    if #alternatives == 0 then
+        local hubMapID = (playerFaction == "HORDE") and 85 or 84
+        if dist[hubMapID] then
+            local hubSteps = {}
+            local hubName = GetMapDisplayName(hubMapID)
+            table.insert(hubSteps, {
+                stepIndex = 1,
+                mapID = hubMapID,
+                x = 0.5,
+                y = 0.5,
+                action = "HEARTHSTONE",
+                description = string.format("使用常规炉石前往【%s】传送门大厅", hubName),
                 isFinal = false,
+            })
+
+            local curr = hubMapID
+            local guard = 0
+            while curr ~= destMapID and nextEdge[curr] and guard < 20 do
+                guard = guard + 1
+                local edge = nextEdge[curr]
+                local fName = GetMapDisplayName(edge.from)
+                local tName = GetMapDisplayName(edge.to)
+                local v = TRANSPORT_TEXT[edge.type] or "搭乘交通设施"
+                table.insert(hubSteps, {
+                    stepIndex = #hubSteps + 1,
+                    mapID = edge.from,
+                    x = edge.x,
+                    y = edge.y,
+                    toMapID = edge.to,
+                    action = edge.type,
+                    description = string.format("在【%s】前往坐标 (%.1f, %.1f)，%s前往【%s】", fName, edge.x * 100, edge.y * 100, v, tName),
+                    isFinal = false,
+                })
+                curr = edge.to
+            end
+
+            table.insert(hubSteps, {
+                stepIndex = #hubSteps + 1,
+                mapID = destination.mapID,
+                x = destination.x,
+                y = destination.y,
+                action = "ARRIVE",
+                description = string.format("抵达【%s】，前往【%s】入口 (%.1f, %.1f)", GetMapDisplayName(destination.mapID), destination.name, destination.x * 100, destination.y * 100),
+                isFinal = true,
+            })
+
+            table.insert(alternatives, {
+                name = "使用常规炉石",
+                viaDesc = "炉石回城",
+                distanceYards = 0,
+                distanceText = "炉石",
+                score = dist[hubMapID] + 5.0,
+                steps = hubSteps,
+                totalSteps = #hubSteps,
             })
         end
     end
 
-    -- 步骤 C：最终抵达目标
-    stepCount = stepCount + 1
-    local finalDesc
-    if destination.type == "zone" or destination.type == "continent" then
-        finalDesc = string.format("抵达【%s】，已成功进入目标区域！", destination.name)
-    else
-        finalDesc = string.format("抵达【%s】，前往【%s】入口 (%.1f, %.1f)", GetMapDisplayName(destination.mapID), destination.name, destination.x * 100, destination.y * 100)
+    if #alternatives == 0 then
+        ns.Print("未能找到前往【" .. destination.name .. "】的有效交通路径")
+        return nil
     end
 
-    table.insert(steps, {
-        stepIndex = stepCount,
-        mapID = destination.mapID,
-        x = destination.x,
-        y = destination.y,
-        action = "ARRIVE",
-        description = finalDesc,
-        isFinal = true,
-    })
+    -- 7. 对所有最终候选方案按总评分排序（若测出了距离，最近且综合代价最低的排在第 1 位作为默认选项）
+    table.sort(alternatives, function(a, b)
+        return a.score < b.score
+    end)
+
+    -- 默认采用第 1 优选方案
+    local selectedAlt = alternatives[1]
 
     return {
         destination = destination,
-        steps = steps,
-        totalSteps = stepCount,
+        steps = selectedAlt.steps,
+        totalSteps = selectedAlt.totalSteps,
+        alternatives = alternatives,
+        selectedAltIndex = 1,
     }
+end
+
+-- 兼容老接口
+function Pathfinder:FindShortestPath(startMapID, targetMapID, playerFaction)
+    if not startMapID or not targetMapID then return nil end
+    if startMapID == targetMapID then return {} end
+
+    local dist, nextEdge = self:ReverseDijkstra(targetMapID, playerFaction or ns.GetPlayerFaction(), startMapID)
+    if not dist[startMapID] then return nil end
+
+    local path = {}
+    local curr = startMapID
+    local guard = 0
+    while curr ~= targetMapID and nextEdge[curr] and guard < 30 do
+        guard = guard + 1
+        local edge = nextEdge[curr]
+        table.insert(path, edge)
+        curr = edge.to
+    end
+
+    if curr == targetMapID then
+        return path
+    end
+    return nil
 end

@@ -110,20 +110,64 @@ function Navigation:ApplyCurrentStep()
     local step = activeRoute.steps[currentStepIndex]
     if not step then return end
 
-    -- 如果当前步骤是中间跳转点（如主城传送门坐标），将导航箭头临时指向该传送门
-    if not step.isFinal and step.x and step.y and step.mapID then
-        local currentMapID = C_Map.GetBestMapForUnit("player")
-        if currentMapID == step.mapID then
+    if not step.isFinal then
+        if step.action == "FLY" then
+            -- 飞行阶段：如果有下一步入口坐标，直接为后续目标入口打标；否则为目的地打标
+            local nextStep = activeRoute.steps[currentStepIndex + 1]
+            if nextStep and nextStep.mapID and nextStep.x and nextStep.y then
+                SetBlizzardWaypoint(nextStep.mapID, nextStep.x, nextStep.y)
+                SetTomTomWaypoint(nextStep.mapID, nextStep.x, nextStep.y, nextStep.description)
+            else
+                local dest = activeRoute.destination
+                SetBlizzardWaypoint(dest.mapID, dest.x, dest.y)
+                SetTomTomWaypoint(dest.mapID, dest.x, dest.y, dest.name)
+            end
+        elseif step.x and step.y and step.mapID then
             SetBlizzardWaypoint(step.mapID, step.x, step.y)
+            SetTomTomWaypoint(step.mapID, step.x, step.y, step.description)
         end
     else
         -- 最终步骤直接指向终点
         local dest = activeRoute.destination
         SetBlizzardWaypoint(dest.mapID, dest.x, dest.y)
+        SetTomTomWaypoint(dest.mapID, dest.x, dest.y, dest.name)
     end
 
     if ns.NavigationHUD then
         ns.NavigationHUD:UpdateStep(activeRoute, currentStepIndex)
+    end
+end
+
+-- 切换备选路线
+function Navigation:SelectAlternativeRoute(altIndex)
+    if not activeRoute or not activeRoute.alternatives then return end
+    local alt = activeRoute.alternatives[altIndex]
+    if not alt then return end
+
+    activeRoute.selectedAltIndex = altIndex
+    activeRoute.steps = alt.steps
+    activeRoute.totalSteps = alt.totalSteps
+    currentStepIndex = 1
+
+    self:ApplyCurrentStep()
+
+    if ns.NavigationHUD then
+        ns.NavigationHUD:ShowRoute(activeRoute, currentStepIndex)
+    end
+
+    local altName = alt.name or ("方案 " .. tostring(altIndex))
+    local distInfo = (alt.distanceText and alt.distanceText ~= "") and (" (" .. alt.distanceText .. ")") or ""
+    ns.Print(string.format("已切换至【%s%s】，地图追踪标记已同步更新！", altName, distInfo))
+end
+
+-- 回退到上一步
+function Navigation:PrevStep()
+    if not activeRoute then return end
+
+    if currentStepIndex > 1 then
+        currentStepIndex = currentStepIndex - 1
+        ns.Print(string.format("已回退到第 %d/%d 步", currentStepIndex, activeRoute.totalSteps))
+        self:ApplyCurrentStep()
     end
 end
 

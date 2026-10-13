@@ -2,12 +2,11 @@ local _, ns = ...
 
 -- 注册聊天命令行
 SLASH_PORTA1 = "/porta"
-SLASH_PORTA2 = "/go"
 SlashCmdList["PORTA"] = function(msg)
-    local query = string.trim and string.trim(msg) or msg
-    if query and query ~= "" then
-        -- 如果带参数输入，直接尝试搜索并展示
-        ns.SearchDialog:Toggle()
+    local query = type(msg) == "string" and (strtrim and strtrim(msg) or string.gsub(msg, "^%s*(.-)%s*$", "%1")) or ""
+    if query ~= "" then
+        -- 如果带参数输入，直接带关键词打开搜索框
+        ns.SearchDialog:Toggle(query)
     else
         ns.SearchDialog:Toggle()
     end
@@ -25,5 +24,5 @@ function ns.EventFrame:PLAYER_LOGIN()
         ns.SearchEngine:Initialize()
     end
 
-    ns.Print("已加载完成！输入 |cffffcc00/porta|r 或 |cffffcc00/go|r 快速打开目的地搜索。")
+    ns.Print("已加载完成！输入 |cffffcc00/porta|r 快速打开目的地搜索。")
 end

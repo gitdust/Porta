@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local SearchEngine = {}
 ns.SearchEngine = SearchEngine
@@ -8,11 +9,11 @@ local isInitialized = false
 
 -- 类别显示文本与颜色
 local TYPE_INFO = {
-    dungeon = { tag = "地下城", color = "|cff00ccff" },
-    raid    = { tag = "团队副本", color = "|cffff8000" },
-    delve   = { tag = "地下堡", color = "|cffffff00" },
-    zone    = { tag = "区域", color = "|cff00ff00" },
-    continent = { tag = "大陆", color = "|cff00ff7f" },
+    dungeon   = { tag = L["TAG_DUNGEON"],   color = "|cff00ccff" },
+    raid      = { tag = L["TAG_RAID"],      color = "|cffff8000" },
+    delve     = { tag = L["TAG_DELVE"],     color = "|cffffff00" },
+    zone      = { tag = L["TAG_ZONE"],      color = "|cff00ff00" },
+    continent = { tag = L["TAG_CONTINENT"], color = "|cff00ff7f" },
 }
 
 -- 魔兽世界核心大洲 ID 列表
@@ -50,6 +51,39 @@ local DEPRECATED_PHASE_MAPS = {
     [2216] = true, -- 千丝之城下层重复图（优先使用 2213）
 }
 
+-- 拉丁语系常见前导定冠词（用于在匹配时支持忽略冠词检索，如输入 "stonevault" 匹配 "The Stonevault"）
+local LEADING_ARTICLES = {
+    "the ", "a ", "an ",
+    "le ", "la ", "les ", "l'",
+    "der ", "die ", "das ",
+    "el ", "los ", "las ",
+}
+
+local function StripLeadingArticle(textLower)
+    for _, art in ipairs(LEADING_ARTICLES) do
+        if string.sub(textLower, 1, #art) == art then
+            return TrimText(string.sub(textLower, #art + 1))
+        end
+    end
+    return textLower
+end
+
+-- 规范化文本：生成将连字符/撇号/标点替换为空格的分词版本，以及完全剔除标点与空格的紧凑版本
+-- 从而同时支持英文 "arakara" / "ara kara" 匹配 "Ara-Kara, City of Echoes"，以及中文 "艾拉卡拉" 匹配 "艾拉-卡拉，回响之城"
+local function NormalizeTextForms(textLower)
+    -- 将常见中西文标点符号替换为空格
+    local spaced = textLower
+        :gsub("['’`%-–—:,;!%?%.%(%)%[%]\"/\\]+", " ")
+        :gsub("，", " ")
+        :gsub("：", " ")
+        :gsub("·", " ")
+        :gsub("！", " ")
+        :gsub("%s+", " ")
+    spaced = TrimText(spaced)
+    local compact = spaced:gsub("%s+", "")
+    return spaced, compact
+end
+
 -- 初始化搜索索引（在 PLAYER_LOGIN 时调用）
 function SearchEngine:Initialize()
     if isInitialized then return end
@@ -67,7 +101,7 @@ function SearchEngine:Initialize()
         for _, dest in ipairs(ns.PortaData.destinations) do
             if not (dest.id and seenDestIDs[dest.id]) then
                 local instanceName = nil
-                -- 尝试通过暴雪原生 Journal API 获取对应语言的名称
+                -- 通过暴雪原生 Journal API 获取当前客户端语言的名称
                 if dest.id and dest.id > 0 and EJ_GetInstanceInfo then
                     local name = EJ_GetInstanceInfo(dest.id)
                     if name and name ~= "" then
@@ -77,7 +111,7 @@ function SearchEngine:Initialize()
 
                 -- 回退到 comment
                 if not instanceName or instanceName == "" then
-                    instanceName = dest.comment or ("未知目的地 #" .. tostring(dest.id))
+                    instanceName = dest.comment or string.format(L["UNKNOWN_DEST_FMT"], tostring(dest.id))
                 end
 
                 instanceName = TrimText(instanceName)
@@ -92,8 +126,8 @@ function SearchEngine:Initialize()
                     seenDestTypeNames[typeNameKey] = true
                     seenInstanceNames[nameLower] = true
 
-                    -- 获取所属地图名称
-                    local zoneName = "未知区域"
+                    -- 获取所属地图名称（当前客户端语言）
+                    local zoneName = L["UNKNOWN_ZONE"]
                     if dest.mapID and C_Map and C_Map.GetMapInfo then
                         local mapInfo = C_Map.GetMapInfo(dest.mapID)
                         if mapInfo and mapInfo.name then
@@ -120,14 +154,14 @@ function SearchEngine:Initialize()
         end
     end
 
-    -- 2. 动态枚举暴雪全版本各大洲与野外区域 (无需人工整理，原生多语言适配)
+    -- 2. 动态枚举暴雪全版本各大洲与野外区域 (原生当前客户端语言适配)
     local zoneType = (Enum and Enum.UIMapType and Enum.UIMapType.Zone) or 3
     local dungeonMapType = (Enum and Enum.UIMapType and Enum.UIMapType.Dungeon) or 4
     local microMapType = (Enum and Enum.UIMapType and Enum.UIMapType.Micro) or 5
     local orphanMapType = (Enum and Enum.UIMapType and Enum.UIMapType.Orphan) or 6
 
     for _, contID in ipairs(MAJOR_CONTINENTS) do
-        local contName = "野外地图"
+        local contName = L["OUTDOOR_MAP"]
         -- 索引大洲自身
         if C_Map and C_Map.GetMapInfo then
             local contInfo = C_Map.GetMapInfo(contID)
@@ -140,7 +174,7 @@ function SearchEngine:Initialize()
                     table.insert(searchIndex, {
                         id = 0,
                         name = contName,
-                        zoneName = "世界大洲",
+                        zoneName = L["WORLD_CONTINENT"],
                         mapID = contID,
                         x = 0.5,
                         y = 0.5,
@@ -205,7 +239,7 @@ function SearchEngine:Initialize()
                             table.insert(searchIndex, {
                                 id = 0,
                                 name = mapName,
-                                zoneName = "交通枢纽",
+                                zoneName = L["TRANSPORT_HUB"],
                                 mapID = targetMapID,
                                 x = 0.5,
                                 y = 0.5,
@@ -224,8 +258,8 @@ function SearchEngine:Initialize()
     isInitialized = true
 end
 
--- 纯地名文本匹配
-local function MatchText(targetText, queryLower)
+-- 当前客户端语言地名智能匹配（兼顾中文子串与英文/拉丁语系冠词、连字符/撇号忽略、词首前缀匹配）
+local function MatchText(targetText, queryLower, querySpaced, queryCompact)
     if not targetText or not queryLower or queryLower == "" then return false, 0 end
 
     local targetLower = string.lower(TrimText(targetText))
@@ -236,26 +270,65 @@ local function MatchText(targetText, queryLower)
         return true, 100
     end
 
-    -- 2. 前缀匹配
-    local s = string.find(targetLower, queryLower, 1, true)
-    if s == 1 then
-        return true, 80
+    local noArticleTarget = StripLeadingArticle(targetLower)
+    local targetSpaced, targetCompact = NormalizeTextForms(targetLower)
+    local noArtSpaced, noArtCompact = NormalizeTextForms(noArticleTarget)
+
+    -- 1b. 去除前导冠词或标点符号后完全一致 (例如输入 "stonevault" 匹配 "The Stonevault"，或 "motherlode" 匹配 "The MOTHERLODE!!")
+    if noArticleTarget == queryLower or (queryCompact ~= "" and (targetCompact == queryCompact or noArtCompact == queryCompact)) then
+        return true, 95
     end
 
-    -- 3. 子串包含
+    -- 2. 前缀匹配（含去除前导冠词或忽略标点后的前缀匹配）
+    local s = string.find(targetLower, queryLower, 1, true)
+    if s == 1 then
+        return true, 85
+    end
+
+    local sNoArt = string.find(noArticleTarget, queryLower, 1, true)
+    if sNoArt == 1 then
+        return true, 82
+    end
+
+    if querySpaced ~= "" then
+        if string.find(targetSpaced, querySpaced, 1, true) == 1 or string.find(noArtSpaced, querySpaced, 1, true) == 1 then
+            return true, 80
+        end
+    end
+
+    if queryCompact ~= "" then
+        if string.find(targetCompact, queryCompact, 1, true) == 1 or string.find(noArtCompact, queryCompact, 1, true) == 1 then
+            return true, 78
+        end
+    end
+
+    -- 3. 单词词首边界匹配 (例如英文输入 "echoes" 匹配 "Ara-Kara, City of Echoes" 中的单词首部)
+    if querySpaced ~= "" and string.find(" " .. targetSpaced, " " .. querySpaced, 1, true) then
+        return true, 72
+    end
+
+    -- 4. 子串包含（含忽略连字符/撇号/标点的子串包含）
     if s then
         return true, 60
     end
 
-    -- 4. 多关键词分词包含 (支持空格分隔，如 "永恒 王宫" 匹配 "永恒王宫")
+    if querySpaced ~= "" and string.find(targetSpaced, querySpaced, 1, true) then
+        return true, 58
+    end
+
+    if queryCompact ~= "" and string.find(targetCompact, queryCompact, 1, true) then
+        return true, 56
+    end
+
+    -- 5. 多关键词分词包含 (支持空格分隔，如 "永恒 王宫" 或 "city echoes")
     local words = {}
-    for word in string.gmatch(queryLower, "%S+") do
+    for word in string.gmatch(querySpaced ~= "" and querySpaced or queryLower, "%S+") do
         table.insert(words, word)
     end
     if #words > 1 then
         local allMatch = true
         for _, w in ipairs(words) do
-            if not string.find(targetLower, w, 1, true) then
+            if not (string.find(targetLower, w, 1, true) or string.find(targetSpaced, w, 1, true) or string.find(targetCompact, w, 1, true)) then
                 allMatch = false
                 break
             end
@@ -268,7 +341,7 @@ local function MatchText(targetText, queryLower)
     return false, 0
 end
 
--- 搜索核心方法（优先精确匹配，杜绝无关项与重复项）
+-- 搜索核心方法（仅匹配当前客户端语言名称，优先精确匹配，杜绝无关项与重复项）
 function SearchEngine:Search(query, limit)
     limit = limit or 10
     if not isInitialized then
@@ -286,18 +359,12 @@ function SearchEngine:Search(query, limit)
     end
 
     local queryLower = string.lower(queryTrimmed)
-    local isAsciiQuery = not string.find(queryLower, "[\128-\255]")
+    local querySpaced, queryCompact = NormalizeTextForms(queryLower)
     local matched = {}
     local hasExactMatch = false
 
     for _, item in ipairs(searchIndex) do
-        local isMatch, score = MatchText(item.name, queryLower)
-
-        -- 仅当玩家输入纯英文时才回退匹配副本的英文原名备注
-        if not isMatch and isAsciiQuery and item.type ~= "zone" and item.comment and item.comment ~= "" then
-            isMatch, score = MatchText(item.comment, queryLower)
-            if isMatch then score = score - 25 end
-        end
+        local isMatch, score = MatchText(item.name, queryLower, querySpaced, queryCompact)
 
         if isMatch then
             if score == 100 then
@@ -310,7 +377,7 @@ function SearchEngine:Search(query, limit)
         end
     end
 
-    -- 如果存在名称完全一致的精确匹配（如输入“永恒王宫”），只保留完全匹配项，过滤掉其他模糊/前缀结果
+    -- 如果存在名称完全一致的精确匹配（如输入“永恒王宫”或“Freehold”），只保留完全匹配项，过滤掉其他模糊/前缀结果
     if hasExactMatch then
         local exactMatches = {}
         for _, entry in ipairs(matched) do

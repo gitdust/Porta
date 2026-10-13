@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local NavigationHUD = {}
 ns.NavigationHUD = NavigationHUD
@@ -16,22 +17,22 @@ local questWarnText = nil
 local secureOverlayBtn = nil
 
 local ACTION_LABELS = {
-    PORTAL       = "穿过传送门",
-    ZEPPELIN     = "搭乘飞艇",
-    SHIP         = "搭乘轮船",
-    WAYGATE      = "进入传送门道",
-    MIRROR       = "穿过传送之镜",
-    MOLE_MACHINE = "使用钻地机",
-    TRAM         = "搭乘矿道地铁",
-    CLASS_PORTAL = "使用职业传送门",
-    TRANSPORT    = "穿过通道",
-    FLY          = "飞行前往",
-    ARRIVE       = "抵达终点",
-    SPELL        = "施放技能",
-    ITEM         = "使用物品",
-    TOY          = "使用玩具",
-    HEARTHSTONE  = "使用炉石",
-    DIRECT       = "直接前往",
+    PORTAL       = L["HUD_ACTION_PORTAL"],
+    ZEPPELIN     = L["HUD_ACTION_ZEPPELIN"],
+    SHIP         = L["HUD_ACTION_SHIP"],
+    WAYGATE      = L["HUD_ACTION_WAYGATE"],
+    MIRROR       = L["HUD_ACTION_MIRROR"],
+    MOLE_MACHINE = L["HUD_ACTION_MOLE_MACHINE"],
+    TRAM         = L["HUD_ACTION_TRAM"],
+    CLASS_PORTAL = L["HUD_ACTION_CLASS_PORTAL"],
+    TRANSPORT    = L["HUD_ACTION_TRANSPORT"],
+    FLY          = L["HUD_ACTION_FLY"],
+    ARRIVE       = L["HUD_ACTION_ARRIVE"],
+    SPELL        = L["HUD_ACTION_SPELL"],
+    ITEM         = L["HUD_ACTION_ITEM"],
+    TOY          = L["HUD_ACTION_TOY"],
+    HEARTHSTONE  = L["HUD_ACTION_HEARTHSTONE"],
+    DIRECT       = L["HUD_ACTION_DIRECT"],
 }
 
 -- 解析 Porta 自定义超链接 (porta:toy:id / porta:item:id / porta:spell:id / porta:coord:mapID:x:y)
@@ -86,15 +87,15 @@ local function ShowPortaLinkTooltip(owner, parsed)
     GameTooltip:ClearLines()
 
     if parsed.kind == "COORD" then
-        local mapName = "当前区域"
+        local mapName = L["HUD_TOOLTIP_CURRENT_ZONE"]
         if parsed.mapID and parsed.mapID > 0 and C_Map and C_Map.GetMapInfo then
             local info = C_Map.GetMapInfo(parsed.mapID)
             if info and info.name then
                 mapName = info.name
             end
         end
-        GameTooltip:SetText(string.format("%s 坐标 (%.1f, %.1f)", mapName, parsed.x, parsed.y), 1.0, 0.82, 0.0)
-        GameTooltip:AddLine("点击：在世界地图中查看位置并设置导航航标", 0.0, 1.0, 0.4)
+        GameTooltip:SetText(string.format(L["HUD_TOOLTIP_COORD_TITLE_FMT"], mapName, parsed.x, parsed.y), 1.0, 0.82, 0.0)
+        GameTooltip:AddLine(L["HUD_TOOLTIP_COORD_CLICK"], 0.0, 1.0, 0.4)
         GameTooltip:Show()
         return
     end
@@ -120,22 +121,22 @@ local function ShowPortaLinkTooltip(owner, parsed)
         if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
             local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsed.kind == "SPELL" and "SPELL" or "ITEM", parsed.id)
             if not isReady and cdSec > 0 then
-                GameTooltip:AddLine(string.format("状态：冷却中 (剩余 %d 秒)", cdSec), 1.0, 0.35, 0.35)
+                GameTooltip:AddLine(string.format(L["HUD_TOOLTIP_STATUS_CD_FMT"], cdSec), 1.0, 0.35, 0.35)
             else
-                GameTooltip:AddLine("状态：已拥有，当前就绪", 0.0, 1.0, 0.2)
+                GameTooltip:AddLine(L["HUD_TOOLTIP_STATUS_READY"], 0.0, 1.0, 0.2)
             end
         end
         if parsed.kind == "SPELL" then
-            GameTooltip:AddLine("左键点击：立即施放该技能", 0.0, 1.0, 0.6)
+            GameTooltip:AddLine(L["HUD_TOOLTIP_LCLICK_SPELL"], 0.0, 1.0, 0.6)
         elseif parsed.kind == "TOY" then
-            GameTooltip:AddLine("左键点击：立即使用该玩具", 0.0, 1.0, 0.6)
+            GameTooltip:AddLine(L["HUD_TOOLTIP_LCLICK_TOY"], 0.0, 1.0, 0.6)
         else
-            GameTooltip:AddLine("左键点击：立即使用/穿戴该物品", 0.0, 1.0, 0.6)
+            GameTooltip:AddLine(L["HUD_TOOLTIP_LCLICK_ITEM"], 0.0, 1.0, 0.6)
         end
-        GameTooltip:AddLine("右键点击：打开固定详情窗口查看", 0.75, 0.75, 0.75)
+        GameTooltip:AddLine(L["HUD_TOOLTIP_RCLICK_DETAIL"], 0.75, 0.75, 0.75)
     else
-        GameTooltip:AddLine("⚠ " .. (missingReason or "当前角色尚未拥有该传送方式"), 1.0, 0.35, 0.25, true)
-        GameTooltip:AddLine("点击：打开详情窗口查看物品/玩具说明", 0.0, 0.85, 1.0)
+        GameTooltip:AddLine("⚠ " .. (missingReason or L["HUD_TOOLTIP_MISSING_FALLBACK"]), 1.0, 0.35, 0.25, true)
+        GameTooltip:AddLine(L["HUD_TOOLTIP_CLICK_DETAIL"], 0.0, 0.85, 1.0)
     end
 
     GameTooltip:Show()
@@ -233,7 +234,7 @@ local function BindHyperlinkScripts(targetFrame)
             -- 战斗中或回退状态下点击玩具/物品/技能链接，打开详情窗口
             OpenTeleportDetailView(parsed)
             if InCombatLockdown and InCombatLockdown() then
-                ns.Print("战斗中无法直接施放传送，已为你打开详情窗口查看。")
+                ns.Print(L["MSG_COMBAT_LOCKDOWN_CLICK"])
             end
         end
     end)
@@ -265,7 +266,7 @@ local function InitHUD()
     -- 标题：目的地
     titleText = hudFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
     titleText:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -14)
-    titleText:SetText("|cff00ccff路线指引|r")
+    titleText:SetText(L["HUD_DEFAULT_TITLE"])
 
     -- 点击目的地标题打开世界地图定位目的地
     local mapBtn = CreateFrame("Button", nil, hudFrame)
@@ -279,17 +280,17 @@ local function InitHUD()
     end)
     mapBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("点击在世界地图中定位终点航标")
+        GameTooltip:SetText(L["HUD_TITLE_TOOLTIP"])
         GameTooltip:Show()
     end)
     mapBtn:SetScript("OnLeave", function()
         GameTooltip:Hide()
     end)
 
-    -- 步骤计数 (例如 "第 1/3 步")
+    -- 步骤计数 (例如 "第 1/3 步" / "Step 1/3")
     stepCounterText = hudFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     stepCounterText:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -36, -14)
-    stepCounterText:SetText("第 1/1 步")
+    stepCounterText:SetText(string.format(L["HUD_STEP_COUNTER_FMT"], 1, 1))
 
     -- 关闭 / 取消导航按钮
     local closeBtn = CreateFrame("Button", nil, hudFrame, "UIPanelCloseButton")
@@ -382,19 +383,19 @@ local function InitHUD()
         if button == "RightButton" or not self.hasIt then
             OpenTeleportDetailView(parsed)
             if not self.hasIt and button == "LeftButton" then
-                ns.Print("|cffff6600[未拥有提示]|r " .. (self.missingReason or "当前尚未拥有该传送道具/玩具。") .. " 已为你打开详情窗口查看。")
+                ns.Print(string.format(L["MSG_CLICK_MISSING_NOTIFY_FMT"], self.missingReason or L["MSG_CLICK_MISSING_FALLBACK"]))
             end
         else
             if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
                 local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsed.kind == "SPELL" and "SPELL" or "ITEM", parsed.id)
                 if not isReady and cdSec > 0 then
-                    ns.Print(string.format("|cffff4040[冷却中]|r 该传送方式正在冷却中（剩余 %d 秒）。", cdSec))
+                    ns.Print(string.format(L["MSG_CLICK_CD_NOTIFY_FMT"], cdSec))
                     return
                 end
             end
             if parsed.kind == "ITEM" and C_Item and C_Item.IsEquippableItem and C_Item.IsEquippableItem(parsed.id) then
                 if not (C_Item.IsEquippedItem and C_Item.IsEquippedItem(parsed.id)) then
-                    ns.Print("已自动为你穿戴该传送装备，请等待 30 秒穿戴冷却结束后再次点击即可传送！")
+                    ns.Print(L["MSG_EQUIPPED_WAIT_CD"])
                 end
             end
         end
@@ -403,9 +404,9 @@ local function InitHUD()
 
     -- 下一步快捷按钮
     local nextBtn = CreateFrame("Button", nil, hudFrame, "UIPanelButtonTemplate")
-    nextBtn:SetSize(54, 22)
+    nextBtn:SetSize(56, 22)
     nextBtn:SetPoint("BOTTOMRIGHT", hudFrame, "BOTTOMRIGHT", -14, 11)
-    nextBtn:SetText("下一步")
+    nextBtn:SetText(L["HUD_BTN_NEXT"])
     nextBtn:SetScript("OnClick", function()
         ns.Navigation:NextStep()
     end)
@@ -413,9 +414,9 @@ local function InitHUD()
 
     -- 上一步快捷按钮
     local prevBtn = CreateFrame("Button", nil, hudFrame, "UIPanelButtonTemplate")
-    prevBtn:SetSize(54, 22)
+    prevBtn:SetSize(56, 22)
     prevBtn:SetPoint("RIGHT", nextBtn, "LEFT", -5, 0)
-    prevBtn:SetText("上一步")
+    prevBtn:SetText(L["HUD_BTN_PREV"])
     prevBtn:SetScript("OnClick", function()
         ns.Navigation:PrevStep()
     end)
@@ -425,7 +426,7 @@ local function InitHUD()
     local viewMapBtn = CreateFrame("Button", nil, hudFrame, "UIPanelButtonTemplate")
     viewMapBtn:SetSize(68, 22)
     viewMapBtn:SetPoint("RIGHT", prevBtn, "LEFT", -5, 0)
-    viewMapBtn:SetText("查看地图")
+    viewMapBtn:SetText(L["HUD_BTN_MAP"])
     viewMapBtn:SetScript("OnClick", function()
         local activeRoute, stepIdx = ns.Navigation:GetActiveRoute()
         if activeRoute and activeRoute.steps and activeRoute.steps[stepIdx] then
@@ -435,7 +436,7 @@ local function InitHUD()
     end)
     viewMapBtn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("在世界地图中定位并查看此步骤的具体标记")
+        GameTooltip:SetText(L["HUD_MAP_BTN_TOOLTIP"])
         GameTooltip:Show()
     end)
     viewMapBtn:SetScript("OnLeave", function()
@@ -495,9 +496,9 @@ local function UpdateAlternativeButtons(route, stepIndex)
         local isSelected = (i == selectedIdx)
         local radio = isSelected and "|cff00ffff●|r " or "|cff888888○|r "
         local distTag = (alt.distanceText and alt.distanceText ~= "") and (" - " .. alt.distanceText) or ""
-        local missingTag = alt.isMissingTeleport and string.format(" |cffff4444[%s]|r", alt.missingShortTag or "未拥有") or ""
-        local tag = (i == 1) and " |cff00ff00[推荐]|r" or (alt.isUncertainWormhole and " |cffffaa00[备选/不确定]|r" or "")
-        local label = string.format("%s方案 %d: %s%s%s%s", radio, i, alt.name, distTag, missingTag, tag)
+        local missingTag = alt.isMissingTeleport and string.format(L["STATUS_MISSING_TAG_FMT"], alt.missingShortTag or L["TAG_MISSING"]) or ""
+        local tag = (i == 1) and L["HUD_ALT_TAG_RECOMMENDED"] or (alt.isUncertainWormhole and L["HUD_ALT_TAG_UNCERTAIN"] or "")
+        local label = string.format(L["HUD_ALT_LABEL_FMT"], radio, i, alt.name, distTag, missingTag, tag)
         btn.text:SetText(label)
 
         if isSelected then
@@ -516,15 +517,15 @@ local function UpdateAlternativeButtons(route, stepIndex)
         end)
         btn:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText(string.format("点击单选切换到【方案 %d：%s】", altIndex, alt.name))
+            GameTooltip:SetText(string.format(L["HUD_ALT_TOOLTIP_TITLE_FMT"], altIndex, alt.name))
             if alt.viaDesc then
                 GameTooltip:AddLine(alt.viaDesc, 0.8, 0.8, 0.8)
             end
             if alt.isUncertainWormhole then
-                GameTooltip:AddLine("提示：虫洞发生器落点具有不确定性（随机或需自选），落地后需自行飞往目标点。", 1.0, 0.75, 0.25, true)
+                GameTooltip:AddLine(L["HUD_ALT_TOOLTIP_WORMHOLE"], 1.0, 0.75, 0.25, true)
             end
             if alt.isMissingTeleport then
-                GameTooltip:AddLine("⚠ " .. (alt.missingReason or "当前角色未检测到该玩具或物品，或不满足专业条件"), 1.0, 0.35, 0.25, true)
+                GameTooltip:AddLine("⚠ " .. (alt.missingReason or L["HUD_ALT_TOOLTIP_MISSING_FALLBACK"]), 1.0, 0.35, 0.25, true)
             end
             GameTooltip:Show()
         end)
@@ -585,8 +586,8 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     end
 
     -- 标题显示
-    titleText:SetText(string.format("|cff00ccff%s|r", route.destination.name or "目的地"))
-    stepCounterText:SetText(string.format("|cffffcc00第 %d / %d 步|r", stepIndex, route.totalSteps))
+    titleText:SetText(string.format("|cff00ccff%s|r", route.destination.name or L["HUD_DEST_FALLBACK"]))
+    stepCounterText:SetText(string.format(L["HUD_STEP_COUNTER_FMT"], stepIndex, route.totalSteps))
 
     -- 1. 多路线单选选项栏渲染 (自适应高度)
     local altOffset = UpdateAlternativeButtons(route, stepIndex)
@@ -608,27 +609,27 @@ function NavigationHUD:UpdateStep(route, stepIndex)
 
     if currentStep.isMissingTeleport and currentStep.teleportInfo then
         local tp = currentStep.teleportInfo
-        local kindLabel = (tp.type == "TOY" and "玩具") or (tp.type == "SPELL" and "技能") or "物品"
-        local tpLink = (ns.Pathfinder and ns.Pathfinder.FormatTeleportLink and ns.Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)) or ("【" .. tostring(tp.name or "") .. "】")
+        local kindLabel = (tp.type == "TOY" and L["KIND_TOY"]) or (tp.type == "SPELL" and L["KIND_SPELL"]) or L["KIND_ITEM"]
+        local tpLink = (ns.Pathfinder and ns.Pathfinder.FormatTeleportLink and ns.Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)) or ns.FormatBracket(tp.name or "")
         local headerLabel
         if tp.isOwned and (tp.missingEngineering or tp.isToyUnusable) then
-            headerLabel = string.format("不满足该传送%s使用条件（%s）", kindLabel, tp.missingShortTag or "需工程学")
+            headerLabel = string.format(L["HUD_WARN_COND_UNMET_FMT"], kindLabel, tp.missingShortTag or L["TAG_REQ_ENG"])
         elseif tp.missingEngineering then
-            headerLabel = string.format("未拥有该传送%s且需工程学专业", kindLabel)
+            headerLabel = string.format(L["HUD_WARN_MISSING_ENG_FMT"], kindLabel)
         else
-            headerLabel = string.format("未拥有该传送%s", kindLabel)
+            headerLabel = string.format(L["HUD_WARN_MISSING_FMT"], kindLabel)
         end
-        local reasonText = tp.missingReason or string.format("当前角色未检测到传送%s %s。", kindLabel, tpLink)
-        local noteLine = (tp.note and tp.note ~= "") and ("\n获取/使用说明：" .. tp.note) or ""
+        local reasonText = tp.missingReason or string.format(L["HUD_WARN_REASON_FALLBACK_FMT"], kindLabel, tpLink)
+        local noteLine = (tp.note and tp.note ~= "") and (L["HUD_WARN_NOTE_PREFIX"] .. tp.note) or ""
         table.insert(warnBlocks, string.format(
-            "|cffff6600⚠ %s|r\n%s%s\n|cffaaaaaa提示：可直接点击 %s 查看详情，或在上方切换其他备选方案。|r",
+            L["HUD_WARN_MISSING_BLOCK_FMT"],
             headerLabel, reasonText, noteLine, tpLink
         ))
     elseif currentStep.isUncertainWormhole and currentStep.teleportInfo then
         local tp = currentStep.teleportInfo
         table.insert(warnBlocks, string.format(
-            "|cffffaa00⚠ 虫洞落点不确定提示|r\n【%s】传送落点具有不确定性（随机落地或需对话选择），落地后需自行乘飞行坐骑前往目标区域。",
-            tp.name or "虫洞发生器"
+            L["HUD_WARN_WORMHOLE_BLOCK_FMT"],
+            tp.name or L["KIND_TOY"]
         ))
     end
 
@@ -636,9 +637,9 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         local gate = currentStep.questGateInfo
         local questWarnStr
         if gate.unlockGuide and gate.unlockGuide ~= "" then
-            questWarnStr = string.format("|cffff4444⚠ 传送门未解锁|r\n%s", gate.unlockGuide)
+            questWarnStr = string.format(L["HUD_WARN_QUEST_UNLOCK_FMT"], gate.unlockGuide)
         else
-            questWarnStr = string.format("|cffff4444⚠ 传送门未解锁|r\n当前角色需在%s接取%s开启；或请队友在副本门口拉人。", gate.startNPC or "主城", gate.questName or "前置任务")
+            questWarnStr = string.format(L["HUD_WARN_QUEST_FALLBACK_FMT"], gate.startNPC or L["HUD_WARN_CAPITAL_FALLBACK"], gate.questName or L["HUD_WARN_PREREQ_FALLBACK"])
         end
         table.insert(warnBlocks, questWarnStr)
     end
@@ -671,12 +672,12 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     -- 5. 下一步预告与“下一步/完成”按钮文本
     if stepIndex < route.totalSteps then
         local nextStep = route.steps[stepIndex + 1]
-        local actionLabel = (nextStep and ACTION_LABELS[nextStep.action]) or (nextStep and nextStep.action) or "前进"
-        nextStepText:SetText(string.format("后续: %s", actionLabel))
-        hudFrame.nextBtn:SetText("下一步")
+        local actionLabel = (nextStep and ACTION_LABELS[nextStep.action]) or (nextStep and nextStep.action) or L["HUD_ACTION_DEFAULT"]
+        nextStepText:SetText(string.format(L["HUD_NEXT_PREVIEW_FMT"], actionLabel))
+        hudFrame.nextBtn:SetText(L["HUD_BTN_NEXT"])
     else
-        nextStepText:SetText("|cff00ff00即将抵达目的地！|r")
-        hudFrame.nextBtn:SetText("完成")
+        nextStepText:SetText(L["HUD_ARRIVING_SOON"])
+        hudFrame.nextBtn:SetText(L["HUD_BTN_DONE"])
     end
 
     -- 6. 动态总高度计算：顶部(36) + 方案栏(altOffset) + 描述(descHeight) + 警告框(questWarnHeight) + 底部按钮间距(48)

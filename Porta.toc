@@ -1,7 +1,11 @@
 ## Interface: 110007, 110100, 110200, 120000, 120001, 120005, 120007, 120100, 120105
-## Title: |cff00ccffPorta|r - 传送与路线导航
-## Notes: 游戏内快速搜索目标地点与副本，提供最优前往步骤与导航
+## Title: |cff00ccffPorta|r - Portal & Route Navigator
+## Title-zhCN: |cff00ccffPorta|r - 传送与路线导航
+## Title-zhTW: |cff00ccffPorta|r - 傳送與路線導航
+## Title-enUS: |cff00ccffPorta|r - Portal & Route Navigator
+## Notes: Fast in-game search for destinations and dungeons, step-by-step route planning.
 ## Notes-zhCN: 游戏内快速搜索目标地点与副本，提供最优前往步骤与导航
+## Notes-zhTW: 遊戲內快速搜尋目標地點與副本，提供最優前往步驟與導航
 ## Notes-enUS: Fast in-game search for destinations and dungeons, step-by-step route planning.
 ## Author: PORTA Team
 ## Version: 1.0.0
@@ -13,6 +17,7 @@ Data\MapNotesData.lua
 
 # 核心系统
 Core\Init.lua
+Core\Locales.lua
 Core\PlayerTeleports.lua
 Core\SearchEngine.lua
 Core\Pathfinder.lua

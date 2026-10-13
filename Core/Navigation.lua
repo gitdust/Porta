@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local Navigation = {}
 ns.Navigation = Navigation
@@ -52,7 +53,7 @@ local function SetTomTomWaypoint(mapID, x, y, title)
         end
         if mapID and x and y and x > 0 and y > 0 then
             tomtomWaypoint = TomTom:AddWaypoint(mapID, x, y, {
-                title = StripHyperlinksAndIcons(title or "Porta 导航目标"),
+                title = StripHyperlinksAndIcons(title or L["TOMTOM_DEFAULT_TITLE"]),
                 persistent = false,
                 minimap = true,
                 world = true,
@@ -88,7 +89,7 @@ function Navigation:FocusCoordinate(mapID, x, y, label)
     local normX = (x > 1.0) and (x / 100.0) or x
     local normY = (y > 1.0) and (y / 100.0) or y
 
-    local mapName = "目标地图"
+    local mapName = L["UNKNOWN_MAP"]
     if C_Map and C_Map.GetMapInfo and mapID > 0 then
         local info = C_Map.GetMapInfo(mapID)
         if info and info.name then
@@ -100,7 +101,7 @@ function Navigation:FocusCoordinate(mapID, x, y, label)
     SetTomTomWaypoint(mapID, normX, normY, label or string.format("%s (%.1f, %.1f)", mapName, normX * 100, normY * 100))
     self:OpenWorldMap(mapID)
 
-    ns.Print(string.format("已定位【%s】坐标 |cffffd100(%.1f, %.1f)|r 并设置超追踪航标！", mapName, normX * 100, normY * 100))
+    ns.Print(string.format(L["MSG_FOCUS_COORD_FMT"], mapName, normX * 100, normY * 100))
 end
 
 -- 检查并提示当前方案中缺失的传送玩具或物品
@@ -109,9 +110,9 @@ local function NotifyMissingTeleportIfAny(route)
     for _, step in ipairs(route.steps) do
         if step.isMissingTeleport and step.teleportInfo then
             local tp = step.teleportInfo
-            local kindName = (tp.type == "TOY" and "玩具") or (tp.type == "SPELL" and "技能") or "物品"
-            local reason = tp.missingReason or string.format("当前未检测到该%s", kindName)
-            ns.Print(string.format("|cffff6600[未拥有提示]|r 当前方案包含传送%s【%s】，但%s你可在导航窗口中点击名称查看详情，或切换其他备选方案。", kindName, tp.name or "", reason))
+            local kindName = (tp.type == "TOY" and L["KIND_TOY"]) or (tp.type == "SPELL" and L["KIND_SPELL"]) or L["KIND_ITEM"]
+            local reason = tp.missingReason or string.format(L["MSG_MISSING_TELEPORT_REASON_FALLBACK_FMT"], kindName)
+            ns.Print(string.format(L["MSG_MISSING_TELEPORT_NOTIFY_FMT"], kindName, tp.name or "", reason))
             break
         end
     end
@@ -122,7 +123,7 @@ end
 -- =========================================================================
 function Navigation:StartRoute(route)
     if not route or not route.steps or #route.steps == 0 then
-        ns.Print("无法启动空路线导航")
+        ns.Print(L["ERR_EMPTY_ROUTE"])
         return
     end
 
@@ -135,8 +136,8 @@ function Navigation:StartRoute(route)
     SetBlizzardWaypoint(dest.mapID, dest.x, dest.y)
     SetTomTomWaypoint(dest.mapID, dest.x, dest.y, dest.name)
 
-    ns.Print(string.format("已启动前往【%s】的路线导航（共 %d 步）", dest.name, route.totalSteps))
-    ns.Print(string.format("已自动在地图【%s】(%.1f, %.1f) 设置目的地航标点！", dest.zoneName or ("地图 #" .. dest.mapID), dest.x * 100, dest.y * 100))
+    ns.Print(string.format(L["MSG_ROUTE_STARTED_FMT"], dest.name, route.totalSteps))
+    ns.Print(string.format(L["MSG_WAYPOINT_SET_FMT"], dest.zoneName or string.format(L["MAP_FALLBACK_FMT"], tostring(dest.mapID)), dest.x * 100, dest.y * 100))
 
     -- 若当前默认方案使用了玩家尚未拥有的玩具/物品，主动提示
     NotifyMissingTeleportIfAny(activeRoute)
@@ -202,9 +203,9 @@ function Navigation:SelectAlternativeRoute(altIndex)
         ns.NavigationHUD:ShowRoute(activeRoute, currentStepIndex)
     end
 
-    local altName = alt.name or ("方案 " .. tostring(altIndex))
+    local altName = alt.name or string.format(L["ALT_OPTION_FALLBACK_FMT"], altIndex)
     local distInfo = (alt.distanceText and alt.distanceText ~= "") and (" (" .. alt.distanceText .. ")") or ""
-    ns.Print(string.format("已切换至【%s%s】，地图追踪标记已同步更新！", altName, distInfo))
+    ns.Print(string.format(L["MSG_SWITCHED_ALT_FMT"], altName, distInfo))
     NotifyMissingTeleportIfAny(activeRoute)
 end
 
@@ -214,7 +215,7 @@ function Navigation:PrevStep()
 
     if currentStepIndex > 1 then
         currentStepIndex = currentStepIndex - 1
-        ns.Print(string.format("已回退到第 %d/%d 步", currentStepIndex, activeRoute.totalSteps))
+        ns.Print(string.format(L["MSG_STEP_PREV_FMT"], currentStepIndex, activeRoute.totalSteps))
         self:ApplyCurrentStep()
     end
 end
@@ -225,7 +226,7 @@ function Navigation:NextStep()
 
     if currentStepIndex < activeRoute.totalSteps then
         currentStepIndex = currentStepIndex + 1
-        ns.Print(string.format("已推进到第 %d/%d 步", currentStepIndex, activeRoute.totalSteps))
+        ns.Print(string.format(L["MSG_STEP_NEXT_FMT"], currentStepIndex, activeRoute.totalSteps))
         self:ApplyCurrentStep()
     else
         self:FinishRoute()
@@ -235,7 +236,7 @@ end
 -- 路线结束
 function Navigation:FinishRoute()
     if not activeRoute then return end
-    ns.Print(string.format("已顺利抵达目的地【%s】！导航结束。", activeRoute.destination.name))
+    ns.Print(string.format(L["MSG_ROUTE_FINISHED_FMT"], activeRoute.destination.name))
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
     activeRoute = nil
@@ -249,7 +250,7 @@ end
 -- 取消导航
 function Navigation:CancelRoute()
     if not activeRoute then return end
-    ns.Print("已取消当前导航。")
+    ns.Print(L["MSG_ROUTE_CANCELLED"])
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
     activeRoute = nil

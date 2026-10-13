@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local SearchDialog = {}
 ns.SearchDialog = SearchDialog
@@ -61,7 +62,7 @@ local function RenderResults()
         if item then
             btn:Show()
             btn.nameText:SetText(item.name)
-            btn.metaText:SetText(string.format("%s[%s]|r  |cff888888%s|r", item.color or "|cffffffff", item.tag or "地点", item.zoneName or ""))
+            btn.metaText:SetText(string.format("%s[%s]|r  |cff888888%s|r", item.color or "|cffffffff", item.tag or L["TAG_PLACE"], item.zoneName or ""))
 
             if i == selectedIndex then
                 btn.bg:SetColorTexture(0.0, 0.5, 0.8, 0.45)
@@ -120,11 +121,11 @@ local function InitFrame()
     -- 标题
     local title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, 2)
-    title:SetText("|cff00ccffPorta|r |cffffffff导航检索|r")
+    title:SetText(L["SEARCH_TITLE"])
 
     local subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
-    subtitle:SetText("输入准确的副本或区域地名（支持模糊匹配）")
+    subtitle:SetText(L["SEARCH_SUBTITLE"])
 
     -- 关闭按钮
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -189,7 +190,7 @@ local function InitFrame()
     -- 底部提示栏
     local footer = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
-    footer:SetText("[↑ / ↓] 切换项    [Enter] 开始导航    [Esc] 关闭")
+    footer:SetText(L["SEARCH_FOOTER"])
 
     -- 创建结果条目
     for i = 1, MAX_VISIBLE_RESULTS do

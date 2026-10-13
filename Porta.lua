@@ -12,17 +12,24 @@ SlashCmdList["PORTA"] = function(msg)
     end
 end
 
+local L = ns.L
+
 -- 按键绑定显示文本 (在游戏按键绑定设置界面显示)
-_G["BINDING_HEADER_PORTA"] = "Porta 路线导航"
-_G["BINDING_NAME_PORTA_TOGGLE"] = "唤出/关闭导航搜索框"
+_G["BINDING_HEADER_PORTA"] = L["BINDING_HEADER"]
+_G["BINDING_NAME_PORTA_TOGGLE"] = L["BINDING_TOGGLE"]
 
 -- 监听玩家进入游戏世界
 ns.EventFrame:RegisterEvent("PLAYER_LOGIN")
 function ns.EventFrame:PLAYER_LOGIN()
+    -- 预热传送物品/玩具/技能名称缓存
+    if ns.PlayerTeleports and ns.PlayerTeleports.PreloadCache then
+        ns.PlayerTeleports:PreloadCache()
+    end
+
     -- 初始化搜索索引
     if ns.SearchEngine then
         ns.SearchEngine:Initialize()
     end
 
-    ns.Print("已加载完成！输入 |cffffcc00/porta|r 快速打开目的地搜索。")
+    ns.Print(L["ADDON_LOADED_MSG"])
 end

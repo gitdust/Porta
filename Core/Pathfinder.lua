@@ -1,4 +1,5 @@
 local _, ns = ...
+local L = ns.L
 
 local Pathfinder = {}
 ns.Pathfinder = Pathfinder
@@ -7,16 +8,16 @@ ns.Pathfinder = Pathfinder
 -- 1. 交通方式显示文本与基础代价权重
 -- =========================================================================
 local TRANSPORT_TEXT = {
-    PORTAL        = "穿过传送门",
-    ZEPPELIN      = "乘坐飞艇",
-    SHIP          = "乘坐轮船",
-    WAYGATE       = "进入传送门道",
-    MIRROR        = "穿过传送之镜",
-    MOLE_MACHINE  = "使用钻地机",
-    TRAM          = "乘坐矿道地铁",
-    CLASS_PORTAL  = "使用职业传送门",
-    TRANSPORT     = "穿过通道",
-    FLY           = "召唤飞行坐骑飞行",
+    PORTAL        = L["TRANSPORT_PORTAL"],
+    ZEPPELIN      = L["TRANSPORT_ZEPPELIN"],
+    SHIP          = L["TRANSPORT_SHIP"],
+    WAYGATE       = L["TRANSPORT_WAYGATE"],
+    MIRROR        = L["TRANSPORT_MIRROR"],
+    MOLE_MACHINE  = L["TRANSPORT_MOLE_MACHINE"],
+    TRAM          = L["TRANSPORT_TRAM"],
+    CLASS_PORTAL  = L["TRANSPORT_CLASS_PORTAL"],
+    TRANSPORT     = L["TRANSPORT_PASSAGE"],
+    FLY           = L["TRANSPORT_FLY"],
 }
 
 local EDGE_COSTS = {
@@ -39,49 +40,49 @@ local PORTAL_QUEST_GATES = {
     [1355] = {
         HORDE = {
             questIDs = { 55095, 55122, 56043 }, -- 发送舰队 / 新生家园 / 下潜
-            questName = "《发送舰队》/《新生家园》",
-            startNPC = "达萨罗大封印【纳萨诺斯·凋零者】",
-            unlockGuide = "当前角色尚未完成纳沙塔尔开启任务！请在达萨罗大封印找【纳萨诺斯·凋零者】接取《发送舰队》完成短剧情开启传送门；或请队友在副本门口集合石直接拉人。",
+            questName = L["GATE_NAZJATAR_H_QUEST"],
+            startNPC = L["GATE_NAZJATAR_H_NPC"],
+            unlockGuide = L["GATE_NAZJATAR_H_GUIDE"],
         },
         ALLIANCE = {
             questIDs = { 54022, 55121, 56044, 55175 }, -- 发送舰队 / 麦扎梅尔
-            questName = "《发送舰队》/《麦扎梅尔》",
-            startNPC = "伯拉勒斯港口【吉恩·格雷迈恩】",
-            unlockGuide = "当前角色尚未完成纳沙塔尔开启任务！请在伯拉勒斯港口找【吉恩·格雷迈恩】接取《发送舰队》完成短剧情开启传送门；或请队友在副本门口集合石直接拉人。",
+            questName = L["GATE_NAZJATAR_A_QUEST"],
+            startNPC = L["GATE_NAZJATAR_A_NPC"],
+            unlockGuide = L["GATE_NAZJATAR_A_GUIDE"],
         },
     },
     -- 阿古斯维迪卡尔 (971 / 885 / 882)
     [971] = {
-        HORDE = { questIDs = { 47221, 47835, 48440 }, questName = "《命运之手》", startNPC = "达拉然克拉苏斯平台【卡德加】", unlockGuide = "需在达拉然克拉苏斯平台找【卡德加】完成阿古斯序幕任务《命运之手》开启维迪卡尔圣光信标。" },
-        ALLIANCE = { questIDs = { 47221, 47835, 48440 }, questName = "《命运之手》", startNPC = "达拉然克拉苏斯平台【卡德加】", unlockGuide = "需在达拉然克拉苏斯平台找【卡德加】完成阿古斯序幕任务《命运之手》开启维迪卡尔圣光信标。" },
+        HORDE = { questIDs = { 47221, 47835, 48440 }, questName = L["GATE_ARGUS_QUEST"], startNPC = L["GATE_ARGUS_NPC"], unlockGuide = L["GATE_ARGUS_GUIDE"] },
+        ALLIANCE = { questIDs = { 47221, 47835, 48440 }, questName = L["GATE_ARGUS_QUEST"], startNPC = L["GATE_ARGUS_NPC"], unlockGuide = L["GATE_ARGUS_GUIDE"] },
     },
     -- 麦卡贡 (1462)
     [1462] = {
-        HORDE = { questIDs = { 55651, 55609 }, questName = "《麦卡贡的传说》", startNPC = "达萨罗大封印旁边【加兹鲁维】", unlockGuide = "需先解锁纳沙塔尔并在达萨罗接取《麦卡贡的传说》开启麦卡贡航线；或直接从库尔提拉斯飞行前往。" },
-        ALLIANCE = { questIDs = { 54992, 55609 }, questName = "《麦卡贡的传说》", startNPC = "伯拉勒斯【吉尔宾·梅卡托克】侍从", unlockGuide = "需先解锁纳沙塔尔并在伯拉勒斯接取《麦卡贡的传说》开启麦卡贡航线；或直接在库尔提拉斯飞行前往。" },
+        HORDE = { questIDs = { 55651, 55609 }, questName = L["GATE_MECHAGON_H_QUEST"], startNPC = L["GATE_MECHAGON_H_NPC"], unlockGuide = L["GATE_MECHAGON_H_GUIDE"] },
+        ALLIANCE = { questIDs = { 54992, 55609 }, questName = L["GATE_MECHAGON_A_QUEST"], startNPC = L["GATE_MECHAGON_A_NPC"], unlockGuide = L["GATE_MECHAGON_A_GUIDE"] },
     },
     -- 深岩之洲 (207)
     [207] = {
-        HORDE = { questIDs = { 27727 }, questName = "《大地的裂变：深岩之洲》", startNPC = "奥格瑞玛西部大地神殿", unlockGuide = "需在奥格瑞玛西部大地神殿接取大地的裂变引导任务开启深岩之洲传送门。" },
-        ALLIANCE = { questIDs = { 27722 }, questName = "《大地的裂变：深岩之洲》", startNPC = "暴风城东部大地神殿", unlockGuide = "需在暴风城东部大地神殿接取大地的裂变引导任务开启深岩之洲传送门。" },
+        HORDE = { questIDs = { 27727 }, questName = L["GATE_DEEPHOLM_QUEST"], startNPC = L["GATE_DEEPHOLM_H_NPC"], unlockGuide = L["GATE_DEEPHOLM_H_GUIDE"] },
+        ALLIANCE = { questIDs = { 27722 }, questName = L["GATE_DEEPHOLM_QUEST"], startNPC = L["GATE_DEEPHOLM_A_NPC"], unlockGuide = L["GATE_DEEPHOLM_A_GUIDE"] },
     },
     -- 暮光高地 (241)
     [241] = {
-        HORDE = { questIDs = { 28716, 26798 }, questName = "《暮光高地前序任务》", startNPC = "奥格瑞玛大地神殿/力量谷", unlockGuide = "需完成大地的裂变暮光高地前置任务开启传送门，或直接从东部王国飞行前往。" },
-        ALLIANCE = { questIDs = { 28717, 26797 }, questName = "《暮光高地前序任务》", startNPC = "暴风城大地神殿/暴风要塞", unlockGuide = "需完成大地的裂变暮光高地前置任务开启传送门，或直接从东部王国飞行前往。" },
+        HORDE = { questIDs = { 28716, 26798 }, questName = L["GATE_TWILIGHT_QUEST"], startNPC = L["GATE_TWILIGHT_H_NPC"], unlockGuide = L["GATE_TWILIGHT_H_GUIDE"] },
+        ALLIANCE = { questIDs = { 28717, 26797 }, questName = L["GATE_TWILIGHT_QUEST"], startNPC = L["GATE_TWILIGHT_A_NPC"], unlockGuide = L["GATE_TWILIGHT_A_GUIDE"] },
     },
     -- 刻希亚 (1961)
     [1961] = {
-        NEUTRAL = { questIDs = { 63662, 63902 }, questName = "《统御之链：骑乘暗影》", startNPC = "奥利波斯【伯瓦尔·弗塔根】", unlockGuide = "需在奥利波斯完成 9.1 统御之链序幕开启刻希亚传送门。" },
+        NEUTRAL = { questIDs = { 63662, 63902 }, questName = L["GATE_KORTHIA_QUEST"], startNPC = L["GATE_KORTHIA_NPC"], unlockGuide = L["GATE_KORTHIA_GUIDE"] },
     },
     -- 扎雷殁提斯 (1970)
     [1970] = {
-        NEUTRAL = { questIDs = { 64957, 64942 }, questName = "《永恒的终结：破晓行动》", startNPC = "奥利波斯【塔尔-伊纳拉】", unlockGuide = "需在奥利波斯完成 9.2 永恒的终结序幕任务开启扎雷殁提斯传送门。" },
+        NEUTRAL = { questIDs = { 64957, 64942 }, questName = L["GATE_ZERETH_QUEST"], startNPC = L["GATE_ZERETH_NPC"], unlockGuide = L["GATE_ZERETH_GUIDE"] },
     },
     -- 雷神岛 (504)
     [504] = {
-        HORDE = { questIDs = { 32680 }, questName = "《雷电王座：风暴聚集》", startNPC = "螳螂高原影踪卫戍营【洛瑟玛·塞隆】", unlockGuide = "需在螳螂高原影踪卫戍营接取《风暴聚集》任务开启雷神岛传送门。" },
-        ALLIANCE = { questIDs = { 32681 }, questName = "《雷电王座：风暴聚集》", startNPC = "螳螂高原影踪卫戍营【温蕾萨·风行者】", unlockGuide = "需在螳螂高原影踪卫戍营接取《风暴聚集》任务开启雷神岛传送门。" },
+        HORDE = { questIDs = { 32680 }, questName = L["GATE_ISLE_THUNDER_QUEST"], startNPC = L["GATE_ISLE_THUNDER_H_NPC"], unlockGuide = L["GATE_ISLE_THUNDER_H_GUIDE"] },
+        ALLIANCE = { questIDs = { 32681 }, questName = L["GATE_ISLE_THUNDER_QUEST"], startNPC = L["GATE_ISLE_THUNDER_A_NPC"], unlockGuide = L["GATE_ISLE_THUNDER_A_GUIDE"] },
     },
 }
 
@@ -99,13 +100,13 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
     if edge and edge.achievementID and GetAchievementInfo then
         local ok, _, achName, _, completed, _, _, _, description = pcall(GetAchievementInfo, edge.achievementID)
         if ok and completed == false then
-            local displayAch = (achName and achName ~= "") and ("【" .. achName .. "】") or ("成就 #" .. tostring(edge.achievementID))
-            local descHint = (description and description ~= "") and ("（" .. description .. "）") or ""
+            local displayAch = (achName and achName ~= "") and ns.FormatBracket(achName) or string.format(L["ACHIEVEMENT_FALLBACK_FMT"], tostring(edge.achievementID))
+            local descHint = (description and description ~= "") and (" (" .. description .. ")") or ""
             return false, {
                 achievementID = edge.achievementID,
-                questName = "成就" .. displayAch,
-                startNPC = "当前版本战役/探索成就",
-                unlockGuide = string.format("该传送门需达成前置成就%s%s方可开启；或请队友在副本集合石直接拉人。", displayAch, descHint),
+                questName = string.format(L["GATE_ACH_PREFIX_FMT"], displayAch),
+                startNPC = L["GATE_ACH_START_NPC"],
+                unlockGuide = string.format(L["GATE_ACH_UNLOCK_FMT"], displayAch, descHint),
             }
         end
     end
@@ -118,12 +119,12 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
                 pcall(C_QuestLog.RequestLoadQuestByID, edge.questID)
             end
             local dynamicTitle = C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(edge.questID)
-            local displayQuest = (dynamicTitle and dynamicTitle ~= "") and ("《" .. dynamicTitle .. "》") or ("任务 #" .. tostring(edge.questID))
+            local displayQuest = (dynamicTitle and dynamicTitle ~= "") and string.format(L["QUEST_TITLE_FMT"], dynamicTitle) or string.format(L["QUEST_FALLBACK_FMT"], tostring(edge.questID))
             return false, {
                 questIDs = { edge.questID },
                 questName = displayQuest,
-                startNPC = "对应区域主线引导 NPC",
-                unlockGuide = string.format("该传送通道需先完成前置任务%s（任务ID: %d）后开启；或请队友在副本集合石直接拉人。", displayQuest, edge.questID),
+                startNPC = L["GATE_QUEST_START_NPC"],
+                unlockGuide = string.format(L["GATE_QUEST_UNLOCK_FMT"], displayQuest, edge.questID),
             }
         end
     end
@@ -152,7 +153,7 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
             end
             local t = C_QuestLog.GetTitleForQuestID(qID)
             if t and t ~= "" then
-                dynamicTitle = "《" .. t .. "》"
+                dynamicTitle = string.format(L["QUEST_TITLE_FMT"], t)
             end
         end
     end
@@ -167,16 +168,16 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
     return isUnlocked, factionConfig
 end
 
--- 获取友好的地图名称
+-- 获取友好的地图名称（当前客户端语言）
 local function GetMapDisplayName(mapID)
-    if not mapID then return "未知地图" end
+    if not mapID then return L["UNKNOWN_MAP"] end
     if C_Map and C_Map.GetMapInfo then
         local info = C_Map.GetMapInfo(mapID)
         if info and info.name then
             return info.name
         end
     end
-    return "地图 #" .. tostring(mapID)
+    return string.format(L["MAP_FALLBACK_FMT"], tostring(mapID))
 end
 
 -- =========================================================================
@@ -223,13 +224,13 @@ function Pathfinder:GetDistanceInYards(mapID, targetX, targetY)
     return nil
 end
 
--- 格式化距离文本 (例如 "450码" 或 "1.8千码")
+-- 格式化距离文本 (例如 "450码"/"450 yds" 或 "1.8千码"/"1.8k yds")
 local function FormatDistanceText(yards)
     if not yards then return "" end
     if yards >= 1000 then
-        return string.format("%.1f千码", yards / 1000)
+        return string.format(L["DIST_KYARDS_FMT"], yards / 1000)
     else
-        return string.format("%d码", yards)
+        return string.format(L["DIST_YARDS_FMT"], yards)
     end
 end
 
@@ -237,7 +238,9 @@ end
 -- 2.5 可点击富文本超链接格式化工具 (玩具 / 物品 / 技能 / 坐标)
 -- =========================================================================
 function Pathfinder:FormatTeleportLink(kind, id, name)
-    if not id or not name then return "【" .. tostring(name or "未知") .. "】" end
+    if not id or not name then
+        return ns.FormatBracket(name or L["UNKNOWN_NAME"])
+    end
     local uKind = string.upper(tostring(kind or "ITEM"))
     local linkKind = "item"
     local color = "|cff00ff99"
@@ -270,7 +273,7 @@ function Pathfinder:FormatTeleportLink(kind, id, name)
     end
 
     local iconTag = icon and string.format("|T%s:14:14:0:0|t", tostring(icon)) or ""
-    return string.format("%s|Hporta:%s:%d|h%s【%s】|r|h", iconTag, linkKind, id, color, name)
+    return string.format("%s|Hporta:%s:%d|h%s%s|r|h", iconTag, linkKind, id, color, ns.FormatBracket(name))
 end
 
 function Pathfinder:FormatCoordLink(mapID, x, y)
@@ -655,27 +658,36 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
     return dist, nextEdge, fwdAdj
 end
 
+-- 辅助：获取黑铁矮人钻地机的当前客户端语言名称
+local function GetMoleMachineName()
+    if ns.PlayerTeleports and ns.PlayerTeleports.GetSpellDisplayName then
+        return ns.PlayerTeleports:GetSpellDisplayName(265225, L["SPELL_NAME_265225"])
+    end
+    return L["SPELL_NAME_265225"]
+end
+
 -- 辅助：获取交通动作描述（若为黑铁钻地机，则内嵌可点击技能链接）
 local function GetEdgeVerbText(edgeType)
     if edgeType == "MOLE_MACHINE" then
-        return "使用 " .. Pathfinder:FormatTeleportLink("SPELL", 265225, "钻地机") .. " "
+        local moleName = GetMoleMachineName()
+        return string.format(L["TRANSPORT_USE_MOLE_FMT"], Pathfinder:FormatTeleportLink("SPELL", 265225, moleName))
     end
-    return TRANSPORT_TEXT[edgeType] or "前往"
+    return TRANSPORT_TEXT[edgeType] or L["TRANSPORT_DEFAULT"]
 end
 
 -- 辅助：构建最终到达终点步骤（内嵌可点击坐标链接）
 local function BuildFinalArriveStep(stepIndex, destination)
     local finalDesc
-    local isMoltenCore = (destination.id == 741) or (destination.name and destination.name:find("熔火之心"))
+    local isMoltenCore = (destination.id == 741)
 
     if destination.type == "zone" or destination.type == "continent" then
-        finalDesc = string.format("抵达【%s】，已成功进入目标区域！", destination.name)
+        finalDesc = string.format(L["STEP_ARRIVE_ZONE"], destination.name)
     else
         local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
-        finalDesc = string.format("抵达【%s】，前往【%s】入口 %s", GetMapDisplayName(destination.mapID), destination.name, entryCoord)
+        finalDesc = string.format(L["STEP_ARRIVE_INSTANCE"], GetMapDisplayName(destination.mapID), destination.name, entryCoord)
         if isMoltenCore then
             local mcNpcCoord = Pathfinder:FormatCoordLink(33, 0.543, 0.848)
-            finalDesc = finalDesc .. string.format("\n\n|cff00ff00[便捷提示]|r 在黑石山坐标 %s 亦可直接与【洛索斯·天痕】对话传送进入！", mcNpcCoord)
+            finalDesc = finalDesc .. string.format(L["STEP_ARRIVE_MC_HINT"], mcNpcCoord)
         end
     end
 
@@ -704,28 +716,30 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
     local toName = GetMapDisplayName(startEdge.to)
     local verb = GetEdgeVerbText(startEdge.type)
     local distYards = Pathfinder:GetDistanceInYards(startEdge.from, startEdge.x, startEdge.y)
-    local distTag = distYards and (" [距离: " .. FormatDistanceText(distYards) .. "]") or ""
+    local distTag = distYards and string.format(L["STEP_DIST_TAG_FMT"], FormatDistanceText(distYards)) or ""
     local startCoord = Pathfinder:FormatCoordLink(startEdge.from, startEdge.x, startEdge.y)
 
     local firstUnlocked, firstGate = Pathfinder:CheckPortalQuestStatus(startEdge, playerFaction)
 
     local firstDesc
     if startEdge.type == "FLY" then
-        firstDesc = string.format("在【%s】召唤飞行坐骑，飞行前往【%s】", fromName, toName)
+        firstDesc = string.format(L["STEP_START_FLY"], fromName, toName)
     elseif startEdge.type == "PORTAL" then
-        firstDesc = string.format("在【%s】前往坐标 %s%s，穿过传送门前往【%s】", fromName, startCoord, distTag, toName)
+        firstDesc = string.format(L["STEP_START_PORTAL"], fromName, startCoord, distTag, toName)
     elseif startEdge.type == "SHIP" then
-        firstDesc = string.format("在【%s】前往码头坐标 %s%s，乘坐轮船前往【%s】", fromName, startCoord, distTag, toName)
+        firstDesc = string.format(L["STEP_START_SHIP"], fromName, startCoord, distTag, toName)
     elseif startEdge.type == "ZEPPELIN" then
-        firstDesc = string.format("在【%s】前往飞艇塔坐标 %s%s，乘坐飞艇前往【%s】", fromName, startCoord, distTag, toName)
+        firstDesc = string.format(L["STEP_START_ZEPPELIN"], fromName, startCoord, distTag, toName)
     elseif startEdge.type == "TRANSPORT" then
-        firstDesc = string.format("在【%s】前往坐标 %s%s，穿过通道进入【%s】", fromName, startCoord, distTag, toName)
+        firstDesc = string.format(L["STEP_START_TRANSPORT"], fromName, startCoord, distTag, toName)
     else
-        firstDesc = string.format("在【%s】前往坐标 %s%s，%s前往【%s】", fromName, startCoord, distTag, verb, toName)
+        firstDesc = string.format(L["STEP_START_GENERIC"], fromName, startCoord, distTag, verb, toName)
     end
     if not firstUnlocked and firstGate then
-        firstDesc = firstDesc .. " |cffff4444[需解锁前置条件]|r"
+        firstDesc = firstDesc .. L["QUEST_GATE_INLINE_TAG"]
     end
+
+    local moleName = (startEdge.type == "MOLE_MACHINE") and GetMoleMachineName() or nil
 
     table.insert(steps, {
         stepIndex = stepCount,
@@ -739,7 +753,7 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         distanceYards = distYards,
         isQuestGated = (not firstUnlocked and firstGate ~= nil),
         questGateInfo = (not firstUnlocked and firstGate ~= nil) and firstGate or nil,
-        teleportInfo = (startEdge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = "钻地机", hasItem = true } or nil,
+        teleportInfo = (startEdge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = moleName, hasItem = true } or nil,
     })
 
     -- 沿后继指针继续推导
@@ -760,17 +774,17 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         local tName = GetMapDisplayName(edge.to)
         local v = GetEdgeVerbText(edge.type)
         local isUnlocked, gateConfig = Pathfinder:CheckPortalQuestStatus(edge, playerFaction)
+        local questTag = (not isUnlocked and gateConfig) and L["QUEST_GATE_INLINE_TAG"] or ""
 
         local desc
         if edge.type == "FLY" then
-            desc = string.format("在【%s】召唤飞行坐骑，飞行前往【%s】", fName, tName)
+            desc = string.format(L["STEP_HOP_FLY"], fName, tName, questTag)
         else
             local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            desc = string.format("在【%s】前往坐标 %s，%s前往【%s】", fName, edgeCoord, v, tName)
+            desc = string.format(L["STEP_HOP_GENERIC"], fName, edgeCoord, v, tName, questTag)
         end
-        if not isUnlocked and gateConfig then
-            desc = desc .. " |cffff4444[需解锁前置条件]|r"
-        end
+
+        local hopMoleName = (edge.type == "MOLE_MACHINE") and GetMoleMachineName() or nil
 
         table.insert(steps, {
             stepIndex = stepCount,
@@ -783,7 +797,7 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
             isFinal = false,
             isQuestGated = (not isUnlocked and gateConfig ~= nil),
             questGateInfo = (not isUnlocked and gateConfig ~= nil) and gateConfig or nil,
-            teleportInfo = (edge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = "钻地机", hasItem = true } or nil,
+            teleportInfo = (edge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = hopMoleName, hasItem = true } or nil,
         })
 
         currNode = edge.to
@@ -809,18 +823,18 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
 
     local statusTag = ""
     if not tp.hasItem then
-        statusTag = string.format(" |cffff4444[%s]|r", tp.missingShortTag or "未拥有")
+        statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], tp.missingShortTag or L["TAG_MISSING"])
     elseif not tp.isReady and (tp.cdSeconds or 0) > 0 then
-        statusTag = string.format(" |cffff4040[CD: %d秒]|r", tp.cdSeconds)
+        statusTag = string.format(L["STATUS_CD_TAG_FMT"], tp.cdSeconds)
     else
-        statusTag = " |cff00ff00[就绪]|r"
+        statusTag = L["STATUS_READY_TAG"]
     end
 
-    local actionPrefix = "使用物品"
+    local actionPrefix = L["ACTION_USE_ITEM"]
     if tp.type == "SPELL" then
-        actionPrefix = "施放技能"
+        actionPrefix = L["ACTION_CAST_SPELL"]
     elseif tp.type == "TOY" then
-        actionPrefix = "使用玩具"
+        actionPrefix = L["ACTION_USE_TOY"]
     end
 
     local toMapName = GetMapDisplayName(tp.toMap)
@@ -833,7 +847,7 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
         y = tp.y or 0.5,
         toMapID = tp.toMap,
         action = tp.type,
-        description = string.format("%s %s%s 传送前往【%s】 %s%s", actionPrefix, linkStr, statusTag, toMapName, coordStr, noteSuffix),
+        description = string.format(L["STEP_TELEPORT_USE"], actionPrefix, linkStr, statusTag, toMapName, coordStr, noteSuffix),
         isFinal = false,
         isMissingTeleport = (not tp.hasItem),
         teleportInfo = tp,
@@ -855,15 +869,17 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
         local tName = GetMapDisplayName(edge.to)
         local v = GetEdgeVerbText(edge.type)
         local isUnlocked, gateConfig = Pathfinder:CheckPortalQuestStatus(edge, playerFaction)
-        local questTag = (not isUnlocked and gateConfig) and " |cffff4444[需解锁前置条件]|r" or ""
+        local questTag = (not isUnlocked and gateConfig) and L["QUEST_GATE_INLINE_TAG"] or ""
 
         local stepDesc
         if edge.type == "FLY" then
-            stepDesc = string.format("在【%s】召唤飞行坐骑，飞行前往【%s】%s", fName, tName, questTag)
+            stepDesc = string.format(L["STEP_HOP_FLY"], fName, tName, questTag)
         else
             local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            stepDesc = string.format("在【%s】前往坐标 %s，%s前往【%s】%s", fName, edgeCoord, v, tName, questTag)
+            stepDesc = string.format(L["STEP_HOP_GENERIC"], fName, edgeCoord, v, tName, questTag)
         end
+
+        local hopMoleName = (edge.type == "MOLE_MACHINE") and GetMoleMachineName() or nil
 
         table.insert(tpSteps, {
             stepIndex = #tpSteps + 1,
@@ -876,7 +892,7 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
             isFinal = false,
             isQuestGated = (not isUnlocked and gateConfig ~= nil),
             questGateInfo = (not isUnlocked and gateConfig ~= nil) and gateConfig or nil,
-            teleportInfo = (edge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = "钻地机", hasItem = true } or nil,
+            teleportInfo = (edge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = hopMoleName, hasItem = true } or nil,
         })
         curr = edge.to
     end
@@ -894,11 +910,11 @@ local function BuildWormholeRouteSteps(tp, destMapID, destination)
     local linkStr = Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)
     local statusTag
     if not tp.hasItem then
-        statusTag = string.format(" |cffff4444[%s]|r", tp.missingShortTag or "未拥有")
+        statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], tp.missingShortTag or L["TAG_MISSING"])
     elseif not tp.isReady and (tp.cdSeconds or 0) > 0 then
-        statusTag = string.format(" |cffff4040[CD: %d秒]|r", tp.cdSeconds)
+        statusTag = string.format(L["STATUS_CD_TAG_FMT"], tp.cdSeconds)
     else
-        statusTag = " |cff00ff00[就绪]|r"
+        statusTag = L["STATUS_READY_TAG"]
     end
 
     local contName = GetMapDisplayName(tp.continentID or tp.toMap)
@@ -906,12 +922,12 @@ local function BuildWormholeRouteSteps(tp, destMapID, destination)
     local uncertainDesc
     if tp.wormholeMode == "MENU" then
         uncertainDesc = string.format(
-            "使用玩具 %s%s |cffffaa00[虫洞自选落点]|r 传送至【%s】（对话选择最接近【%s】的落点），落地后前往【%s】",
+            L["STEP_WORMHOLE_MENU"],
             linkStr, statusTag, contName, destZoneName, destZoneName
         )
     else
         uncertainDesc = string.format(
-            "使用玩具 %s%s |cffffaa00[落点随机不确定]|r 随机传送至【%s】某处，落地后飞行前往【%s】",
+            L["STEP_WORMHOLE_RANDOM"],
             linkStr, statusTag, contName, destZoneName
         )
     end
@@ -942,7 +958,7 @@ function Pathfinder:CalculateRoute(destination)
 
     local currentMapID = C_Map.GetBestMapForUnit("player")
     if not currentMapID then
-        ns.Print("无法获取当前玩家所在地图")
+        ns.Print(L["ERR_NO_PLAYER_MAP"])
         return nil
     end
 
@@ -955,10 +971,10 @@ function Pathfinder:CalculateRoute(destination)
     if currentMapID == destMapID then
         local arriveDesc
         if destination.type == "zone" or destination.type == "continent" then
-            arriveDesc = string.format("你当前已在【%s】，已抵达目标区域！", destination.name)
+            arriveDesc = string.format(L["STEP_ALREADY_IN_ZONE"], destination.name)
         else
             local coordLink = self:FormatCoordLink(destMapID, destination.x, destination.y)
-            arriveDesc = string.format("你已在该地图，直接前往【%s】入口 %s", destination.name, coordLink)
+            arriveDesc = string.format(L["STEP_ALREADY_IN_MAP_INSTANCE"], destination.name, coordLink)
         end
         return {
             destination = destination,
@@ -994,20 +1010,20 @@ function Pathfinder:CalculateRoute(destination)
 
             local statusTag
             if not direct.hasItem then
-                statusTag = string.format(" |cffff4444[%s]|r", direct.missingShortTag or "未拥有")
+                statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], direct.missingShortTag or L["TAG_MISSING"])
             elseif direct.isReady then
-                statusTag = " |cff00ff00[就绪]|r"
+                statusTag = L["STATUS_READY_TAG"]
             else
-                statusTag = string.format(" |cffff4040[CD: %d秒]|r", direct.cdSeconds or 0)
+                statusTag = string.format(L["STATUS_CD_TAG_FMT"], direct.cdSeconds or 0)
             end
 
             local desc
             if direct.type == "SPELL" then
-                desc = string.format("施放传送技能 %s%s 直达【%s】门口 %s", linkStr, statusTag, destination.name, coordStr)
+                desc = string.format(L["STEP_DIRECT_SPELL"], linkStr, statusTag, destination.name, coordStr)
             else
-                local kindText = (direct.type == "TOY") and "传送玩具" or "传送物品"
+                local kindText = (direct.type == "TOY") and L["KIND_TELEPORT_TOY"] or L["KIND_TELEPORT_ITEM"]
                 local noteSuffix = (direct.note and direct.note ~= "") and (" (" .. direct.note .. ")") or ""
-                desc = string.format("使用%s %s%s 直达【%s】 %s%s", kindText, linkStr, statusTag, destination.name, coordStr, noteSuffix)
+                desc = string.format(L["STEP_DIRECT_ITEM_OR_TOY"], kindText, linkStr, statusTag, destination.name, coordStr, noteSuffix)
             end
 
             local directSteps = {
@@ -1025,13 +1041,13 @@ function Pathfinder:CalculateRoute(destination)
             }
 
             local directScore = direct.isReady and 0.5 or (0.5 + math.min((direct.cdSeconds or 0) / 30, 8.0))
-            local actionPrefix = (direct.type == "SPELL") and "施放" or "使用"
+            local altNameFmt = (direct.type == "SPELL") and L["ALT_CAST_FMT"] or L["ALT_USE_FMT"]
 
             table.insert(alternatives, {
-                name = string.format("%s【%s】", actionPrefix, direct.name),
-                viaDesc = direct.note or "专属直达传送",
+                name = string.format(altNameFmt, direct.name),
+                viaDesc = direct.note or L["ALT_DESC_DIRECT"],
                 distanceYards = 0,
-                distanceText = "直达",
+                distanceText = L["ALT_DIST_DIRECT"],
                 isMissingTeleport = (not direct.hasItem),
                 missingShortTag = direct.missingShortTag,
                 missingReason = direct.missingReason,
@@ -1069,16 +1085,16 @@ function Pathfinder:CalculateRoute(destination)
                 y = destination.y,
                 toMapID = destMapID,
                 action = "FLY",
-                description = string.format("在【%s】召唤飞行坐骑，直接飞行前往【%s】", GetMapDisplayName(currentMapID), destName),
+                description = string.format(L["STEP_SAME_CONT_FLY"], GetMapDisplayName(currentMapID), destName),
                 isFinal = false,
             },
             BuildFinalArriveStep(2, destination),
         }
         table.insert(validPhysical, {
-            name = "直接飞行前往【" .. destName .. "】",
-            viaDesc = "同大陆飞行坐骑直达",
+            name = string.format(L["ALT_FLY_DIRECT_FMT"], destName),
+            viaDesc = L["ALT_DESC_SAME_CONT_FLY"],
             distanceYards = nil,
-            distanceText = "同大陆直飞",
+            distanceText = L["ALT_DIST_SAME_CONT_FLY"],
             score = 2.0,
             steps = flySteps,
             totalSteps = 2,
@@ -1116,23 +1132,24 @@ function Pathfinder:CalculateRoute(destination)
                         local distanceScore = distYards and (distYards / 500.0) or 1.5
                         local totalScore = distanceScore + (edge.cost or 1.5) + dist[edge.to]
 
+                        local targetName = GetMapDisplayName(edge.to)
                         local branchName
                         if edge.type == "PORTAL" then
-                            branchName = "经【" .. GetMapDisplayName(edge.to) .. "】传送门"
+                            branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
                         elseif edge.type == "SHIP" then
-                            branchName = "经【" .. GetMapDisplayName(edge.to) .. "】轮船"
+                            branchName = string.format(L["ALT_VIA_SHIP_FMT"], targetName)
                         elseif edge.type == "ZEPPELIN" then
-                            branchName = "经【" .. GetMapDisplayName(edge.to) .. "】飞艇"
+                            branchName = string.format(L["ALT_VIA_ZEPPELIN_FMT"], targetName)
                         elseif edge.type == "FLY" then
-                            branchName = "飞行前往【" .. GetMapDisplayName(edge.to) .. "】"
+                            branchName = string.format(L["ALT_VIA_FLY_FMT"], targetName)
                         else
-                            branchName = "前往【" .. GetMapDisplayName(edge.to) .. "】"
+                            branchName = string.format(L["ALT_VIA_GENERIC_FMT"], targetName)
                         end
 
                         table.insert(physicalCandidates, {
                             edge = edge,
                             name = branchName,
-                            viaDesc = string.format("前往坐标 (%.1f, %.1f)%s", edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or "")),
+                            viaDesc = string.format(L["ALT_VIA_COORD_FMT"], edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or "")),
                             distanceYards = distYards,
                             distanceText = distText,
                             score = totalScore,
@@ -1267,12 +1284,13 @@ function Pathfinder:CalculateRoute(destination)
             local tp = cand.tp
             local tpSteps = BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, playerFaction)
             if tpSteps then
-                local actionPrefix = (tp.type == "SPELL") and "施放" or "使用"
+                local altNameFmt = (tp.type == "SPELL") and L["ALT_CAST_FMT"] or L["ALT_USE_FMT"]
+                local fallbackViaDesc = (tp.type == "TOY" and L["ALT_DESC_TOY_TELEPORT"]) or (tp.type == "SPELL" and L["ALT_DESC_SPELL_TELEPORT"]) or L["ALT_DESC_ITEM_TELEPORT"]
                 table.insert(alternatives, {
-                    name = string.format("%s【%s】", actionPrefix, tp.name),
-                    viaDesc = tp.note or ((tp.type == "TOY" and "玩具传送") or (tp.type == "SPELL" and "技能传送") or "背包/装备传送"),
+                    name = string.format(altNameFmt, tp.name),
+                    viaDesc = tp.note or fallbackViaDesc,
                     distanceYards = 0,
-                    distanceText = "直接使用",
+                    distanceText = L["ALT_DIST_USE_DIRECT"],
                     isMissingTeleport = (not tp.hasItem),
                     missingShortTag = tp.missingShortTag,
                     missingReason = tp.missingReason,
@@ -1287,10 +1305,10 @@ function Pathfinder:CalculateRoute(destination)
         for _, wTp in ipairs(wormholeCandidates) do
             local wSteps = BuildWormholeRouteSteps(wTp, destMapID, destination)
             if wSteps then
-                local uncertainLabel = (wTp.wormholeMode == "MENU") and "虫洞自选落点" or "落点随机不确定"
+                local uncertainLabel = (wTp.wormholeMode == "MENU") and L["ALT_DIST_WORMHOLE_MENU"] or L["ALT_DIST_WORMHOLE_RANDOM"]
                 table.insert(alternatives, {
-                    name = string.format("使用【%s】", wTp.name),
-                    viaDesc = wTp.note or "工程学虫洞传送（落点具有不确定性）",
+                    name = string.format(L["ALT_USE_FMT"], wTp.name),
+                    viaDesc = wTp.note or L["ALT_DESC_WORMHOLE"],
                     distanceYards = 0,
                     distanceText = uncertainLabel,
                     isMissingTeleport = (not wTp.hasItem),
@@ -1311,14 +1329,15 @@ function Pathfinder:CalculateRoute(destination)
     if #alternatives == 0 then
         local hubMapID = (playerFaction == "HORDE") and 85 or 84
         if dist[hubMapID] then
+            local hsName = (ns.PlayerTeleports and ns.PlayerTeleports.GetItemDisplayName and ns.PlayerTeleports:GetItemDisplayName(6948, L["ITEM_NAME_6948"])) or L["ITEM_NAME_6948"]
             local hasHearthstone, hsMissingReason = true, nil
             if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
-                hasHearthstone, hsMissingReason = ns.PlayerTeleports:CheckTeleportOwnership("ITEM", 6948, "炉石")
+                hasHearthstone, hsMissingReason = ns.PlayerTeleports:CheckTeleportOwnership("ITEM", 6948, hsName)
             end
             local hsInfo = {
                 type = "ITEM",
                 id = 6948,
-                name = "炉石",
+                name = hsName,
                 toMap = hubMapID,
                 x = 0.5,
                 y = 0.5,
@@ -1330,10 +1349,10 @@ function Pathfinder:CalculateRoute(destination)
             local hubSteps = BuildTeleportRouteSteps(hsInfo, destMapID, destination, nextEdge, playerFaction)
             if hubSteps then
                 table.insert(alternatives, {
-                    name = "使用【炉石】",
-                    viaDesc = "常规炉石回城",
+                    name = string.format(L["ALT_USE_FMT"], hsName),
+                    viaDesc = L["ALT_DESC_HEARTHSTONE"],
                     distanceYards = 0,
-                    distanceText = "炉石",
+                    distanceText = L["ALT_DIST_HEARTHSTONE"],
                     isMissingTeleport = (not hasHearthstone),
                     missingReason = hsMissingReason,
                     score = dist[hubMapID] + 5.0,
@@ -1345,7 +1364,7 @@ function Pathfinder:CalculateRoute(destination)
     end
 
     if #alternatives == 0 then
-        ns.Print("未能找到前往【" .. destination.name .. "】的有效交通路径")
+        ns.Print(string.format(L["ERR_NO_ROUTE_FOUND_FMT"], destination.name))
         return nil
     end
 

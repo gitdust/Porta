@@ -1,17 +1,19 @@
 local _, ns = ...
+local L = ns.L
 
 local PlayerTeleports = {}
 ns.PlayerTeleports = PlayerTeleports
 
 -- =========================================================================
 -- 1. 常用传送玩具与物品定义表 (供跨地图寻路算法评估优先跳数使用)
+--    名称通过暴雪客户端 API (C_Item / C_ToyBox) 动态获取当前客户端语言文本
 -- =========================================================================
 local TELEPORT_ITEMS = {
     -- 核心炉石系列
     {
         id = 140192,
         kind = "TOY_OR_ITEM",
-        name = "达拉然炉石",
+        name = L["ITEM_NAME_140192"],
         toMap = 627, -- 军团再临达拉然
         x = 0.50, y = 0.50,
         faction = "NEUTRAL",
@@ -20,7 +22,7 @@ local TELEPORT_ITEMS = {
     {
         id = 110560,
         kind = "TOY_OR_ITEM",
-        name = "要塞炉石",
+        name = L["ITEM_NAME_110560"],
         toMapHorde = 590, -- 霜壁要塞
         toMapAlliance = 582, -- 落月要塞
         x = 0.50, y = 0.50,
@@ -30,7 +32,7 @@ local TELEPORT_ITEMS = {
     {
         id = 128353,
         kind = "ITEM",
-        name = "海军上将的罗盘",
+        name = L["ITEM_NAME_128353"],
         toMapHorde = 590,
         toMapAlliance = 582,
         x = 0.50, y = 0.50,
@@ -38,54 +40,56 @@ local TELEPORT_ITEMS = {
         priority = 7,
     },
 
-    -- 公会传送披风（直达主城传送大厅）
-    { id = 65360, kind = "ITEM", name = "协作披风 (暴风城)", toMap = 84, x = 0.49, y = 0.87, faction = "ALLIANCE", priority = 9 },
-    { id = 65274, kind = "ITEM", name = "协作披风 (奥格瑞玛)", toMap = 85, x = 0.57, y = 0.89, faction = "HORDE", priority = 9 },
-    { id = 63206, kind = "ITEM", name = "统御披风 (暴风城)", toMap = 84, x = 0.49, y = 0.87, faction = "ALLIANCE", priority = 9 },
-    { id = 63352, kind = "ITEM", name = "统御披风 (奥格瑞玛)", toMap = 85, x = 0.57, y = 0.89, faction = "HORDE", priority = 9 },
-    { id = 63207, kind = "ITEM", name = "协调披风 (暴风城)", toMap = 84, x = 0.49, y = 0.87, faction = "ALLIANCE", priority = 9 },
-    { id = 63353, kind = "ITEM", name = "协调披风 (奥格瑞玛)", toMap = 85, x = 0.57, y = 0.89, faction = "HORDE", priority = 9 },
+    -- 公会传送披风（直达主城传送大厅，自动附加目标主城名称区分）
+    { id = 65360, kind = "ITEM", name = L["ITEM_NAME_65360"], toMap = 84, suffixMapID = 84, x = 0.49, y = 0.87, faction = "ALLIANCE", priority = 9 },
+    { id = 65274, kind = "ITEM", name = L["ITEM_NAME_65274"], toMap = 85, suffixMapID = 85, x = 0.57, y = 0.89, faction = "HORDE", priority = 9 },
+    { id = 63206, kind = "ITEM", name = L["ITEM_NAME_63206"], toMap = 84, suffixMapID = 84, x = 0.49, y = 0.87, faction = "ALLIANCE", priority = 9 },
+    { id = 63352, kind = "ITEM", name = L["ITEM_NAME_63352"], toMap = 85, suffixMapID = 85, x = 0.57, y = 0.89, faction = "HORDE", priority = 9 },
+    { id = 63207, kind = "ITEM", name = L["ITEM_NAME_63207"], toMap = 84, suffixMapID = 84, x = 0.49, y = 0.87, faction = "ALLIANCE", priority = 9 },
+    { id = 63353, kind = "ITEM", name = L["ITEM_NAME_63353"], toMap = 85, suffixMapID = 85, x = 0.57, y = 0.89, faction = "HORDE", priority = 9 },
 
     -- 黑暗神殿专属传送
     {
         id = 151271,
         kind = "TOY",
-        name = "开裂的死者之颅",
+        name = L["ITEM_NAME_151271"],
         toMap = 104, -- 外域影月谷
         x = 0.71, y = 0.46, -- 黑暗神殿大门前
         faction = "NEUTRAL",
         priority = 9,
-        note = "需选中一只小动物献祭开门",
+        noteKey = "NOTE_NECROLYTE_SKULL",
     },
     {
         id = 32757,
         kind = "ITEM",
-        name = "卡拉波神圣勋章",
+        name = L["ITEM_NAME_32757"],
         toMap = 104,
         x = 0.71, y = 0.46,
         faction = "NEUTRAL",
         priority = 9,
-        note = "项链直达黑暗神殿正门",
+        noteKey = "NOTE_KARABOR_MEDALLION",
     },
 
     -- 永恒岛传送
     {
         id = 103678,
         kind = "ITEM",
-        name = "迷时神器 (永恒岛)",
+        name = L["ITEM_NAME_103678"],
         toMap = 554, -- 潘达利亚永恒岛
+        suffixMapID = 554,
         x = 0.65, y = 0.75,
         faction = "NEUTRAL",
         priority = 8,
-        note = "1分钟冷却直达天神庭院",
+        noteKey = "NOTE_TIMELOST_ARTIFACT",
     },
 
     -- 肯瑞托紫罗兰印戒 (卡拉赞)
     {
         id = 142469,
         kind = "ITEM",
-        name = "肯瑞托紫罗兰印戒 (卡拉赞)",
+        name = L["ITEM_NAME_142469"],
         toMap = 42, -- 逆风小径
+        suffixInstanceID = 745, -- 卡拉赞
         x = 0.47, y = 0.74, -- 卡拉赞正门
         faction = "NEUTRAL",
         priority = 8,
@@ -95,12 +99,13 @@ local TELEPORT_ITEMS = {
     {
         id = 37863,
         kind = "ITEM",
-        name = "烈酒的遥控器 (黑铁酒吧)",
+        name = L["ITEM_NAME_37863"],
         toMap = 33, -- 燃烧平原/黑石山
+        suffixInstanceID = 228, -- 黑石深渊
         x = 0.45, y = 0.50,
         faction = "NEUTRAL",
         priority = 8,
-        note = "直达黑铁酒吧，穿过酒吧即到黑石深渊与MC门前",
+        noteKey = "NOTE_DIREBREW_REMOTE_MC",
     },
 
     -- 达拉然肯瑞托戒指系列 (诺森德达拉然)
@@ -110,8 +115,9 @@ local TELEPORT_ITEMS = {
             48954, 48955, 48956, 48957, 51557, 51558, 51559, 51560
         },
         kind = "ITEM",
-        name = "肯瑞托戒指 (诺森德达拉然)",
+        name = L["ITEM_NAME_40586"],
         toMap = 125,
+        suffixMapID = 113, -- 诺森德
         x = 0.50, y = 0.50,
         faction = "NEUTRAL",
         priority = 8,
@@ -120,89 +126,90 @@ local TELEPORT_ITEMS = {
     {
         id = 139599,
         kind = "ITEM",
-        name = "强化肯瑞托徽记 (军团达拉然)",
+        name = L["ITEM_NAME_139599"],
         toMap = 627,
+        suffixMapID = 619, -- 破碎群岛
         x = 0.50, y = 0.50,
         faction = "NEUTRAL",
         priority = 8,
     },
 
     -- 搏击俱乐部拳手戒指
-    { id = 144369, kind = "ITEM", name = "拳手强力重击戒指 (暴风城)", toMap = 84, x = 0.50, y = 0.35, faction = "ALLIANCE", priority = 7 },
-    { id = 144370, kind = "ITEM", name = "拳手强力重击戒指 (奥格瑞玛)", toMap = 85, x = 0.42, y = 0.70, faction = "HORDE", priority = 7 },
+    { id = 144369, kind = "ITEM", name = L["ITEM_NAME_144369"], toMap = 84, suffixMapID = 84, x = 0.50, y = 0.35, faction = "ALLIANCE", priority = 7 },
+    { id = 144370, kind = "ITEM", name = L["ITEM_NAME_144370"], toMap = 85, suffixMapID = 85, x = 0.42, y = 0.70, faction = "HORDE", priority = 7 },
 
     -- 特殊传送战袍与项坠
-    { id = 52251, kind = "ITEM", name = "吉安娜的坠饰", toMap = 125, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 7 },
-    { id = 46874, kind = "ITEM", name = "银色十字军战袍", toMap = 118, x = 0.69, y = 0.23, faction = "NEUTRAL", priority = 7, note = "直达诺森德冰冠冰川锦标赛营地，近ICC/奥杜尔" },
-    { id = 92510, kind = "ITEM", name = "沃金的黄铜指环", toMap = 1, x = 0.55, y = 0.74, faction = "HORDE", priority = 6, note = "直达杜隆塔尔森金村" },
-    { id = 63378, kind = "ITEM", name = "巴拉丁典狱官战袍", toMap = 244, x = 0.50, y = 0.50, faction = "ALLIANCE", priority = 7 },
-    { id = 63379, kind = "ITEM", name = "地狱咆哮近卫军战袍", toMap = 245, x = 0.50, y = 0.50, faction = "HORDE", priority = 7 },
+    { id = 52251, kind = "ITEM", name = L["ITEM_NAME_52251"], toMap = 125, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 7 },
+    { id = 46874, kind = "ITEM", name = L["ITEM_NAME_46874"], toMap = 118, x = 0.69, y = 0.23, faction = "NEUTRAL", priority = 7, noteKey = "NOTE_ARGENT_TABARD_ICC" },
+    { id = 92510, kind = "ITEM", name = L["ITEM_NAME_92510"], toMap = 1, x = 0.55, y = 0.74, faction = "HORDE", priority = 6, noteKey = "NOTE_VOLJIN_RING" },
+    { id = 63378, kind = "ITEM", name = L["ITEM_NAME_63378"], toMap = 244, x = 0.50, y = 0.50, faction = "ALLIANCE", priority = 7 },
+    { id = 63379, kind = "ITEM", name = L["ITEM_NAME_63379"], toMap = 245, x = 0.50, y = 0.50, faction = "HORDE", priority = 7 },
 
     -- 工程学虫洞发生器全集 (玩具 - 落点随机或需菜单选择，仅在前往对应大洲时作为补充备选方案提供)
-    { id = 221966, kind = "TOY", name = "虫洞发生器：卡兹阿加", toMap = 2274, continentID = 2274, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择卡兹阿加各区域落点" },
-    { id = 198156, kind = "TOY", name = "虫洞发生器：巨龙群岛", toMap = 1978, continentID = 1978, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择巨龙群岛各区域落点" },
-    { id = 172924, kind = "TOY", name = "虫洞发生器：暗影界", toMap = 1670, continentID = 1550, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择暗影界各区域落点" },
-    { id = 168807, kind = "TOY", name = "虫洞发生器：库尔提拉斯", toMap = 876, continentID = 876, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至库尔提拉斯某处，落点不确定" },
-    { id = 168808, kind = "TOY", name = "虫洞发生器：赞达拉", toMap = 875, continentID = 875, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至赞达拉某处，落点不确定" },
-    { id = 151652, kind = "TOY", name = "虫洞发生器：阿古斯", toMap = 905, continentID = 905, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至阿古斯某处，落点不确定" },
-    { id = 112059, kind = "TOY", name = "虫洞发生器：德拉诺", toMap = 572, continentID = 572, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择德拉诺各区域落点" },
-    { id = 87215, kind = "TOY", name = "虫洞发生器：潘达利亚", toMap = 424, continentID = 424, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至潘达利亚某处，落点不确定" },
-    { id = 48933, kind = "TOY", name = "虫洞发生器：诺森德", toMap = 113, continentID = 113, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择诺森德各区域落点" },
+    { id = 221966, kind = "TOY", name = L["ITEM_NAME_221966"], toMap = 2274, continentID = 2274, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
+    { id = 198156, kind = "TOY", name = L["ITEM_NAME_198156"], toMap = 1978, continentID = 1978, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
+    { id = 172924, kind = "TOY", name = L["ITEM_NAME_172924"], toMap = 1670, continentID = 1550, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
+    { id = 168807, kind = "TOY", name = L["ITEM_NAME_168807"], toMap = 876, continentID = 876, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true },
+    { id = 168808, kind = "TOY", name = L["ITEM_NAME_168808"], toMap = 875, continentID = 875, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true },
+    { id = 151652, kind = "TOY", name = L["ITEM_NAME_151652"], toMap = 905, continentID = 905, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true },
+    { id = 112059, kind = "TOY", name = L["ITEM_NAME_112059"], toMap = 572, continentID = 572, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
+    { id = 87215, kind = "TOY", name = L["ITEM_NAME_87215"], toMap = 424, continentID = 424, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true },
+    { id = 48933, kind = "TOY", name = L["ITEM_NAME_48933"], toMap = 113, continentID = 113, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
 
     -- 工程学经典定点传送器 (空间撕裂器 / 安全传送器 - 落点固定，纳入常规路线评估，不满足专业或未拥有时提示)
-    { id = 18984, kind = "TOY_OR_ITEM", name = "安全传送器：加基森", toMap = 71, x = 0.52, y = 0.28, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需地精工程学；定点直达塔纳利斯加基森" },
-    { id = 18986, kind = "TOY_OR_ITEM", name = "空间撕裂器 - 永望镇", toMap = 83, x = 0.61, y = 0.38, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需侏儒工程学；定点直达冬泉谷永望镇" },
-    { id = 30542, kind = "TOY_OR_ITEM", name = "空间撕裂器 - 52区", toMap = 109, x = 0.33, y = 0.64, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需地精工程学；定点直达虚空风暴52区" },
-    { id = 30544, kind = "TOY_OR_ITEM", name = "安全传送器：托什雷的基地", toMap = 105, x = 0.60, y = 0.69, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需侏儒工程学；定点直达刀锋山托什雷基地" },
+    { id = 18984, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18984"], toMap = 71, x = 0.52, y = 0.28, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_GADGETZAN_TRANSPORTER" },
+    { id = 18986, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18986"], toMap = 83, x = 0.61, y = 0.38, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_EVERLOOK_RIPPER" },
+    { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], toMap = 109, x = 0.33, y = 0.64, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    { id = 30544, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30544"], toMap = 105, x = 0.60, y = 0.69, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_TOSHLEY_TRANSPORTER" },
 }
 
 -- =========================================================================
--- 2. 职业传送技能定义表
+-- 2. 职业传送技能定义表 (技能名称通过 C_Spell API 动态获取当前客户端语言)
 -- =========================================================================
 local CLASS_TELEPORT_SPELLS = {
     -- 德鲁伊：梦境行者 (直达翡翠梦境之道，连通海加尔/暮色/灰谷/菲拉斯等)
-    { id = 193753, class = "DRUID", name = "梦境行者", toMap = 715, x = 0.50, y = 0.50, priority = 10 },
-    { id = 18960, class = "DRUID", name = "传送：月光林地", toMap = 80, x = 0.56, y = 0.30, priority = 8 },
+    { id = 193753, class = "DRUID", name = "Dreamwalk", toMap = 715, x = 0.50, y = 0.50, priority = 10 },
+    { id = 18960, class = "DRUID", name = "Teleport: Moonglade", toMap = 80, x = 0.56, y = 0.30, priority = 8 },
 
     -- 死亡骑士：黑锋之门 (阿彻鲁斯黑锋要塞)
-    { id = 50977, class = "DEATHKNIGHT", name = "黑锋之门", toMap = 647, x = 0.50, y = 0.50, priority = 8 },
+    { id = 50977, class = "DEATHKNIGHT", name = "Death Gate", toMap = 647, x = 0.50, y = 0.50, priority = 8 },
 
     -- 武僧：禅宗朝圣 (晴日峰 / 迷踪岛)
-    { id = 126892, class = "MONK", name = "禅宗朝圣", toMap = 378, x = 0.50, y = 0.50, priority = 8 },
+    { id = 126892, class = "MONK", name = "Zen Pilgrimage", toMap = 378, x = 0.50, y = 0.50, priority = 8 },
 
     -- 萨满祭司：星界召回
-    { id = 556, class = "SHAMAN", name = "星界召回", toMap = 85, x = 0.50, y = 0.50, priority = 7 },
+    { id = 556, class = "SHAMAN", name = "Astral Recall", toMap = 85, x = 0.50, y = 0.50, priority = 7 },
 
     -- 黑铁矮人种族特长：钻地机
-    { id = 265225, class = "ALL", name = "钻地机", toMap = 84, x = 0.50, y = 0.50, priority = 8 },
+    { id = 265225, class = "ALL", name = L["SPELL_NAME_265225"], toMap = 84, x = 0.50, y = 0.50, priority = 8 },
 
     -- 法师全套传送门与传送技能
-    { id = 3567, class = "MAGE", name = "传送：奥格瑞玛", toMap = 85, x = 0.57, y = 0.89, priority = 10 },
-    { id = 3561, class = "MAGE", name = "传送：暴风城", toMap = 84, x = 0.49, y = 0.87, priority = 10 },
-    { id = 3562, class = "MAGE", name = "传送：铁炉堡", toMap = 87, x = 0.50, y = 0.50, priority = 9 },
-    { id = 3565, class = "MAGE", name = "传送：达纳苏斯", toMap = 89, x = 0.50, y = 0.50, priority = 9 },
-    { id = 32271, class = "MAGE", name = "传送：埃索达", toMap = 103, x = 0.50, y = 0.50, priority = 9 },
-    { id = 3563, class = "MAGE", name = "传送：幽暗城", toMap = 90, x = 0.50, y = 0.50, priority = 9 },
-    { id = 3566, class = "MAGE", name = "传送：雷霆崖", toMap = 88, x = 0.50, y = 0.50, priority = 9 },
-    { id = 32272, class = "MAGE", name = "传送：银月城", toMap = 110, x = 0.50, y = 0.50, priority = 9 },
-    { id = 33690, class = "MAGE", name = "传送：沙塔斯", toMap = 111, x = 0.50, y = 0.50, priority = 9 },
-    { id = 35715, class = "MAGE", name = "传送：沙塔斯", toMap = 111, x = 0.50, y = 0.50, priority = 9 },
-    { id = 53140, class = "MAGE", name = "传送：达拉然 - 诺森德", toMap = 125, x = 0.50, y = 0.50, priority = 9 },
-    { id = 120145, class = "MAGE", name = "传送：古代达拉然巨坑", toMap = 25, x = 0.55, y = 0.24, priority = 9 },
-    { id = 49359, class = "MAGE", name = "传送：塞拉摩", toMap = 70, x = 0.67, y = 0.48, priority = 8 },
-    { id = 49358, class = "MAGE", name = "传送：斯通纳德", toMap = 47, x = 0.47, y = 0.55, priority = 8 },
-    { id = 88342, class = "MAGE", name = "传送：托尔巴拉德", toMap = 244, x = 0.50, y = 0.50, priority = 9 },
-    { id = 88344, class = "MAGE", name = "传送：托尔巴拉德", toMap = 245, x = 0.50, y = 0.50, priority = 9 },
-    { id = 132621, class = "MAGE", name = "传送：锦绣谷", toMap = 390, x = 0.50, y = 0.50, priority = 9 },
-    { id = 132627, class = "MAGE", name = "传送：锦绣谷", toMap = 390, x = 0.50, y = 0.50, priority = 9 },
-    { id = 176248, class = "MAGE", name = "传送：暴风之盾", toMap = 622, x = 0.50, y = 0.50, priority = 9 },
-    { id = 176242, class = "MAGE", name = "传送：战争之矛", toMap = 624, x = 0.50, y = 0.50, priority = 9 },
-    { id = 224869, class = "MAGE", name = "传送：达拉然 - 破碎群岛", toMap = 627, x = 0.50, y = 0.50, priority = 10 },
-    { id = 281403, class = "MAGE", name = "传送：伯拉勒斯", toMap = 1161, x = 0.50, y = 0.50, priority = 9 },
-    { id = 281404, class = "MAGE", name = "传送：达萨罗", toMap = 1165, x = 0.50, y = 0.50, priority = 9 },
-    { id = 344587, class = "MAGE", name = "传送：奥利波斯", toMap = 1670, x = 0.50, y = 0.50, priority = 10 },
-    { id = 395277, class = "MAGE", name = "传送：瓦德拉肯", toMap = 2112, x = 0.50, y = 0.50, priority = 10 },
-    { id = 446540, class = "MAGE", name = "传送：多恩诺加尔", toMap = 2339, x = 0.50, y = 0.50, priority = 10 },
+    { id = 3567, class = "MAGE", name = "Teleport: Orgrimmar", toMap = 85, x = 0.57, y = 0.89, priority = 10 },
+    { id = 3561, class = "MAGE", name = "Teleport: Stormwind", toMap = 84, x = 0.49, y = 0.87, priority = 10 },
+    { id = 3562, class = "MAGE", name = "Teleport: Ironforge", toMap = 87, x = 0.50, y = 0.50, priority = 9 },
+    { id = 3565, class = "MAGE", name = "Teleport: Darnassus", toMap = 89, x = 0.50, y = 0.50, priority = 9 },
+    { id = 32271, class = "MAGE", name = "Teleport: Exodar", toMap = 103, x = 0.50, y = 0.50, priority = 9 },
+    { id = 3563, class = "MAGE", name = "Teleport: Undercity", toMap = 90, x = 0.50, y = 0.50, priority = 9 },
+    { id = 3566, class = "MAGE", name = "Teleport: Thunder Bluff", toMap = 88, x = 0.50, y = 0.50, priority = 9 },
+    { id = 32272, class = "MAGE", name = "Teleport: Silvermoon", toMap = 110, x = 0.50, y = 0.50, priority = 9 },
+    { id = 33690, class = "MAGE", name = "Teleport: Shattrath", toMap = 111, x = 0.50, y = 0.50, priority = 9 },
+    { id = 35715, class = "MAGE", name = "Teleport: Shattrath", toMap = 111, x = 0.50, y = 0.50, priority = 9 },
+    { id = 53140, class = "MAGE", name = "Teleport: Dalaran - Northrend", toMap = 125, x = 0.50, y = 0.50, priority = 9 },
+    { id = 120145, class = "MAGE", name = "Ancient Teleport: Dalaran", toMap = 25, x = 0.55, y = 0.24, priority = 9 },
+    { id = 49359, class = "MAGE", name = "Teleport: Theramore", toMap = 70, x = 0.67, y = 0.48, priority = 8 },
+    { id = 49358, class = "MAGE", name = "Teleport: Stonard", toMap = 47, x = 0.47, y = 0.55, priority = 8 },
+    { id = 88342, class = "MAGE", name = "Teleport: Tol Barad", toMap = 244, x = 0.50, y = 0.50, priority = 9 },
+    { id = 88344, class = "MAGE", name = "Teleport: Tol Barad", toMap = 245, x = 0.50, y = 0.50, priority = 9 },
+    { id = 132621, class = "MAGE", name = "Teleport: Vale of Eternal Blossoms", toMap = 390, x = 0.50, y = 0.50, priority = 9 },
+    { id = 132627, class = "MAGE", name = "Teleport: Vale of Eternal Blossoms", toMap = 390, x = 0.50, y = 0.50, priority = 9 },
+    { id = 176248, class = "MAGE", name = "Teleport: Stormshield", toMap = 622, x = 0.50, y = 0.50, priority = 9 },
+    { id = 176242, class = "MAGE", name = "Teleport: Warspear", toMap = 624, x = 0.50, y = 0.50, priority = 9 },
+    { id = 224869, class = "MAGE", name = "Teleport: Dalaran - Broken Isles", toMap = 627, x = 0.50, y = 0.50, priority = 10 },
+    { id = 281403, class = "MAGE", name = "Teleport: Boralus", toMap = 1161, x = 0.50, y = 0.50, priority = 9 },
+    { id = 281404, class = "MAGE", name = "Teleport: Dazar'alor", toMap = 1165, x = 0.50, y = 0.50, priority = 9 },
+    { id = 344587, class = "MAGE", name = "Teleport: Oribos", toMap = 1670, x = 0.50, y = 0.50, priority = 10 },
+    { id = 395277, class = "MAGE", name = "Teleport: Valdrakken", toMap = 2112, x = 0.50, y = 0.50, priority = 10 },
+    { id = 446540, class = "MAGE", name = "Teleport: Dornogal", toMap = 2339, x = 0.50, y = 0.50, priority = 10 },
 }
 
 -- =========================================================================
@@ -325,34 +332,34 @@ local MYTHIC_PLUS_DUNGEON_SPELLS = {
 local DIRECT_DESTINATION_ITEMS = {
     -- 黑暗神殿 (journalInstanceID = 751)
     [751] = {
-        { id = 32757, kind = "ITEM", name = "卡拉波神圣勋章", faction = "NEUTRAL", note = "经典项链，直达黑暗神殿正门" },
-        { id = 151271, kind = "TOY", name = "开裂的死者之颅", faction = "NEUTRAL", note = "需选中一只小动物献祭开门" },
+        { id = 32757, kind = "ITEM", name = L["ITEM_NAME_32757"], faction = "NEUTRAL", noteKey = "NOTE_KARABOR_MEDALLION" },
+        { id = 151271, kind = "TOY", name = L["ITEM_NAME_151271"], faction = "NEUTRAL", noteKey = "NOTE_NECROLYTE_SKULL" },
     },
     -- 重返卡拉赞 (860) 与 老卡拉赞 (745)
     [860] = {
-        { id = 142469, kind = "ITEM", name = "肯瑞托紫罗兰印戒", faction = "NEUTRAL", note = "戒指直达卡拉赞正门" },
+        { id = 142469, kind = "ITEM", name = L["ITEM_NAME_142469"], faction = "NEUTRAL", noteKey = "NOTE_VIOLET_SEAL" },
     },
     [745] = {
-        { id = 142469, kind = "ITEM", name = "肯瑞托紫罗兰印戒", faction = "NEUTRAL", note = "戒指直达卡拉赞正门" },
+        { id = 142469, kind = "ITEM", name = L["ITEM_NAME_142469"], faction = "NEUTRAL", noteKey = "NOTE_VIOLET_SEAL" },
     },
     -- 黑石深渊 (228) 及黑石山系列副本
     [228] = {
-        { id = 37863, kind = "ITEM", name = "烈酒的遥控器", faction = "NEUTRAL", note = "召唤钻地机直达黑铁酒吧" },
+        { id = 37863, kind = "ITEM", name = L["ITEM_NAME_37863"], faction = "NEUTRAL", noteKey = "NOTE_DIREBREW_REMOTE_BRD" },
     },
     [741] = { -- 熔火之心
-        { id = 37863, kind = "ITEM", name = "烈酒的遥控器", faction = "NEUTRAL", note = "直达黑铁酒吧，穿过酒吧即到MC门前" },
+        { id = 37863, kind = "ITEM", name = L["ITEM_NAME_37863"], faction = "NEUTRAL", noteKey = "NOTE_DIREBREW_REMOTE_MC" },
     },
     -- 巴拉丁监狱 (75 - 托尔巴拉德)
     [75] = {
-        { id = 63378, kind = "ITEM", name = "巴拉丁典狱官战袍", faction = "ALLIANCE", note = "战袍直达托尔巴拉德" },
-        { id = 63379, kind = "ITEM", name = "地狱咆哮近卫军战袍", faction = "HORDE", note = "战袍直达托尔巴拉德" },
+        { id = 63378, kind = "ITEM", name = L["ITEM_NAME_63378"], faction = "ALLIANCE", noteKey = "NOTE_TOL_BARAD_TABARD" },
+        { id = 63379, kind = "ITEM", name = L["ITEM_NAME_63379"], faction = "HORDE", noteKey = "NOTE_TOL_BARAD_TABARD" },
     },
     -- 冰冠堡垒 (758) 与 十字军的试炼 (757)
     [758] = {
-        { id = 46874, kind = "ITEM", name = "银色十字军战袍", faction = "NEUTRAL", note = "直达冰冠冰川锦标赛营地，近ICC" },
+        { id = 46874, kind = "ITEM", name = L["ITEM_NAME_46874"], faction = "NEUTRAL", noteKey = "NOTE_ARGENT_TABARD_ICC" },
     },
     [757] = {
-        { id = 46874, kind = "ITEM", name = "银色十字军战袍", faction = "NEUTRAL", note = "直达十字军试炼大门前" },
+        { id = 46874, kind = "ITEM", name = L["ITEM_NAME_46874"], faction = "NEUTRAL", noteKey = "NOTE_ARGENT_TABARD_TOC" },
     },
 }
 
@@ -362,16 +369,183 @@ local DIRECT_DESTINATION_ITEMS = {
 local DIRECT_MAP_ITEMS = {
     -- 永恒岛 (mapID = 554)
     [554] = {
-        { id = 103678, kind = "ITEM", name = "迷时神器", faction = "NEUTRAL", note = "1分钟冷却直达天神庭院" },
+        { id = 103678, kind = "ITEM", name = L["ITEM_NAME_103678"], faction = "NEUTRAL", noteKey = "NOTE_TIMELOST_ARTIFACT" },
     },
     -- 托尔巴拉德半岛 (244 联盟, 245 部落)
     [244] = {
-        { id = 63378, kind = "ITEM", name = "巴拉丁典狱官战袍", faction = "ALLIANCE", note = "战袍直达托尔巴拉德" },
+        { id = 63378, kind = "ITEM", name = L["ITEM_NAME_63378"], faction = "ALLIANCE", noteKey = "NOTE_TOL_BARAD_TABARD" },
     },
     [245] = {
-        { id = 63379, kind = "ITEM", name = "地狱咆哮近卫军战袍", faction = "HORDE", note = "战袍直达托尔巴拉德" },
+        { id = 63379, kind = "ITEM", name = L["ITEM_NAME_63379"], faction = "HORDE", noteKey = "NOTE_TOL_BARAD_TABARD" },
     },
 }
+
+-- =========================================================================
+-- 动态名称与说明获取工具 (基于暴雪原生 API 实时适配当前客户端语言)
+-- =========================================================================
+local function GetMapLocalizedName(mapID)
+    if not mapID or mapID <= 0 then return nil end
+    if C_Map and C_Map.GetMapInfo then
+        local info = C_Map.GetMapInfo(mapID)
+        if info and info.name and info.name ~= "" then
+            return info.name
+        end
+    end
+    return nil
+end
+
+local function GetInstanceLocalizedName(instanceID)
+    if not instanceID or instanceID <= 0 then return nil end
+    if EJ_GetInstanceInfo then
+        local name = EJ_GetInstanceInfo(instanceID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    return nil
+end
+
+-- 动态获取法术在当前客户端语言下的名称
+function PlayerTeleports:GetSpellDisplayName(spellID, fallbackName)
+    if not spellID then
+        return fallbackName or L["UNKNOWN_NAME"]
+    end
+    if C_Spell and C_Spell.GetSpellName then
+        local name = C_Spell.GetSpellName(spellID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    if C_Spell and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(spellID)
+        if info and info.name and info.name ~= "" then
+            return info.name
+        end
+    end
+    if GetSpellInfo then
+        local name = GetSpellInfo(spellID)
+        if name and name ~= "" then
+            return name
+        end
+    end
+    local localeKey = "SPELL_NAME_" .. tostring(spellID)
+    if rawget(L, localeKey) then
+        return L[localeKey]
+    end
+    return fallbackName or string.format(L["SPELL_FALLBACK_FMT"], tostring(spellID))
+end
+
+-- 动态获取物品/玩具在当前客户端语言下的名称（同名披风/戒指等自动拼接目标地图/副本名区分）
+function PlayerTeleports:GetItemDisplayName(itemID, fallbackName, suffixMapID, suffixInstanceID)
+    if not itemID then
+        return fallbackName or L["UNKNOWN_NAME"]
+    end
+
+    local baseName = nil
+
+    if C_ToyBox and C_ToyBox.GetToyInfo then
+        local _, toyName = C_ToyBox.GetToyInfo(itemID)
+        if type(toyName) == "string" and toyName ~= "" then
+            baseName = toyName
+        end
+    end
+
+    if not baseName and C_Item and C_Item.GetItemNameByID then
+        local itemName = C_Item.GetItemNameByID(itemID)
+        if type(itemName) == "string" and itemName ~= "" then
+            baseName = itemName
+        end
+    end
+
+    if not baseName and GetItemInfo then
+        local itemName = GetItemInfo(itemID)
+        if type(itemName) == "string" and itemName ~= "" then
+            baseName = itemName
+        end
+    end
+
+    if not baseName then
+        if C_Item and C_Item.RequestLoadItemDataByID then
+            pcall(C_Item.RequestLoadItemDataByID, itemID)
+        end
+        local localeKey = "ITEM_NAME_" .. tostring(itemID)
+        baseName = rawget(L, localeKey) or fallbackName or string.format(L["ITEM_FALLBACK_FMT"], tostring(itemID))
+    end
+
+    local suffixName = nil
+    if suffixMapID then
+        suffixName = GetMapLocalizedName(suffixMapID)
+    elseif suffixInstanceID then
+        suffixName = GetInstanceLocalizedName(suffixInstanceID)
+    end
+
+    if suffixName and suffixName ~= "" and not string.find(baseName, suffixName, 1, true) then
+        return string.format("%s (%s)", baseName, suffixName)
+    end
+
+    return baseName
+end
+
+-- 动态获取条目备注说明 (Note)
+local function ResolveEntryNote(entry)
+    if not entry then return nil end
+    if entry.isWormhole then
+        local contName = GetMapLocalizedName(entry.continentID or entry.toMap) or string.format(L["MAP_FALLBACK_FMT"], tostring(entry.continentID or entry.toMap or 0))
+        if entry.wormholeMode == "MENU" then
+            return string.format(L["NOTE_WORMHOLE_MENU_FMT"], contName)
+        else
+            return string.format(L["NOTE_WORMHOLE_RANDOM_FMT"], contName)
+        end
+    end
+    if entry.noteKey and L[entry.noteKey] then
+        return L[entry.noteKey]
+    end
+    return entry.note
+end
+
+-- 登录时预热所有传送物品、玩具、技能的客户端本地化名称缓存
+function PlayerTeleports:PreloadCache()
+    local function requestItem(id)
+        if id and C_Item and C_Item.RequestLoadItemDataByID then
+            pcall(C_Item.RequestLoadItemDataByID, id)
+        end
+    end
+    local function requestSpell(id)
+        if id and C_Spell and C_Spell.RequestLoadSpellData then
+            pcall(C_Spell.RequestLoadSpellData, id)
+        end
+    end
+
+    requestItem(6948) -- 炉石
+    for _, item in ipairs(TELEPORT_ITEMS) do
+        if item.id then requestItem(item.id) end
+        if item.ids then
+            for _, cid in ipairs(item.ids) do
+                requestItem(cid)
+            end
+        end
+    end
+    for _, list in pairs(DIRECT_DESTINATION_ITEMS) do
+        for _, item in ipairs(list) do
+            requestItem(item.id)
+        end
+    end
+    for _, list in pairs(DIRECT_MAP_ITEMS) do
+        for _, item in ipairs(list) do
+            requestItem(item.id)
+        end
+    end
+    for _, spell in ipairs(CLASS_TELEPORT_SPELLS) do
+        requestSpell(spell.id)
+    end
+    for _, entry in pairs(MYTHIC_PLUS_DUNGEON_SPELLS) do
+        if type(entry) == "table" then
+            for _, sid in ipairs(entry) do requestSpell(sid) end
+        else
+            requestSpell(entry)
+        end
+    end
+end
 
 -- =========================================================================
 -- 辅助判断函数
@@ -436,7 +610,7 @@ for _, item in ipairs(TELEPORT_ITEMS) do
     end
 end
 
--- 检查当前角色是否学习了工程学专业 (Engineering skillLine == 202)
+-- 检查当前角色是否学习了工程学专业 (Engineering skillLine == 202，跨语言通用)
 local function HasEngineeringProfession()
     if not GetProfessions or not GetProfessionInfo then
         return true
@@ -470,9 +644,17 @@ end
 
 -- 供外部（如 HUD 点击/悬停时）实时检测某玩具、物品或技能当前是否拥有/可用
 function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
-    if not id then return false, "未知的传送编号" end
+    if not id then return false, L["ERR_UNKNOWN_TELEPORT_ID"] end
     local uKind = string.upper(tostring(kind or "ITEM"))
-    local label = displayName and ("【" .. displayName .. "】") or ("#" .. tostring(id))
+    local resolvedName = displayName
+    if not resolvedName or resolvedName == "" then
+        if uKind == "SPELL" then
+            resolvedName = self:GetSpellDisplayName(id)
+        else
+            resolvedName = self:GetItemDisplayName(id)
+        end
+    end
+    local label = ns.FormatBracket(resolvedName or ("#" .. tostring(id)))
     local reqEng = (ENGINEERING_REQ_MAP[id] ~= nil)
     local hasEng = (not reqEng) or HasEngineeringProfession()
 
@@ -480,47 +662,47 @@ function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
         if IsSpellKnown(id) then
             return true, nil
         end
-        return false, string.format("当前角色尚未习得传送技能%s。", label)
+        return false, string.format(L["REASON_SPELL_NOT_KNOWN_FMT"], label)
     elseif uKind == "TOY" then
         if HasToyCollected(id) then
             if not hasEng then
-                return false, string.format("已收集玩具%s，但当前角色未学习工程学专业，无法使用。", label)
+                return false, string.format(L["REASON_TOY_NO_ENG_FMT"], label)
             end
             if not IsToyUsableByPlayer(id) then
-                return false, string.format("已收集玩具%s，但当前角色不满足使用条件（如工程学专业分支/等级或阵营限制）。", label)
+                return false, string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
             end
             return true, nil
         elseif HasItem(id) then
             if not hasEng then
-                return false, string.format("已携带%s，但当前角色未学习工程学专业，无法使用。", label)
+                return false, string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
             end
             return true, nil
         end
         if reqEng and not hasEng then
-            return false, string.format("玩具箱中尚未收集%s，且该装置需要工程学专业才可使用。", label)
+            return false, string.format(L["REASON_TOY_MISSING_ENG_FMT"], label)
         end
-        return false, string.format("玩具箱中尚未收集玩具%s。", label)
+        return false, string.format(L["REASON_TOY_MISSING_FMT"], label)
     else
         local ownedInBag = HasItem(id)
         local ownedAsToy = HasToyCollected(id)
         if ownedInBag or ownedAsToy then
             if not hasEng then
-                return false, string.format("已拥有%s，但当前角色未学习工程学专业，无法使用。", label)
+                return false, string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
             end
             if ownedAsToy and not ownedInBag and not IsToyUsableByPlayer(id) then
-                return false, string.format("已收集%s，但当前角色不满足使用条件（如工程学分支/等级限制）。", label)
+                return false, string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
             end
             return true, nil
         elseif IsItemInBank(id) then
             if not hasEng then
-                return false, string.format("物品%s存放在银行中未携带，且当前角色未学习工程学专业。", label)
+                return false, string.format(L["REASON_BANK_NO_ENG_FMT"], label)
             end
-            return false, string.format("物品%s存放在银行/战团银行中，当前背包未携带。", label)
+            return false, string.format(L["REASON_BANK_FMT"], label)
         end
         if reqEng and not hasEng then
-            return false, string.format("当前未拥有%s，且该装置需要工程学专业才可使用。", label)
+            return false, string.format(L["REASON_ITEM_MISSING_ENG_FMT"], label)
         end
-        return false, string.format("当前背包或装备栏中未拥有物品%s。", label)
+        return false, string.format(L["REASON_ITEM_MISSING_FMT"], label)
     end
 end
 
@@ -580,6 +762,9 @@ local function InspectItemOrToyEntry(entry)
         end
     end
 
+    local resolvedName = PlayerTeleports:GetItemDisplayName(matchedID, entry.name, entry.suffixMapID, entry.suffixInstanceID)
+    local label = ns.FormatBracket(resolvedName)
+
     local reqEng = entry.requiresEngineering and true or false
     local hasEng = (not reqEng) or HasEngineeringProfession()
     local hasIt = isOwned and hasEng and (not isToyUnusable)
@@ -589,33 +774,33 @@ local function InspectItemOrToyEntry(entry)
     if not hasIt then
         if isOwned then
             if reqEng and not hasEng then
-                missingShortTag = "需工程学"
-                missingReason = string.format("你已拥有【%s】，但当前角色未学习工程学专业，无法使用。", entry.name)
+                missingShortTag = L["TAG_REQ_ENG"]
+                missingReason = string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
             else
-                missingShortTag = reqEng and "工程学条件不符" or "条件不符"
-                missingReason = string.format("你已收集【%s】，但当前角色不满足使用条件（如地精/侏儒工程学分支、专业点数或阵营限制）。", entry.name)
+                missingShortTag = reqEng and L["TAG_ENG_UNMET"] or L["TAG_COND_UNMET"]
+                missingReason = string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
             end
         elseif inBank then
             if reqEng and not hasEng then
-                missingShortTag = "在银行/需工程学"
-                missingReason = string.format("物品【%s】存放在银行中未携带，且当前角色未学习工程学专业。", entry.name)
+                missingShortTag = L["TAG_IN_BANK_ENG"]
+                missingReason = string.format(L["REASON_BANK_NO_ENG_FMT"], label)
             else
-                missingShortTag = "在银行"
-                missingReason = string.format("物品【%s】目前存放在银行/战团银行中，当前背包未携带。", entry.name)
+                missingShortTag = L["TAG_IN_BANK"]
+                missingReason = string.format(L["REASON_BANK_FMT"], label)
             end
         else
             if reqEng and not hasEng then
-                missingShortTag = "未拥有/需工程学"
-                missingReason = string.format("当前未拥有【%s】，且使用该传送装置需要工程学专业。", entry.name)
+                missingShortTag = L["TAG_MISSING_ENG"]
+                missingReason = string.format(L["REASON_ITEM_MISSING_ENG_FMT"], label)
             elseif reqEng then
-                missingShortTag = "未拥有"
-                missingReason = string.format("当前尚未收集或携带工程学传送装置【%s】。", entry.name)
+                missingShortTag = L["TAG_MISSING"]
+                missingReason = string.format(L["REASON_ENG_DEVICE_MISSING_FMT"], label)
             elseif actualKind == "TOY" then
-                missingShortTag = "未拥有"
-                missingReason = string.format("当前尚未收集玩具【%s】（玩具箱中未找到）。", entry.name)
+                missingShortTag = L["TAG_MISSING"]
+                missingReason = string.format(L["REASON_TOY_MISSING_FMT"], label)
             else
-                missingShortTag = "未拥有"
-                missingReason = string.format("当前背包或装备栏中未检测到物品【%s】。", entry.name)
+                missingShortTag = L["TAG_MISSING"]
+                missingReason = string.format(L["REASON_ITEM_MISSING_FMT"], label)
             end
         end
     end
@@ -624,6 +809,8 @@ local function InspectItemOrToyEntry(entry)
         hasItem = hasIt,
         isOwned = isOwned,
         id = matchedID,
+        name = resolvedName,
+        note = ResolveEntryNote(entry),
         kind = actualKind,
         inBank = inBank,
         isToyUnusable = isToyUnusable,
@@ -679,7 +866,7 @@ function PlayerTeleports:GetAvailableTeleports()
     local playerFaction = ns.GetPlayerFaction()
     local _, playerClass = UnitClass("player")
 
-    -- 1. 扫描传送物品与玩具（全部纳入候选，记录真实拥有与专业条件状态）
+    -- 1. 扫描传送物品与玩具（全部纳入候选，记录真实拥有与专业条件状态，并动态获取客户端本地化名称）
     for _, item in ipairs(TELEPORT_ITEMS) do
         if item.faction == "NEUTRAL" or item.faction == playerFaction then
             local state = InspectItemOrToyEntry(item)
@@ -696,7 +883,7 @@ function PlayerTeleports:GetAvailableTeleports()
             table.insert(available, {
                 type = state.kind, -- "TOY" 或 "ITEM"
                 id = state.id,
-                name = item.name,
+                name = state.name,
                 toMap = toMap,
                 x = item.x or 0.50,
                 y = item.y or 0.50,
@@ -710,7 +897,7 @@ function PlayerTeleports:GetAvailableTeleports()
                 missingReason = state.missingReason,
                 isReady = isReady,
                 cdSeconds = cdSeconds,
-                note = item.note,
+                note = state.note,
                 isWormhole = item.isWormhole or false,
                 continentID = item.continentID,
                 wormholeMode = item.wormholeMode,
@@ -719,15 +906,16 @@ function PlayerTeleports:GetAvailableTeleports()
         end
     end
 
-    -- 2. 扫描职业专属法术与种族特长
+    -- 2. 扫描职业专属法术与种族特长（通过 C_Spell 动态获取当前客户端语言名称）
     for _, spell in ipairs(CLASS_TELEPORT_SPELLS) do
         local classMatch = (spell.class == "ALL") or (spell.class == playerClass)
         if classMatch and IsSpellKnown(spell.id) then
             local isReady, cdSeconds = GetCooldownStatus("SPELL", spell.id)
+            local spellName = self:GetSpellDisplayName(spell.id, spell.name)
             table.insert(available, {
                 type = "SPELL",
                 id = spell.id,
-                name = spell.name,
+                name = spellName,
                 toMap = spell.toMap,
                 x = spell.x or 0.50,
                 y = spell.y or 0.50,
@@ -758,8 +946,11 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
             local candidateSpells = (type(entry) == "table") and entry or { entry }
             for _, spellID in ipairs(candidateSpells) do
                 if IsSpellKnown(spellID) then
-                    local spellInfo = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(spellID)
-                    local spellName = spellInfo and spellInfo.name or ("传送：" .. (destination.name or ("副本 #" .. tostring(destination.id))))
+                    local fallbackSpellName = string.format(
+                        L["TELEPORT_FALLBACK_FMT"],
+                        destination.name or string.format(L["INSTANCE_FALLBACK_FMT"], tostring(destination.id))
+                    )
+                    local spellName = self:GetSpellDisplayName(spellID, fallbackSpellName)
                     local isReady, cdSeconds = GetCooldownStatus("SPELL", spellID)
 
                     table.insert(results, {
@@ -788,8 +979,8 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                 table.insert(results, {
                     type = state.kind, -- "TOY" 或 "ITEM"
                     id = state.id,
-                    name = itemEntry.name,
-                    note = itemEntry.note,
+                    name = state.name,
+                    note = state.note,
                     hasItem = state.hasItem,
                     isOwned = state.isOwned,
                     inBank = state.inBank,
@@ -817,8 +1008,8 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                 table.insert(results, {
                     type = state.kind, -- "TOY" 或 "ITEM"
                     id = state.id,
-                    name = itemEntry.name,
-                    note = itemEntry.note,
+                    name = state.name,
+                    note = state.note,
                     hasItem = state.hasItem,
                     isOwned = state.isOwned,
                     inBank = state.inBank,
@@ -858,4 +1049,3 @@ function PlayerTeleports:GetDirectDungeonPortal(journalInstanceID)
     if not journalInstanceID then return nil end
     return self:GetDirectDestinationTeleport({ id = journalInstanceID })
 end
-

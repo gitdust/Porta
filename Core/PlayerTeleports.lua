@@ -138,22 +138,22 @@ local TELEPORT_ITEMS = {
     { id = 63378, kind = "ITEM", name = "巴拉丁典狱官战袍", toMap = 244, x = 0.50, y = 0.50, faction = "ALLIANCE", priority = 7 },
     { id = 63379, kind = "ITEM", name = "地狱咆哮近卫军战袍", toMap = 245, x = 0.50, y = 0.50, faction = "HORDE", priority = 7 },
 
-    -- 工程学虫洞发生器全集 (玩具)
-    { id = 221966, kind = "TOY", name = "虫洞发生器：卡兹阿加", toMap = 2339, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 9 },
-    { id = 198156, kind = "TOY", name = "虫洞发生器：巨龙群岛", toMap = 2112, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 9 },
-    { id = 172924, kind = "TOY", name = "虫洞发生器：暗影界", toMap = 1670, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 8 },
-    { id = 168807, kind = "TOY", name = "虫洞发生器：库尔提拉斯", toMap = 876, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 8 },
-    { id = 168808, kind = "TOY", name = "虫洞发生器：赞达拉", toMap = 875, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 8 },
-    { id = 151652, kind = "TOY", name = "虫洞发生器：阿古斯", toMap = 905, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 7 },
-    { id = 112059, kind = "TOY", name = "虫洞发生器：德拉诺", toMap = 572, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 7 },
-    { id = 87215, kind = "TOY", name = "虫洞发生器：潘达利亚", toMap = 424, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 7 },
-    { id = 48933, kind = "TOY", name = "虫洞发生器：诺森德", toMap = 113, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 7 },
+    -- 工程学虫洞发生器全集 (玩具 - 落点随机或需菜单选择，仅在前往对应大洲时作为补充备选方案提供)
+    { id = 221966, kind = "TOY", name = "虫洞发生器：卡兹阿加", toMap = 2274, continentID = 2274, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择卡兹阿加各区域落点" },
+    { id = 198156, kind = "TOY", name = "虫洞发生器：巨龙群岛", toMap = 1978, continentID = 1978, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择巨龙群岛各区域落点" },
+    { id = 172924, kind = "TOY", name = "虫洞发生器：暗影界", toMap = 1670, continentID = 1550, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择暗影界各区域落点" },
+    { id = 168807, kind = "TOY", name = "虫洞发生器：库尔提拉斯", toMap = 876, continentID = 876, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至库尔提拉斯某处，落点不确定" },
+    { id = 168808, kind = "TOY", name = "虫洞发生器：赞达拉", toMap = 875, continentID = 875, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至赞达拉某处，落点不确定" },
+    { id = 151652, kind = "TOY", name = "虫洞发生器：阿古斯", toMap = 905, continentID = 905, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至阿古斯某处，落点不确定" },
+    { id = 112059, kind = "TOY", name = "虫洞发生器：德拉诺", toMap = 572, continentID = 572, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择德拉诺各区域落点" },
+    { id = 87215, kind = "TOY", name = "虫洞发生器：潘达利亚", toMap = 424, continentID = 424, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 5, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true, note = "需工程学专业；随机传送至潘达利亚某处，落点不确定" },
+    { id = 48933, kind = "TOY", name = "虫洞发生器：诺森德", toMap = 113, continentID = 113, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true, note = "需工程学专业；使用后可选择诺森德各区域落点" },
 
-    -- 工程学经典传送器 (空间撕裂器 / 安全传送器)
-    { id = 18984, kind = "ITEM", name = "安全传送器：加基森", toMap = 71, x = 0.52, y = 0.28, faction = "NEUTRAL", priority = 7 },
-    { id = 18986, kind = "ITEM", name = "空间撕裂器 - 永望镇", toMap = 83, x = 0.61, y = 0.38, faction = "NEUTRAL", priority = 7 },
-    { id = 30542, kind = "ITEM", name = "空间撕裂器 - 52区", toMap = 109, x = 0.33, y = 0.64, faction = "NEUTRAL", priority = 7 },
-    { id = 30544, kind = "ITEM", name = "安全传送器：托什雷的基地", toMap = 105, x = 0.60, y = 0.69, faction = "NEUTRAL", priority = 7 },
+    -- 工程学经典定点传送器 (空间撕裂器 / 安全传送器 - 落点固定，纳入常规路线评估，不满足专业或未拥有时提示)
+    { id = 18984, kind = "TOY_OR_ITEM", name = "安全传送器：加基森", toMap = 71, x = 0.52, y = 0.28, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需地精工程学；定点直达塔纳利斯加基森" },
+    { id = 18986, kind = "TOY_OR_ITEM", name = "空间撕裂器 - 永望镇", toMap = 83, x = 0.61, y = 0.38, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需侏儒工程学；定点直达冬泉谷永望镇" },
+    { id = 30542, kind = "TOY_OR_ITEM", name = "空间撕裂器 - 52区", toMap = 109, x = 0.33, y = 0.64, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需地精工程学；定点直达虚空风暴52区" },
+    { id = 30544, kind = "TOY_OR_ITEM", name = "安全传送器：托什雷的基地", toMap = 105, x = 0.60, y = 0.69, faction = "NEUTRAL", priority = 8, requiresEngineering = true, note = "需侏儒工程学；定点直达刀锋山托什雷基地" },
 }
 
 -- =========================================================================
@@ -376,55 +376,261 @@ local DIRECT_MAP_ITEMS = {
 -- =========================================================================
 -- 辅助判断函数
 -- =========================================================================
-local function HasItem(itemID)
-    if not itemID then return false end
+local function GetBagItemCount(itemID)
+    if not itemID then return 0 end
     if C_Item and C_Item.GetItemCount then
-        -- 仅检测玩家背包内是否拥有该物品（无需穿戴）
-        return (C_Item.GetItemCount(itemID) or 0) > 0
+        return C_Item.GetItemCount(itemID, false) or 0
     elseif GetItemCount then
-        return (GetItemCount(itemID) or 0) > 0
+        return GetItemCount(itemID, false) or 0
     end
-    return false
+    return 0
 end
 
-local function HasToy(toyID)
+local function GetTotalItemCountWithBank(itemID)
+    if not itemID then return 0 end
+    if C_Item and C_Item.GetItemCount then
+        return C_Item.GetItemCount(itemID, true) or 0
+    elseif GetItemCount then
+        return GetItemCount(itemID, true) or 0
+    end
+    return 0
+end
+
+local function HasItem(itemID)
+    return GetBagItemCount(itemID) > 0
+end
+
+local function IsItemInBank(itemID)
+    local bagCount = GetBagItemCount(itemID)
+    local totalCount = GetTotalItemCountWithBank(itemID)
+    return (bagCount == 0) and (totalCount > 0)
+end
+
+local function HasToyCollected(toyID)
     if not toyID then return false end
     if PlayerHasToy and PlayerHasToy(toyID) then
-        if C_ToyBox and C_ToyBox.IsToyUsable then
-            return C_ToyBox.IsToyUsable(toyID)
-        end
         return true
     end
     return false
 end
 
--- 检查物品/玩具是否可用 (支持单 id 或多 ids 列表)
-local function HasItemOrToy(entry)
-    if entry.ids then
-        for _, id in ipairs(entry.ids) do
-            if entry.kind == "TOY" then
-                if HasToy(id) then return true, id end
-            elseif entry.kind == "ITEM" then
-                if HasItem(id) then return true, id end
-            else
-                if HasToy(id) or HasItem(id) then return true, id end
+local function IsToyUsableByPlayer(toyID)
+    if not toyID then return false end
+    if C_ToyBox and C_ToyBox.IsToyUsable then
+        return C_ToyBox.IsToyUsable(toyID)
+    end
+    return true
+end
+
+local ENGINEERING_REQ_MAP = {}
+for _, item in ipairs(TELEPORT_ITEMS) do
+    if item.requiresEngineering then
+        if item.id then
+            ENGINEERING_REQ_MAP[item.id] = item
+        end
+        if item.ids then
+            for _, cid in ipairs(item.ids) do
+                ENGINEERING_REQ_MAP[cid] = item
             end
         end
-        return false, nil
+    end
+end
+
+-- 检查当前角色是否学习了工程学专业 (Engineering skillLine == 202)
+local function HasEngineeringProfession()
+    if not GetProfessions or not GetProfessionInfo then
+        return true
+    end
+    local prof1, prof2 = GetProfessions()
+    local profIndices = { prof1, prof2 }
+    for _, idx in ipairs(profIndices) do
+        if idx then
+            local name, _, _, _, _, _, skillLine = GetProfessionInfo(idx)
+            if skillLine == 202 or (name and (name:find("工程") or name:find("Engineering"))) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+PlayerTeleports.HasEngineeringProfession = HasEngineeringProfession
+
+-- 检查法术是否习得
+local function IsSpellKnown(spellID)
+    if not spellID then return false end
+    if IsSpellKnownOrOverridesKnown then
+        return IsSpellKnownOrOverridesKnown(spellID)
+    end
+    if IsPlayerSpell then
+        return IsPlayerSpell(spellID)
+    end
+    return false
+end
+
+-- 供外部（如 HUD 点击/悬停时）实时检测某玩具、物品或技能当前是否拥有/可用
+function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
+    if not id then return false, "未知的传送编号" end
+    local uKind = string.upper(tostring(kind or "ITEM"))
+    local label = displayName and ("【" .. displayName .. "】") or ("#" .. tostring(id))
+    local reqEng = (ENGINEERING_REQ_MAP[id] ~= nil)
+    local hasEng = (not reqEng) or HasEngineeringProfession()
+
+    if uKind == "SPELL" then
+        if IsSpellKnown(id) then
+            return true, nil
+        end
+        return false, string.format("当前角色尚未习得传送技能%s。", label)
+    elseif uKind == "TOY" then
+        if HasToyCollected(id) then
+            if not hasEng then
+                return false, string.format("已收集玩具%s，但当前角色未学习工程学专业，无法使用。", label)
+            end
+            if not IsToyUsableByPlayer(id) then
+                return false, string.format("已收集玩具%s，但当前角色不满足使用条件（如工程学专业分支/等级或阵营限制）。", label)
+            end
+            return true, nil
+        elseif HasItem(id) then
+            if not hasEng then
+                return false, string.format("已携带%s，但当前角色未学习工程学专业，无法使用。", label)
+            end
+            return true, nil
+        end
+        if reqEng and not hasEng then
+            return false, string.format("玩具箱中尚未收集%s，且该装置需要工程学专业才可使用。", label)
+        end
+        return false, string.format("玩具箱中尚未收集玩具%s。", label)
+    else
+        local ownedInBag = HasItem(id)
+        local ownedAsToy = HasToyCollected(id)
+        if ownedInBag or ownedAsToy then
+            if not hasEng then
+                return false, string.format("已拥有%s，但当前角色未学习工程学专业，无法使用。", label)
+            end
+            if ownedAsToy and not ownedInBag and not IsToyUsableByPlayer(id) then
+                return false, string.format("已收集%s，但当前角色不满足使用条件（如工程学分支/等级限制）。", label)
+            end
+            return true, nil
+        elseif IsItemInBank(id) then
+            if not hasEng then
+                return false, string.format("物品%s存放在银行中未携带，且当前角色未学习工程学专业。", label)
+            end
+            return false, string.format("物品%s存放在银行/战团银行中，当前背包未携带。", label)
+        end
+        if reqEng and not hasEng then
+            return false, string.format("当前未拥有%s，且该装置需要工程学专业才可使用。", label)
+        end
+        return false, string.format("当前背包或装备栏中未拥有物品%s。", label)
+    end
+end
+
+-- 检查物品/玩具条目状态（不因未拥有或专业不符而丢弃，返回详细状态以供方案生成时提示）
+local function InspectItemOrToyEntry(entry)
+    local candidateIDs = entry.ids or { entry.id }
+    local matchedID = candidateIDs[1]
+    local actualKind = (entry.kind == "TOY" or entry.kind == "TOY_OR_ITEM") and "TOY" or "ITEM"
+    local isOwned = false
+    local inBank = false
+    local isToyUnusable = false
+
+    for _, id in ipairs(candidateIDs) do
+        if entry.kind == "TOY" then
+            if HasToyCollected(id) then
+                matchedID = id
+                actualKind = "TOY"
+                isOwned = true
+                if not IsToyUsableByPlayer(id) then
+                    isToyUnusable = true
+                else
+                    isToyUnusable = false
+                    break
+                end
+            end
+        elseif entry.kind == "ITEM" then
+            if HasItem(id) then
+                matchedID = id
+                actualKind = "ITEM"
+                isOwned = true
+                break
+            elseif IsItemInBank(id) then
+                matchedID = id
+                inBank = true
+            end
+        else -- TOY_OR_ITEM
+            if HasToyCollected(id) then
+                matchedID = id
+                actualKind = "TOY"
+                isOwned = true
+                if not IsToyUsableByPlayer(id) then
+                    isToyUnusable = true
+                else
+                    isToyUnusable = false
+                    break
+                end
+            elseif HasItem(id) then
+                matchedID = id
+                actualKind = "ITEM"
+                isOwned = true
+                break
+            elseif IsItemInBank(id) then
+                matchedID = id
+                actualKind = "ITEM"
+                inBank = true
+            end
+        end
     end
 
-    local itemID = entry.id
-    if entry.kind == "TOY" then
-        return HasToy(itemID), itemID
-    elseif entry.kind == "ITEM" then
-        return HasItem(itemID), itemID
-    elseif entry.kind == "TOY_OR_ITEM" then
-        if HasToy(itemID) or HasItem(itemID) then
-            return true, itemID
+    local reqEng = entry.requiresEngineering and true or false
+    local hasEng = (not reqEng) or HasEngineeringProfession()
+    local hasIt = isOwned and hasEng and (not isToyUnusable)
+
+    local missingReason = nil
+    local missingShortTag = nil
+    if not hasIt then
+        if isOwned then
+            if reqEng and not hasEng then
+                missingShortTag = "需工程学"
+                missingReason = string.format("你已拥有【%s】，但当前角色未学习工程学专业，无法使用。", entry.name)
+            else
+                missingShortTag = reqEng and "工程学条件不符" or "条件不符"
+                missingReason = string.format("你已收集【%s】，但当前角色不满足使用条件（如地精/侏儒工程学分支、专业点数或阵营限制）。", entry.name)
+            end
+        elseif inBank then
+            if reqEng and not hasEng then
+                missingShortTag = "在银行/需工程学"
+                missingReason = string.format("物品【%s】存放在银行中未携带，且当前角色未学习工程学专业。", entry.name)
+            else
+                missingShortTag = "在银行"
+                missingReason = string.format("物品【%s】目前存放在银行/战团银行中，当前背包未携带。", entry.name)
+            end
+        else
+            if reqEng and not hasEng then
+                missingShortTag = "未拥有/需工程学"
+                missingReason = string.format("当前未拥有【%s】，且使用该传送装置需要工程学专业。", entry.name)
+            elseif reqEng then
+                missingShortTag = "未拥有"
+                missingReason = string.format("当前尚未收集或携带工程学传送装置【%s】。", entry.name)
+            elseif actualKind == "TOY" then
+                missingShortTag = "未拥有"
+                missingReason = string.format("当前尚未收集玩具【%s】（玩具箱中未找到）。", entry.name)
+            else
+                missingShortTag = "未拥有"
+                missingReason = string.format("当前背包或装备栏中未检测到物品【%s】。", entry.name)
+            end
         end
-        return false, itemID
     end
-    return false, itemID
+
+    return {
+        hasItem = hasIt,
+        isOwned = isOwned,
+        id = matchedID,
+        kind = actualKind,
+        inBank = inBank,
+        isToyUnusable = isToyUnusable,
+        missingEngineering = (reqEng and not hasEng),
+        missingShortTag = missingShortTag,
+        missingReason = missingReason,
+    }
 end
 
 -- 获取法术或物品冷却状态 (返回 isReady, remainingSec)
@@ -462,50 +668,54 @@ local function GetCooldownStatus(kind, id)
     end
 end
 
--- 检查法术是否习得
-local function IsSpellKnown(spellID)
-    if not spellID then return false end
-    if IsSpellKnownOrOverridesKnown then
-        return IsSpellKnownOrOverridesKnown(spellID)
-    end
-    if IsPlayerSpell then
-        return IsPlayerSpell(spellID)
-    end
-    return false
-end
+PlayerTeleports.GetCooldownStatus = GetCooldownStatus
 
 -- =========================================================================
--- 核心检测接口 1：获取玩家拥有的所有通用传送手段（供 Dijkstra/BFS 寻路）
+-- 核心检测接口 1：获取所有通用传送手段（供 Dijkstra/BFS 寻路）
+-- 规则：玩具与物品不因玩家未拥有或未学专业而过滤，默认纳入算路；若实际未拥有或不满足条件则在方案中提示
 -- =========================================================================
 function PlayerTeleports:GetAvailableTeleports()
     local available = {}
     local playerFaction = ns.GetPlayerFaction()
     local _, playerClass = UnitClass("player")
 
-    -- 1. 扫描传送物品与玩具
+    -- 1. 扫描传送物品与玩具（全部纳入候选，记录真实拥有与专业条件状态）
     for _, item in ipairs(TELEPORT_ITEMS) do
         if item.faction == "NEUTRAL" or item.faction == playerFaction then
-            local hasIt, matchedID = HasItemOrToy(item)
-            if hasIt then
-                local toMap = item.toMap
-                if item.toMapHorde and item.toMapAlliance then
-                    toMap = (playerFaction == "HORDE") and item.toMapHorde or item.toMapAlliance
-                end
-
-                local isReady, cdSeconds = GetCooldownStatus("ITEM", matchedID or item.id)
-                table.insert(available, {
-                    type = "ITEM",
-                    id = matchedID or item.id,
-                    name = item.name,
-                    toMap = toMap,
-                    x = item.x or 0.50,
-                    y = item.y or 0.50,
-                    priority = item.priority or 5,
-                    isReady = isReady,
-                    cdSeconds = cdSeconds,
-                    note = item.note,
-                })
+            local state = InspectItemOrToyEntry(item)
+            local toMap = item.toMap
+            if item.toMapHorde and item.toMapAlliance then
+                toMap = (playerFaction == "HORDE") and item.toMapHorde or item.toMapAlliance
             end
+
+            local isReady, cdSeconds = true, 0
+            if state.hasItem then
+                isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
+            end
+
+            table.insert(available, {
+                type = state.kind, -- "TOY" 或 "ITEM"
+                id = state.id,
+                name = item.name,
+                toMap = toMap,
+                x = item.x or 0.50,
+                y = item.y or 0.50,
+                priority = item.priority or 5,
+                hasItem = state.hasItem,
+                isOwned = state.isOwned,
+                inBank = state.inBank,
+                isToyUnusable = state.isToyUnusable,
+                missingEngineering = state.missingEngineering,
+                missingShortTag = state.missingShortTag,
+                missingReason = state.missingReason,
+                isReady = isReady,
+                cdSeconds = cdSeconds,
+                note = item.note,
+                isWormhole = item.isWormhole or false,
+                continentID = item.continentID,
+                wormholeMode = item.wormholeMode,
+                requiresEngineering = item.requiresEngineering or false,
+            })
         end
     end
 
@@ -522,6 +732,7 @@ function PlayerTeleports:GetAvailableTeleports()
                 x = spell.x or 0.50,
                 y = spell.y or 0.50,
                 priority = spell.priority or 5,
+                hasItem = true,
                 isReady = isReady,
                 cdSeconds = cdSeconds,
             })
@@ -532,14 +743,15 @@ function PlayerTeleports:GetAvailableTeleports()
 end
 
 -- =========================================================================
--- 核心检测接口 2：检测是否拥有直达特定目的地的传送手段（优先返回）
--- 包含：史诗大秘境英雄之路门、团本门、专属直达道具（卡拉波勋章/死者之颅/迷时神器/烈酒遥控器等）
+-- 核心检测接口 2：获取特定目的地的所有直达传送手段列表
+-- 包含：史诗大秘境英雄之路门、团本门、专属直达玩具/道具（不管玩家是否拥有玩具/物品，均生成并在缺失时提示）
 -- =========================================================================
-function PlayerTeleports:GetDirectDestinationTeleport(destination)
-    if not destination then return nil end
+function PlayerTeleports:GetDirectDestinationTeleports(destination)
+    if not destination then return {} end
+    local results = {}
     local playerFaction = ns.GetPlayerFaction()
 
-    -- 1. 优先检测【大秘境 / 挑战模式 / 团队副本英雄之路传送门】
+    -- 1. 检测【大秘境 / 挑战模式 / 团队副本英雄之路传送门】
     if destination.id and destination.id > 0 then
         local entry = MYTHIC_PLUS_DUNGEON_SPELLS[destination.id]
         if entry then
@@ -547,62 +759,98 @@ function PlayerTeleports:GetDirectDestinationTeleport(destination)
             for _, spellID in ipairs(candidateSpells) do
                 if IsSpellKnown(spellID) then
                     local spellInfo = C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(spellID)
-                    local spellName = spellInfo and spellInfo.name or ("传送：副本 #" .. tostring(destination.id))
+                    local spellName = spellInfo and spellInfo.name or ("传送：" .. (destination.name or ("副本 #" .. tostring(destination.id))))
                     local isReady, cdSeconds = GetCooldownStatus("SPELL", spellID)
 
-                    return {
+                    table.insert(results, {
                         type = "SPELL",
                         id = spellID,
                         name = spellName,
+                        hasItem = true,
                         isReady = isReady,
                         cdSeconds = cdSeconds,
-                    }
+                    })
+                    break
                 end
             end
         end
     end
 
-    -- 2. 检测【副本专属直达道具】（如黑暗神殿：卡拉波勋章/死者之颅，卡拉赞：紫罗兰印戒，黑石深渊：烈酒遥控器）
+    -- 2. 检测【副本专属直达道具/玩具】（不因未拥有而过滤，记录未拥有提示）
     if destination.id and destination.id > 0 and DIRECT_DESTINATION_ITEMS[destination.id] then
         for _, itemEntry in ipairs(DIRECT_DESTINATION_ITEMS[destination.id]) do
             if itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction then
-                local hasIt, matchedID = HasItemOrToy(itemEntry)
-                if hasIt then
-                    local isReady, cdSeconds = GetCooldownStatus("ITEM", matchedID or itemEntry.id)
-                    return {
-                        type = "ITEM",
-                        id = matchedID or itemEntry.id,
-                        name = itemEntry.name,
-                        note = itemEntry.note,
-                        isReady = isReady,
-                        cdSeconds = cdSeconds,
-                    }
+                local state = InspectItemOrToyEntry(itemEntry)
+                local isReady, cdSeconds = true, 0
+                if state.hasItem then
+                    isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
                 end
+                table.insert(results, {
+                    type = state.kind, -- "TOY" 或 "ITEM"
+                    id = state.id,
+                    name = itemEntry.name,
+                    note = itemEntry.note,
+                    hasItem = state.hasItem,
+                    isOwned = state.isOwned,
+                    inBank = state.inBank,
+                    isToyUnusable = state.isToyUnusable,
+                    missingEngineering = state.missingEngineering,
+                    missingShortTag = state.missingShortTag,
+                    missingReason = state.missingReason,
+                    requiresEngineering = itemEntry.requiresEngineering or false,
+                    isReady = isReady,
+                    cdSeconds = cdSeconds,
+                })
             end
         end
     end
 
-    -- 3. 检测【目标区域专属直达道具】（如直接搜索永恒岛 554、托尔巴拉德 244/245 等）
+    -- 3. 检测【目标区域专属直达道具/玩具】（如永恒岛 554、托尔巴拉德 244/245 等）
     if destination.mapID and DIRECT_MAP_ITEMS[destination.mapID] then
         for _, itemEntry in ipairs(DIRECT_MAP_ITEMS[destination.mapID]) do
             if itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction then
-                local hasIt, matchedID = HasItemOrToy(itemEntry)
-                if hasIt then
-                    local isReady, cdSeconds = GetCooldownStatus("ITEM", matchedID or itemEntry.id)
-                    return {
-                        type = "ITEM",
-                        id = matchedID or itemEntry.id,
-                        name = itemEntry.name,
-                        note = itemEntry.note,
-                        isReady = isReady,
-                        cdSeconds = cdSeconds,
-                    }
+                local state = InspectItemOrToyEntry(itemEntry)
+                local isReady, cdSeconds = true, 0
+                if state.hasItem then
+                    isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
                 end
+                table.insert(results, {
+                    type = state.kind, -- "TOY" 或 "ITEM"
+                    id = state.id,
+                    name = itemEntry.name,
+                    note = itemEntry.note,
+                    hasItem = state.hasItem,
+                    isOwned = state.isOwned,
+                    inBank = state.inBank,
+                    isToyUnusable = state.isToyUnusable,
+                    missingEngineering = state.missingEngineering,
+                    missingShortTag = state.missingShortTag,
+                    missingReason = state.missingReason,
+                    requiresEngineering = itemEntry.requiresEngineering or false,
+                    isReady = isReady,
+                    cdSeconds = cdSeconds,
+                })
             end
         end
     end
 
-    return nil
+    -- 已拥有的排前面，就绪的排前面
+    table.sort(results, function(a, b)
+        if (a.hasItem and true or false) ~= (b.hasItem and true or false) then
+            return a.hasItem and true or false
+        end
+        if (a.isReady and true or false) ~= (b.isReady and true or false) then
+            return a.isReady and true or false
+        end
+        return (a.id or 0) < (b.id or 0)
+    end)
+
+    return results
+end
+
+function PlayerTeleports:GetDirectDestinationTeleport(destination)
+    local list = self:GetDirectDestinationTeleports(destination)
+    return list[1]
 end
 
 -- 兼容老接口
@@ -610,3 +858,4 @@ function PlayerTeleports:GetDirectDungeonPortal(journalInstanceID)
     if not journalInstanceID then return nil end
     return self:GetDirectDestinationTeleport({ id = journalInstanceID })
 end
+

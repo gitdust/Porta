@@ -32,6 +32,15 @@ local function ClearBlizzardWaypoint()
     end
 end
 
+-- 剥离超链接与图标控制码，生成纯文本标题
+local function StripHyperlinksAndIcons(text)
+    if type(text) ~= "string" then return "" end
+    return text
+        :gsub("|T[^|]*|t", "")
+        :gsub("|H[^|]*|h", "")
+        :gsub("|h", "")
+end
+
 -- 设置 TomTom 航标（如果安装了 TomTom）
 local function SetTomTomWaypoint(mapID, x, y, title)
     if not _G.TomTom or not TomTom.AddWaypoint then return end
@@ -43,7 +52,7 @@ local function SetTomTomWaypoint(mapID, x, y, title)
         end
         if mapID and x and y and x > 0 and y > 0 then
             tomtomWaypoint = TomTom:AddWaypoint(mapID, x, y, {
-                title = title or "Porta 导航目标",
+                title = StripHyperlinksAndIcons(title or "Porta 导航目标"),
                 persistent = false,
                 minimap = true,
                 world = true,
@@ -64,13 +73,48 @@ end
 
 -- 打开世界地图并定位到指定地图
 function Navigation:OpenWorldMap(mapID)
-    if not mapID then return end
+    if not mapID or mapID <= 0 then return end
     pcall(function()
         if not WorldMapFrame:IsShown() then
             ShowUIPanel(WorldMapFrame)
         end
         WorldMapFrame:SetMapID(mapID)
     end)
+end
+
+-- 点击步骤中的坐标时：设置暴雪/TomTom 航标并打开世界地图查看
+function Navigation:FocusCoordinate(mapID, x, y, label)
+    if not mapID or not x or not y then return end
+    local normX = (x > 1.0) and (x / 100.0) or x
+    local normY = (y > 1.0) and (y / 100.0) or y
+
+    local mapName = "目标地图"
+    if C_Map and C_Map.GetMapInfo and mapID > 0 then
+        local info = C_Map.GetMapInfo(mapID)
+        if info and info.name then
+            mapName = info.name
+        end
+    end
+
+    SetBlizzardWaypoint(mapID, normX, normY)
+    SetTomTomWaypoint(mapID, normX, normY, label or string.format("%s (%.1f, %.1f)", mapName, normX * 100, normY * 100))
+    self:OpenWorldMap(mapID)
+
+    ns.Print(string.format("已定位【%s】坐标 |cffffd100(%.1f, %.1f)|r 并设置超追踪航标！", mapName, normX * 100, normY * 100))
+end
+
+-- 检查并提示当前方案中缺失的传送玩具或物品
+local function NotifyMissingTeleportIfAny(route)
+    if not route or not route.steps then return end
+    for _, step in ipairs(route.steps) do
+        if step.isMissingTeleport and step.teleportInfo then
+            local tp = step.teleportInfo
+            local kindName = (tp.type == "TOY" and "玩具") or (tp.type == "SPELL" and "技能") or "物品"
+            local reason = tp.missingReason or string.format("当前未检测到该%s", kindName)
+            ns.Print(string.format("|cffff6600[未拥有提示]|r 当前方案包含传送%s【%s】，但%s你可在导航窗口中点击名称查看详情，或切换其他备选方案。", kindName, tp.name or "", reason))
+            break
+        end
+    end
 end
 
 -- =========================================================================
@@ -93,6 +137,9 @@ function Navigation:StartRoute(route)
 
     ns.Print(string.format("已启动前往【%s】的路线导航（共 %d 步）", dest.name, route.totalSteps))
     ns.Print(string.format("已自动在地图【%s】(%.1f, %.1f) 设置目的地航标点！", dest.zoneName or ("地图 #" .. dest.mapID), dest.x * 100, dest.y * 100))
+
+    -- 若当前默认方案使用了玩家尚未拥有的玩具/物品，主动提示
+    NotifyMissingTeleportIfAny(activeRoute)
 
     -- 2. 应用当前步骤状态与指引
     self:ApplyCurrentStep()
@@ -158,6 +205,7 @@ function Navigation:SelectAlternativeRoute(altIndex)
     local altName = alt.name or ("方案 " .. tostring(altIndex))
     local distInfo = (alt.distanceText and alt.distanceText ~= "") and (" (" .. alt.distanceText .. ")") or ""
     ns.Print(string.format("已切换至【%s%s】，地图追踪标记已同步更新！", altName, distInfo))
+    NotifyMissingTeleportIfAny(activeRoute)
 end
 
 -- 回退到上一步

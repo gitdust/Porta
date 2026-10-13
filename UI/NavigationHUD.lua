@@ -266,6 +266,9 @@ local function InitHUD()
     -- 标题：目的地
     titleText = hudFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
     titleText:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -14)
+    titleText:SetPoint("RIGHT", hudFrame, "TOPRIGHT", -80, -14)
+    titleText:SetJustifyH("LEFT")
+    titleText:SetWordWrap(false)
     titleText:SetText(L["HUD_DEFAULT_TITLE"])
 
     -- 点击目的地标题打开世界地图定位目的地
@@ -315,6 +318,7 @@ local function InitHUD()
 
     currentStepText = stepTextFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlightMedium")
     currentStepText:SetPoint("TOPLEFT", stepTextFrame, "TOPLEFT", 0, 0)
+    currentStepText:SetPoint("RIGHT", stepTextFrame, "RIGHT", 0, 0)
     currentStepText:SetWidth(388)
     currentStepText:SetJustifyH("LEFT")
     currentStepText:SetJustifyV("TOP")
@@ -340,6 +344,7 @@ local function InitHUD()
 
     questWarnText = questWarnBox:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     questWarnText:SetPoint("TOPLEFT", questWarnBox, "TOPLEFT", 10, -8)
+    questWarnText:SetPoint("RIGHT", questWarnBox, "RIGHT", -10, 0)
     questWarnText:SetWidth(368)
     questWarnText:SetJustifyH("LEFT")
     questWarnText:SetJustifyV("TOP")
@@ -454,93 +459,6 @@ local function InitHUD()
     hudFrame:Hide()
 end
 
--- 刷新多路线单选按钮栏 (独占行垂直排列，彻底解决文字重叠)
-local function UpdateAlternativeButtons(route, stepIndex)
-    if not altContainer then return 0 end
-
-    -- 仅在第 1 步且存在 2 个以上可行起点时展示方案单选
-    if stepIndex ~= 1 or not route.alternatives or #route.alternatives <= 1 then
-        altContainer:Hide()
-        return 0
-    end
-
-    altContainer:Show()
-    local selectedIdx = route.selectedAltIndex or 1
-    local btnCount = #route.alternatives
-    local rowHeight = 24
-    local containerHeight = btnCount * rowHeight + 4
-    altContainer:SetHeight(containerHeight)
-
-    for i, alt in ipairs(route.alternatives) do
-        local btn = altButtons[i]
-        if not btn then
-            btn = CreateFrame("Button", nil, altContainer, "BackdropTemplate")
-            btn:SetHeight(22)
-            btn:SetBackdrop({
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-                edgeSize = 10,
-                insets = { left = 2, right = 2, top = 2, bottom = 2 },
-            })
-            btn.text = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-            btn.text:SetPoint("LEFT", btn, "LEFT", 10, 0)
-            btn.text:SetJustifyH("LEFT")
-            altButtons[i] = btn
-        end
-
-        btn:Show()
-        btn:ClearAllPoints()
-        btn:SetPoint("TOPLEFT", altContainer, "TOPLEFT", 0, -(i - 1) * rowHeight)
-        btn:SetPoint("RIGHT", altContainer, "RIGHT", 0, 0)
-
-        local isSelected = (i == selectedIdx)
-        local radio = isSelected and "|cff00ffff●|r " or "|cff888888○|r "
-        local distTag = (alt.distanceText and alt.distanceText ~= "") and (" - " .. alt.distanceText) or ""
-        local missingTag = alt.isMissingTeleport and string.format(L["STATUS_MISSING_TAG_FMT"], alt.missingShortTag or L["TAG_MISSING"]) or ""
-        local tag = (i == 1) and L["HUD_ALT_TAG_RECOMMENDED"] or (alt.isUncertainWormhole and L["HUD_ALT_TAG_UNCERTAIN"] or "")
-        local label = string.format(L["HUD_ALT_LABEL_FMT"], radio, i, alt.name, distTag, missingTag, tag)
-        btn.text:SetText(label)
-
-        if isSelected then
-            btn:SetBackdropColor(0.0, 0.45, 0.75, 0.65)
-            btn:SetBackdropBorderColor(0.0, 0.9, 1.0, 0.95)
-            btn.text:SetTextColor(1.0, 1.0, 1.0)
-        else
-            btn:SetBackdropColor(0.12, 0.15, 0.20, 0.50)
-            btn:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.50)
-            btn.text:SetTextColor(0.75, 0.75, 0.75)
-        end
-
-        local altIndex = i
-        btn:SetScript("OnClick", function()
-            ns.Navigation:SelectAlternativeRoute(altIndex)
-        end)
-        btn:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText(string.format(L["HUD_ALT_TOOLTIP_TITLE_FMT"], altIndex, alt.name))
-            if alt.viaDesc then
-                GameTooltip:AddLine(alt.viaDesc, 0.8, 0.8, 0.8)
-            end
-            if alt.isUncertainWormhole then
-                GameTooltip:AddLine(L["HUD_ALT_TOOLTIP_WORMHOLE"], 1.0, 0.75, 0.25, true)
-            end
-            if alt.isMissingTeleport then
-                GameTooltip:AddLine("⚠ " .. (alt.missingReason or L["HUD_ALT_TOOLTIP_MISSING_FALLBACK"]), 1.0, 0.35, 0.25, true)
-            end
-            GameTooltip:Show()
-        end)
-        btn:SetScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-    end
-
-    for i = btnCount + 1, #altButtons do
-        altButtons[i]:Hide()
-    end
-
-    return containerHeight + 4
-end
-
 -- 辅助：计算带自动换行的中英文混排文本安全高度（剥离超链接与纹理标签后再估算折行）
 local function GetSafeFontStringHeight(fontString, rawText, bytesPerLine, lineHeight, minHeight)
     local measured = (fontString and fontString.GetStringHeight and fontString:GetStringHeight()) or 0
@@ -565,6 +483,117 @@ local function GetSafeFontStringHeight(fontString, rawText, bytesPerLine, lineHe
 
     local estimated = totalLines * (lineHeight or 16)
     return math.max(measured, estimated, minHeight or 18)
+end
+
+-- 刷新多路线单选按钮栏 (独占行垂直排列，支持文本自动换行与高度自适应，杜绝超出框体)
+local function UpdateAlternativeButtons(route, stepIndex)
+    if not altContainer then return 0 end
+
+    -- 仅在第 1 步且存在 2 个以上可行起点时展示方案单选
+    if stepIndex ~= 1 or not route.alternatives or #route.alternatives <= 1 then
+        altContainer:Hide()
+        return 0
+    end
+
+    altContainer:Show()
+    local selectedIdx = route.selectedAltIndex or 1
+    local btnCount = #route.alternatives
+    local currentY = 0
+
+    for i, alt in ipairs(route.alternatives) do
+        local btn = altButtons[i]
+        if not btn then
+            btn = CreateFrame("Button", nil, altContainer, "BackdropTemplate")
+            btn:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                edgeSize = 10,
+                insets = { left = 2, right = 2, top = 2, bottom = 2 },
+            })
+            btn.text = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+            btn.text:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -4)
+            btn.text:SetPoint("RIGHT", btn, "RIGHT", -10, 0)
+            btn.text:SetWidth(368)
+            btn.text:SetJustifyH("LEFT")
+            btn.text:SetJustifyV("TOP")
+            btn.text:SetWordWrap(true)
+            if btn.text.SetNonSpaceWrap then
+                btn.text:SetNonSpaceWrap(true)
+            end
+            btn.text:SetSpacing(2)
+            altButtons[i] = btn
+        end
+
+        btn:Show()
+
+        local isSelected = (i == selectedIdx)
+        local radio = isSelected and "|cff00ffff●|r " or "|cff888888○|r "
+        local distTag = (alt.distanceText and alt.distanceText ~= "") and (" - " .. alt.distanceText) or ""
+        local missingTag = alt.isMissingTeleport and string.format(L["STATUS_MISSING_TAG_FMT"], alt.missingShortTag or L["TAG_MISSING"]) or ""
+        local tag = (i == 1) and L["HUD_ALT_TAG_RECOMMENDED"] or (alt.isUncertainWormhole and L["HUD_ALT_TAG_UNCERTAIN"] or "")
+        local label = string.format(L["HUD_ALT_LABEL_FMT"], radio, i, alt.name, distTag, missingTag, tag)
+
+        btn.text:ClearAllPoints()
+        btn.text:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -4)
+        btn.text:SetPoint("RIGHT", btn, "RIGHT", -10, 0)
+        btn.text:SetWidth(368)
+        btn.text:SetWordWrap(true)
+        if btn.text.SetNonSpaceWrap then
+            btn.text:SetNonSpaceWrap(true)
+        end
+        btn.text:SetText(label)
+
+        local textH = GetSafeFontStringHeight(btn.text, label, 66, 14, 14)
+        local btnHeight = math.max(22, textH + 8)
+
+        btn:ClearAllPoints()
+        btn:SetPoint("TOPLEFT", altContainer, "TOPLEFT", 0, -currentY)
+        btn:SetPoint("RIGHT", altContainer, "RIGHT", 0, 0)
+        btn:SetHeight(btnHeight)
+
+        currentY = currentY + btnHeight + 4
+
+        if isSelected then
+            btn:SetBackdropColor(0.0, 0.45, 0.75, 0.65)
+            btn:SetBackdropBorderColor(0.0, 0.9, 1.0, 0.95)
+            btn.text:SetTextColor(1.0, 1.0, 1.0)
+        else
+            btn:SetBackdropColor(0.12, 0.15, 0.20, 0.50)
+            btn:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.50)
+            btn.text:SetTextColor(0.75, 0.75, 0.75)
+        end
+
+        local altIndex = i
+        btn:SetScript("OnClick", function()
+            ns.Navigation:SelectAlternativeRoute(altIndex)
+        end)
+        btn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText(string.format(L["HUD_ALT_TOOLTIP_TITLE_FMT"], altIndex, alt.name))
+            if alt.viaDesc then
+                GameTooltip:AddLine(alt.viaDesc, 0.8, 0.8, 0.8, true)
+            end
+            if alt.isUncertainWormhole then
+                GameTooltip:AddLine(L["HUD_ALT_TOOLTIP_WORMHOLE"], 1.0, 0.75, 0.25, true)
+            end
+            if alt.isMissingTeleport then
+                GameTooltip:AddLine("⚠ " .. (alt.missingReason or L["HUD_ALT_TOOLTIP_MISSING_FALLBACK"]), 1.0, 0.35, 0.25, true)
+            end
+            GameTooltip:Show()
+        end)
+        btn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+    end
+
+    for i = btnCount + 1, #altButtons do
+        altButtons[i]:Hide()
+    end
+
+    local containerHeight = math.max(26, currentY)
+    altContainer:SetHeight(containerHeight)
+
+    return containerHeight + 4
 end
 
 -- 显示路线
@@ -601,7 +630,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     currentStepText:SetWidth(388)
     currentStepText:SetText(descStr)
 
-    local descHeight = GetSafeFontStringHeight(currentStepText, descStr, 78, 17, 20)
+    local descHeight = GetSafeFontStringHeight(currentStepText, descStr, 68, 17, 20)
     stepTextFrame:SetHeight(descHeight + 4)
 
     -- 3. 缺失玩具/物品提示 & 前置任务提醒框排版 (位于步骤描述下方，高度随内容行数完全自适应)
@@ -667,7 +696,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         questWarnText:SetText(warnStr)
         questWarnBox:Show()
 
-        local warnTextH = GetSafeFontStringHeight(questWarnText, warnStr, 72, 16, 20)
+        local warnTextH = GetSafeFontStringHeight(questWarnText, warnStr, 66, 16, 20)
         local boxHeight = warnTextH + 18
         questWarnBox:SetHeight(boxHeight)
         questWarnHeight = boxHeight + 8
@@ -701,18 +730,44 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     if C_Timer and C_Timer.After then
         C_Timer.After(0, function()
             if not hudFrame or not hudFrame:IsShown() then return end
+
+            local realAltOffset = 0
+            if altContainer and altContainer:IsShown() and route.alternatives and #route.alternatives > 1 then
+                local currentY = 0
+                for i = 1, #route.alternatives do
+                    local btn = altButtons[i]
+                    if btn and btn:IsShown() then
+                        local actualTextH = (btn.text and btn.text.GetStringHeight and btn.text:GetStringHeight()) or 0
+                        local actualBtnH = math.max(22, actualTextH + 8)
+                        btn:SetHeight(actualBtnH)
+                        btn:ClearAllPoints()
+                        btn:SetPoint("TOPLEFT", altContainer, "TOPLEFT", 0, -currentY)
+                        btn:SetPoint("RIGHT", altContainer, "RIGHT", 0, 0)
+                        currentY = currentY + actualBtnH + 4
+                    end
+                end
+                local realContainerH = math.max(26, currentY)
+                altContainer:SetHeight(realContainerH)
+                realAltOffset = realContainerH + 4
+            else
+                realAltOffset = altOffset
+            end
+
             local realDescH = math.max(descHeight, currentStepText:GetStringHeight() or 0)
+            stepTextFrame:ClearAllPoints()
+            stepTextFrame:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36 - realAltOffset)
             stepTextFrame:SetHeight(realDescH + 4)
+
             local realWarnH = 0
             if questWarnBox:IsShown() then
                 questWarnBox:ClearAllPoints()
-                questWarnBox:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36 - altOffset - realDescH - 8)
+                questWarnBox:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36 - realAltOffset - realDescH - 8)
                 local actualWarnTextH = questWarnText:GetStringHeight() or 0
                 local finalBoxH = math.max(questWarnBox:GetHeight(), actualWarnTextH + 18)
                 questWarnBox:SetHeight(finalBoxH)
                 realWarnH = finalBoxH + 8
             end
-            hudFrame:SetHeight(math.max(130, 36 + altOffset + realDescH + realWarnH + 48))
+            hudFrame:SetHeight(math.max(130, 36 + realAltOffset + realDescH + realWarnH + 48))
         end)
     end
 end

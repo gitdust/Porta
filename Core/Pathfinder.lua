@@ -858,7 +858,7 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                             type = "FLY",
                             faction = "NEUTRAL",
                             cost = EDGE_COSTS.FLY or 2.0,
-                            note = "召唤飞行坐骑飞行前往",
+                            note = "飞行前往",
                         }
                         heap.push({ node = currentMapID, cost = flyCost })
                     end

@@ -180,6 +180,73 @@ local function GetMapDisplayName(mapID)
     return string.format(L["MAP_FALLBACK_FMT"], tostring(mapID))
 end
 
+-- 检测千禧阈限 (The Timeways - 2266) 是否处于有效版本与赛季生命周期
+local function IsTimewaysActive()
+    if ns.config and ns.config.forceTimewaysActive ~= nil then
+        return ns.config.forceTimewaysActive
+    end
+    if GetBuildInfo then
+        local _, _, _, tocVersion = GetBuildInfo()
+        if tocVersion and tocVersion > 0 then
+            -- 仅在 11.x (地心之战) 大秘境赛季周期内有效；跨入 12.0 及更高版本 (如 12.1) 时下线
+            return tocVersion >= 110000 and tocVersion < 120000
+        end
+    end
+    -- 默认以当前 12.1 大秘境第一赛季环境为准，千禧阈限处于关闭下线状态
+    return false
+end
+Pathfinder.IsTimewaysActive = IsTimewaysActive
+
+-- 计算暗月马戏团当前活动状态 (每月第一个周日 00:01 ~ 次周六 23:59)
+local function GetDarkmoonFaireStatus()
+    local now
+    if C_DateAndTime and C_DateAndTime.GetCurrentCalendarTime then
+        local ok, cTime = pcall(C_DateAndTime.GetCurrentCalendarTime)
+        if ok and cTime and cTime.year and cTime.month and cTime.monthDay then
+            now = {
+                year = cTime.year,
+                month = cTime.month,
+                day = cTime.monthDay,
+                hour = cTime.hour or 12,
+                wday = cTime.weekday or 1,
+            }
+        end
+    end
+    local getTimeStamp = time or (os and os.time) or function() return 0 end
+    local getDateTable = date or (os and os.date) or function() return {} end
+
+    if not now then
+        local ok, d = pcall(getDateTable, "*t")
+        now = ok and d or { year = 2026, month = 10, day = 13, hour = 12, wday = 3 }
+    end
+
+    -- 计算当月 1 号星期几 (wday: 1=周日, 2=周一, ..., 7=周六)
+    local t1 = getTimeStamp({ year = now.year, month = now.month, day = 1, hour = 12 })
+    local d1 = getDateTable("*t", t1)
+    local firstSunday = (1 - (d1.wday or 1) + 7) % 7 + 1
+    local faireEndDay = firstSunday + 6
+
+    local isOpen = (now.day >= firstSunday and now.day <= faireEndDay)
+
+    -- 计算下次开放日期
+    local nextMonth = now.month
+    local nextYear = now.year
+    if now.day > faireEndDay then
+        nextMonth = nextMonth + 1
+        if nextMonth > 12 then
+            nextMonth = 1
+            nextYear = nextYear + 1
+        end
+    end
+    local nextT1 = getTimeStamp({ year = nextYear, month = nextMonth, day = 1, hour = 12 })
+    local nextD1 = getDateTable("*t", nextT1)
+    local nextSundayDay = (1 - (nextD1.wday or 1) + 7) % 7 + 1
+    local nextOpenStr = string.format(L["DARKMOON_NEXT_DATE_FMT"] or "%d月%d日", nextMonth, nextSundayDay)
+
+    return isOpen, nextOpenStr, firstSunday, faireEndDay
+end
+Pathfinder.GetDarkmoonFaireStatus = GetDarkmoonFaireStatus
+
 -- =========================================================================
 -- 2. 真实物理距离计算器 (支持计算玩家当前位置到起点的真实码数)
 -- =========================================================================
@@ -308,7 +375,7 @@ local CONTIGUOUS_CONTINENTS = {
         100, 102, 104, 105, 107, 108, 109, 111
     },
     [619] = {
-        627, 630, 634, 641, 646, 650, 680, 790
+        627, 630, 634, 641, 646, 647, 650, 680, 790
     },
     [905] = {
         830, 882, 885, 971
@@ -354,7 +421,7 @@ local CONTINENT_CAPITAL_HUBS = {
     [424] = { HORDE = { 371, 390, 393 }, ALLIANCE = { 371, 390, 392 } },
     [572] = { HORDE = { 624, 590 }, ALLIANCE = { 622, 582 } },
     [101] = { HORDE = { 111 }, ALLIANCE = { 111 } },
-    [619] = { HORDE = { 627 }, ALLIANCE = { 627 } },
+    [619] = { HORDE = { 627, 630 }, ALLIANCE = { 627, 630 } },
     [905] = { HORDE = { 971 }, ALLIANCE = { 971 } },
     [875] = { HORDE = { 1163, 862 }, ALLIANCE = {} },
     [876] = { HORDE = {}, ALLIANCE = { 1161 } },
@@ -444,6 +511,18 @@ local SUBZONE_CONNECTIONS = {
     { from = 2339, to = 2444, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "虚痕竞技场通道", cost = 1.0 },
     { from = 2339, to = 2509, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "毒渊通道", cost = 1.0 },
     { from = 2339, to = 2512, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "尖牙祭坛通道", cost = 1.0 },
+
+    -- 【暗月马戏团主城秘法师直达通道】
+    { from = 85, to = 407, x = 0.48, y = 0.70, type = "TRANSPORT", faction = "HORDE", note = "暗月马戏团秘法师 (力量谷入口)", isDarkmoon = true, cost = 1.0 },
+    { from = 88, to = 407, x = 0.54, y = 0.51, type = "TRANSPORT", faction = "HORDE", note = "暗月马戏团秘法师 (长者高地)", isDarkmoon = true, cost = 1.0 },
+    { from = 84, to = 407, x = 0.62, y = 0.32, type = "TRANSPORT", faction = "ALLIANCE", note = "暗月马戏团秘法师 (法师区)", isDarkmoon = true, cost = 1.0 },
+    { from = 87, to = 407, x = 0.61, y = 0.89, type = "TRANSPORT", faction = "ALLIANCE", note = "暗月马戏团秘法师 (平民区)", isDarkmoon = true, cost = 1.0 },
+
+    -- 【死亡骑士职业大厅：阿彻鲁斯黑锋要塞 (647)】
+    { from = 647, to = 646, x = 0.50, y = 0.50, type = "FLY", faction = "NEUTRAL", note = "俯冲飞往破碎海滩野外", cost = 0.8 },
+    { from = 646, to = 647, x = 0.45, y = 0.60, type = "FLY", faction = "NEUTRAL", note = "飞往阿彻鲁斯：黑锋要塞", cost = 0.8 },
+    { from = 647, to = 627, x = 0.28, y = 0.35, type = "PORTAL", faction = "NEUTRAL", note = "阿彻鲁斯：达拉然传送门", cost = 1.0 },
+    { from = 627, to = 647, x = 0.68, y = 0.42, type = "PORTAL", faction = "NEUTRAL", note = "克拉苏斯平台：黑锋要塞传送门", cost = 1.0 },
 }
 
 -- =========================================================================
@@ -502,20 +581,152 @@ local function CreateMinHeap()
     return { push = push, pop = pop, empty = empty }
 end
 
+-- 军团再临职业大厅专属地图（仅对应职业可进出，严禁跨职业借道）
+local CLASS_HALL_MAPS = {
+    [24] = "PALADIN",       -- 圣光之愿礼拜堂圣所
+    [626] = "ROGUE",        -- 无冕者密室
+    [695] = "WARRIOR",      -- 苍穹要塞
+    [702] = "PRIEST",       -- 虚空之光神殿
+    [720] = "DEMONHUNTER",  -- 邪能之槌
+    [726] = "SHAMAN",       -- 漩涡之隙
+    [717] = "WARLOCK",      -- 恐惧痕迹
+    [747] = "DRUID",        -- 梦境林地
+    [647] = "DEATHKNIGHT",  -- 阿彻鲁斯：黑锋要塞
+    [648] = "DEATHKNIGHT",  -- 阿彻鲁斯：黑锋要塞下层
+    [739] = "HUNTER",       -- 神射手营地
+    [715] = "DRUID",        -- 翡翠梦境之道
+    [734] = "MAGE",         -- 守护者圣殿
+}
+
 -- =========================================================================
--- 6. 构建双向拓扑图 (支持正向与反向遍历)
+-- 历史时间线/多位面区域与兹多米 (Zidormi) 切换 NPC 定义表
 -- =========================================================================
-local function BuildGraphData(playerFaction)
+local PHASE_SHIFT_ZONES = {
+    [81] = { -- 希利苏斯 (Silithus)
+        npcMapID = 81,
+        x = 0.789,
+        y = 0.220,
+        tipKey = "PHASE_TIP_SILITHUS",
+        relatedMaps = { [81] = true, [1021] = true, [1473] = true, [1604] = true, [2321] = true },
+    },
+    [18] = { -- 提瑞斯法林地 / 幽暗城 (Tirisfal Glades / Undercity)
+        npcMapID = 18,
+        x = 0.695,
+        y = 0.628,
+        tipKey = "PHASE_TIP_TIRISFAL",
+        relatedMaps = { [18] = true, [90] = true, [2070] = true },
+    },
+    [390] = { -- 锦绣谷 (Vale of Eternal Blossoms)
+        npcMapID = 390,
+        x = 0.805,
+        y = 0.320,
+        tipKey = "PHASE_TIP_VALE",
+        relatedMaps = { [390] = true, [1530] = true },
+    },
+    [1527] = { -- 奥丹姆 (Uldum)
+        npcMapID = 1527,
+        x = 0.560,
+        y = 0.351,
+        tipKey = "PHASE_TIP_ULDUM",
+        relatedMaps = { [249] = true, [1527] = true },
+    },
+    [17] = { -- 诅咒之地 (Blasted Lands)
+        npcMapID = 17,
+        x = 0.482,
+        y = 0.073,
+        tipKey = "PHASE_TIP_BLASTED_LANDS",
+        relatedMaps = { [17] = true },
+    },
+    [62] = { -- 黑海岸 / 达纳苏斯 (Darkshore / Darnassus)
+        npcMapID = 62,
+        x = 0.489,
+        y = 0.245,
+        tipKey = "PHASE_TIP_DARKSHORE",
+        relatedMaps = { [62] = true, [89] = true },
+    },
+    [14] = { -- 阿拉希高地 (Arathi Highlands)
+        npcMapID = 14,
+        x = 0.382,
+        y = 0.901,
+        tipKey = "PHASE_TIP_ARATHI",
+        relatedMaps = { [14] = true },
+    },
+    [70] = { -- 尘泥沼泽 / 塞拉摩 (Dustwallow Bay / Theramore)
+        npcMapID = 70,
+        x = 0.564,
+        y = 0.500,
+        tipKey = "PHASE_TIP_THERAMORE",
+        relatedMaps = { [70] = true },
+    },
+}
+
+local MAP_TO_PHASE_INFO = {}
+for _, entry in pairs(PHASE_SHIFT_ZONES) do
+    for mID in pairs(entry.relatedMaps) do
+        MAP_TO_PHASE_INFO[mID] = entry
+    end
+end
+
+-- 获取指定地图对应的时间线位面切换信息
+function Pathfinder:GetPhaseShiftInfo(mapID)
+    if not mapID then return nil end
+    local entry = MAP_TO_PHASE_INFO[mapID]
+    if not entry then return nil end
+    local coordLink = self:FormatCoordLink(entry.npcMapID, entry.x, entry.y)
+    return {
+        zoneName = GetMapDisplayName(entry.npcMapID),
+        npcName = L["NPC_ZIDORMI"] or "兹多米",
+        npcMapID = entry.npcMapID,
+        x = entry.x,
+        y = entry.y,
+        tip = L[entry.tipKey] or "",
+        coordLink = coordLink,
+    }
+end
+
+-- =========================================================================
+-- 6. 构建双向拓扑图 (支持正向与反向遍历及动态生命周期/活动守卫)
+-- =========================================================================
+local function BuildGraphData(playerFaction, destMapID)
     local revAdj = {}
     local fwdAdj = {}
     playerFaction = playerFaction or ns.GetPlayerFaction()
 
     local _, _, playerRaceID = UnitRace("player")
     local isDarkIron = (playerRaceID == 34)
+    local _, playerClass = UnitClass("player")
 
-    local function addEdge(fromNode, toNode, x, y, edgeType, faction, note, cost, questID, achievementID)
+    local isTimeways = IsTimewaysActive()
+    local isDarkmoonOpen = GetDarkmoonFaireStatus()
+
+    local function addEdge(fromNode, toNode, x, y, edgeType, faction, note, cost, questID, achievementID, isDarkmoon)
         if not fromNode or not toNode or fromNode == toNode then return end
         if edgeType == "MOLE_MACHINE" and not isDarkIron then return end
+
+        -- 1. 资料片与赛季生命周期守卫：千禧阈限 (2266)
+        if (fromNode == 2266 or toNode == 2266) and not isTimeways then
+            return
+        end
+
+        -- 2. 暗月马戏团 (407) 周期时效守卫
+        if fromNode == 407 or toNode == 407 or isDarkmoon then
+            if not isDarkmoonOpen then
+                -- 活动未开放期间：不可将暗月岛作为中间过路中转；若目的地非暗月岛，彻底过滤
+                if destMapID ~= 407 then
+                    return
+                end
+                -- 若目的地即为暗月岛，仅允许单向进入（方便查看路线与未开放提示），禁止逆向离开
+                if fromNode == 407 then
+                    return
+                end
+            end
+        end
+
+        -- 3. 职业专属大厅地图隔离（防止跨职业穿梭圣所/大厅通道）
+        local reqClass = CLASS_HALL_MAPS[fromNode] or CLASS_HALL_MAPS[toNode]
+        if reqClass and reqClass ~= playerClass then
+            return
+        end
 
         local fMatch = (faction == "NEUTRAL") or (faction == playerFaction)
         if not fMatch then return end
@@ -531,6 +742,7 @@ local function BuildGraphData(playerFaction)
             cost = cost or (EDGE_COSTS[edgeType] or 1.5),
             questID = questID,
             achievementID = achievementID,
+            isDarkmoon = isDarkmoon or (fromNode == 407 or toNode == 407),
         }
 
         if not revAdj[toNode] then revAdj[toNode] = {} end
@@ -547,7 +759,7 @@ local function BuildGraphData(playerFaction)
     end
 
     for _, s in ipairs(SUBZONE_CONNECTIONS) do
-        addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID)
+        addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID, s.isDarkmoon)
     end
 
     return revAdj, fwdAdj
@@ -559,7 +771,7 @@ end
 function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
     if not destMapID then return {}, {}, {} end
 
-    local revAdj, fwdAdj = BuildGraphData(playerFaction)
+    local revAdj, fwdAdj = BuildGraphData(playerFaction, destMapID)
     local dist = {}
     local nextEdge = {}
 
@@ -691,6 +903,11 @@ local function BuildFinalArriveStep(stepIndex, destination)
         end
     end
 
+    local phaseInfo = Pathfinder:GetPhaseShiftInfo(destination.mapID)
+    if phaseInfo then
+        finalDesc = finalDesc .. string.format(L["STEP_ARRIVE_PHASE_HINT"], phaseInfo.coordLink, phaseInfo.npcName)
+    end
+
     return {
         stepIndex = stepIndex,
         mapID = destination.mapID,
@@ -699,6 +916,8 @@ local function BuildFinalArriveStep(stepIndex, destination)
         action = "ARRIVE",
         description = finalDesc,
         isFinal = true,
+        isPhaseShiftZone = (phaseInfo ~= nil),
+        phaseShiftInfo = phaseInfo,
     }
 end
 
@@ -721,8 +940,14 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
 
     local firstUnlocked, firstGate = Pathfinder:CheckPortalQuestStatus(startEdge, playerFaction)
 
+    local isDarkmoonStart = (startEdge.to == 407) and (startEdge.from == 85 or startEdge.from == 84 or startEdge.from == 88 or startEdge.from == 87)
+    local isDarkmoonOpen, nextDarkmoonDate = GetDarkmoonFaireStatus()
+
     local firstDesc
-    if startEdge.type == "FLY" then
+    if isDarkmoonStart then
+        local statusNotice = isDarkmoonOpen and L["DARKMOON_FAIRE_OPEN_TAG"] or string.format(L["DARKMOON_FAIRE_CLOSED_TAG_FMT"], nextDarkmoonDate)
+        firstDesc = string.format(L["STEP_DARKMOON_NPC"], fromName, startCoord, distTag, statusNotice)
+    elseif startEdge.type == "FLY" then
         firstDesc = string.format(L["STEP_START_FLY"], fromName, toName)
     elseif startEdge.type == "PORTAL" then
         firstDesc = string.format(L["STEP_START_PORTAL"], fromName, startCoord, distTag, toName)
@@ -777,7 +1002,11 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         local questTag = (not isUnlocked and gateConfig) and L["QUEST_GATE_INLINE_TAG"] or ""
 
         local desc
-        if edge.type == "FLY" then
+        if (edge.to == 407) and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
+            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
+            local statusNotice = isDarkmoonOpen and L["DARKMOON_FAIRE_OPEN_TAG"] or string.format(L["DARKMOON_FAIRE_CLOSED_TAG_FMT"], nextDarkmoonDate)
+            desc = string.format(L["STEP_DARKMOON_NPC_HOP"], fName, edgeCoord, statusNotice)
+        elseif edge.type == "FLY" then
             desc = string.format(L["STEP_HOP_FLY"], fName, tName, questTag)
         else
             local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
@@ -965,6 +1194,12 @@ function Pathfinder:CalculateRoute(destination)
     local playerFaction = ns.GetPlayerFaction()
     local destMapID = destination.mapID
 
+    -- 0. 检查千禧阈限 (2266) 是否在当前版本/赛季中有效开放
+    if destMapID == 2266 and not IsTimewaysActive() then
+        ns.Print(L["ERR_TIMEWAYS_INACTIVE"])
+        return nil
+    end
+
     -- =====================================================================
     -- 1. 已在同一地图：直接前往目标点
     -- =====================================================================
@@ -976,20 +1211,41 @@ function Pathfinder:CalculateRoute(destination)
             local coordLink = self:FormatCoordLink(destMapID, destination.x, destination.y)
             arriveDesc = string.format(L["STEP_ALREADY_IN_MAP_INSTANCE"], destination.name, coordLink)
         end
+        local phaseInfo = self:GetPhaseShiftInfo(destMapID)
+        if phaseInfo then
+            arriveDesc = arriveDesc .. string.format(L["STEP_ARRIVE_PHASE_HINT"], phaseInfo.coordLink, phaseInfo.npcName)
+        end
+        local directSteps = {
+            {
+                stepIndex = 1,
+                mapID = destMapID,
+                x = destination.x,
+                y = destination.y,
+                action = "DIRECT",
+                description = arriveDesc,
+                isFinal = true,
+                isPhaseShiftZone = (phaseInfo ~= nil),
+                phaseShiftInfo = phaseInfo,
+            }
+        }
         return {
             destination = destination,
-            steps = {
+            steps = directSteps,
+            totalSteps = 1,
+            alternatives = {
                 {
-                    stepIndex = 1,
-                    mapID = destMapID,
-                    x = destination.x,
-                    y = destination.y,
-                    action = "DIRECT",
-                    description = arriveDesc,
-                    isFinal = true,
+                    name = L["ALT_DIRECT_RUN"],
+                    viaDesc = string.format(L["ALT_DESC_ALREADY_IN_MAP"], destination.name),
+                    distanceYards = self:GetDistanceInYards(destMapID, destination.x, destination.y),
+                    distanceText = L["ALT_DIST_SAME_MAP"],
+                    score = 0.5,
+                    steps = directSteps,
+                    totalSteps = 1,
+                    phaseShiftInfo = phaseInfo,
                 }
             },
-            totalSteps = 1,
+            selectedAltIndex = 1,
+            phaseShiftInfo = phaseInfo,
         }
     end
 
@@ -1134,7 +1390,9 @@ function Pathfinder:CalculateRoute(destination)
 
                         local targetName = GetMapDisplayName(edge.to)
                         local branchName
-                        if edge.type == "PORTAL" then
+                        if (edge.to == 407) and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
+                            branchName = string.format(L["ALT_VIA_DARKMOON_NPC_FMT"], GetMapDisplayName(edge.from))
+                        elseif edge.type == "PORTAL" then
                             branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
                         elseif edge.type == "SHIP" then
                             branchName = string.format(L["ALT_VIA_SHIP_FMT"], targetName)
@@ -1262,20 +1520,23 @@ function Pathfinder:CalculateRoute(destination)
             return (a.tp.priority or 5) > (b.tp.priority or 5)
         end)
 
-        -- 选取最优的定点传送方案（若第 1 优方案未拥有/专业不符，且存在另一款已拥有的高竞争力传送方案，则同时提供）
+        -- 选取最优的定点传送方案：
+        -- 1) 加入第 1 优方案 (firstCand)
+        -- 2) 若第 1 优为职业技能 (SPELL)，且存在具有高竞争力的通用玩具/物品 (TOY / ITEM)，也可作为备选方案展示给玩家
+        -- 3) 若第 1 优方案未拥有/专业不符，且存在另一款已拥有的高竞争力传送方案，也同时提供
         local chosenTpCands = {}
         if #tpCandidates > 0 then
             local firstCand = tpCandidates[1]
             if firstCand.score <= bestPhysicalScore + 0.8 then
                 table.insert(chosenTpCands, firstCand)
             end
-            if not firstCand.tp.hasItem then
-                for i = 2, #tpCandidates do
-                    local cand = tpCandidates[i]
-                    if cand.tp.hasItem and cand.score <= bestPhysicalScore + 0.5 then
-                        table.insert(chosenTpCands, cand)
-                        break
-                    end
+            for i = 2, #tpCandidates do
+                local cand = tpCandidates[i]
+                local isDifferentType = (firstCand.tp.type == "SPELL" and cand.tp.type ~= "SPELL")
+                local isFallbackOwned = (not firstCand.tp.hasItem and cand.tp.hasItem)
+                if (isDifferentType or isFallbackOwned) and cand.score <= bestPhysicalScore + 0.5 then
+                    table.insert(chosenTpCands, cand)
+                    break
                 end
             end
         end
@@ -1368,6 +1629,22 @@ function Pathfinder:CalculateRoute(destination)
         return nil
     end
 
+    -- 暗月马戏团目标状态完善与非开放期提示
+    if destMapID == 407 then
+        local isDarkmoonOpen, nextDarkmoonDate = GetDarkmoonFaireStatus()
+        for _, alt in ipairs(alternatives) do
+            if not isDarkmoonOpen then
+                alt.isDarkmoonClosed = true
+                alt.viaDesc = string.format(L["DARKMOON_FAIRE_CLOSED_DESC_FMT"], nextDarkmoonDate)
+                alt.distanceText = string.format(L["DARKMOON_FAIRE_CLOSED_TAG_FMT"], nextDarkmoonDate)
+                alt.score = (alt.score or 5.0) + 10.0
+            else
+                alt.viaDesc = L["DARKMOON_FAIRE_OPEN_DESC"]
+                alt.distanceText = L["DARKMOON_FAIRE_OPEN_TAG"]
+            end
+        end
+    end
+
     -- 7. 对所有最终候选方案按总评分排序（玩具/物品方案默认视同已拥有参与排序，缺失时在界面与聊天中提示）
     table.sort(alternatives, function(a, b)
         if math.abs(a.score - b.score) > 0.01 then
@@ -1379,6 +1656,13 @@ function Pathfinder:CalculateRoute(destination)
         return (a.totalSteps or 99) < (b.totalSteps or 99)
     end)
 
+    local destPhaseInfo = self:GetPhaseShiftInfo(destMapID)
+    if destPhaseInfo then
+        for _, alt in ipairs(alternatives) do
+            alt.phaseShiftInfo = destPhaseInfo
+        end
+    end
+
     -- 默认采用第 1 优选方案
     local selectedAlt = alternatives[1]
 
@@ -1388,6 +1672,7 @@ function Pathfinder:CalculateRoute(destination)
         totalSteps = selectedAlt.totalSteps,
         alternatives = alternatives,
         selectedAltIndex = 1,
+        phaseShiftInfo = destPhaseInfo,
     }
 end
 

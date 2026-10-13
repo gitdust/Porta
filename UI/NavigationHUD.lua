@@ -644,6 +644,19 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         table.insert(warnBlocks, questWarnStr)
     end
 
+    local phaseInfo = currentStep.phaseShiftInfo or (currentStep.isFinal and route.phaseShiftInfo)
+    if phaseInfo then
+        local zidormiCoord = (ns.Pathfinder and ns.Pathfinder.FormatCoordLink) and ns.Pathfinder:FormatCoordLink(phaseInfo.npcMapID, phaseInfo.x, phaseInfo.y) or string.format("(%.1f, %.1f)", phaseInfo.x * 100, phaseInfo.y * 100)
+        local phaseWarnStr = string.format(
+            L["HUD_WARN_PHASE_SHIFT_FMT"],
+            phaseInfo.zoneName or "",
+            phaseInfo.tip or "",
+            phaseInfo.npcName or L["NPC_ZIDORMI"],
+            zidormiCoord
+        )
+        table.insert(warnBlocks, phaseWarnStr)
+    end
+
     local questWarnHeight = 0
     if #warnBlocks > 0 then
         local warnStr = table.concat(warnBlocks, "\n\n")

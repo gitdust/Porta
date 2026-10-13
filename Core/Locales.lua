@@ -142,6 +142,17 @@ local L_enUS = {
     ALT_DESC_HEARTHSTONE = "Standard Hearthstone",
     ALT_DIST_HEARTHSTONE = "Hearthstone",
     ALT_OPTION_FALLBACK_FMT = "Option %d",
+    ALT_VIA_DARKMOON_NPC_FMT = "Via [%s] Darkmoon Mystic Mage",
+
+    -- 暗月马戏团与千禧阈限动态时效提示
+    STEP_DARKMOON_NPC = "In [%s], go to %s%s and speak with the [Darkmoon Faire Mystic Mage] to teleport to the Darkmoon Faire entrance%s",
+    STEP_DARKMOON_NPC_HOP = "In [%s], go to %s and speak with the [Darkmoon Faire Mystic Mage] to teleport to the Darkmoon Faire entrance%s",
+    DARKMOON_FAIRE_OPEN_TAG = " |cff00ff00[Darkmoon Faire Open]|r",
+    DARKMOON_FAIRE_CLOSED_TAG_FMT = " |cffff4444[Event Closed (Next: %s)]|r",
+    DARKMOON_FAIRE_OPEN_DESC = "The Darkmoon Faire is currently active! Teleport directly via capital Mystic Mage.",
+    DARKMOON_FAIRE_CLOSED_DESC_FMT = "The Darkmoon Faire is currently closed (Next opening: %s). Only open from 1st Sunday to following Saturday each month.",
+    DARKMOON_NEXT_DATE_FMT = "%d/%d",
+    ERR_TIMEWAYS_INACTIVE = "The Timeways portal was only active during The War Within (11.0); it is closed in the current 12.1 expansion.",
 
     -- 物品/玩具/技能缺失状态短标签与原因模板 (PlayerTeleports)
     TAG_REQ_ENG = "Req. Engineering",
@@ -332,6 +343,19 @@ local L_enUS = {
     HUD_WARN_QUEST_FALLBACK_FMT = "|cffff4444⚠ Portal Locked|r\nPick up %s from %s to unlock; or ask a party member for a summon.",
     HUD_WARN_CAPITAL_FALLBACK = "Capital City",
     HUD_WARN_PREREQ_FALLBACK = "Prerequisite Quest",
+
+    NPC_ZIDORMI = "Zidormi",
+    DEST_CHAMBER_OF_HEART = "Chamber of Heart",
+    HUD_WARN_PHASE_SHIFT_FMT = "|cffffaa00⏱ [Timeline / Phase Alert] %s|r\n%s\n|cffffd100Timeline NPC: [%s] %s|r",
+    STEP_ARRIVE_PHASE_HINT = "\n|cffffaa00[Phase Alert] This zone has multiple timelines. If entrance/NPC is missing, visit %s and speak with [%s] to switch.|r",
+    PHASE_TIP_SILITHUS = "Silithus has two historical phases: 'The Wound / Chamber of Heart' and 'Classic'. If the Chamber of Heart portal, Magni's camp, or Ahn'Qiraj NPCs are missing, speak with Zidormi at the northeast border to switch timelines.",
+    PHASE_TIP_TIRISFAL = "Tirisfal Glades has two historical phases: 'Ruins of Lordaeron (Plague Blighted)' and 'Pre-Battle Classic Capital'. If Undercity is full of blight or vendors/heirloom NPCs are missing, speak with Zidormi east of the ruins to switch timelines.",
+    PHASE_TIP_VALE = "Vale of Eternal Blossoms has two historical phases: '8.3 Black Empire Assault' and 'Classic Pandaria'. If assault quests, NPCs, or Mogu'shan Palace entrance are missing, speak with Zidormi on the upper terrace of Mogu'shan Palace to switch timelines.",
+    PHASE_TIP_ULDUM = "Uldum has two historical phases: '8.3 Black Empire Assault' and 'Cataclysm'. If dungeon/raid summoning stones, quests, or NPCs are missing, speak with Zidormi east of Ramkahen to switch timelines.",
+    PHASE_TIP_BLASTED_LANDS = "Blasted Lands has two historical phases: 'Iron Horde Invasion (Red Dark Portal)' and 'Burning Crusade (Green Dark Portal)'. If the portal color is incorrect or quest NPCs are missing, speak with Zidormi at the northern mountain pass to switch timelines.",
+    PHASE_TIP_DARKSHORE = "Darkshore has two historical phases: 'Burned Teldrassil / Warfront' and 'Pre-Burning Classic'. If Darnassus is in ruins or quest NPCs are missing, speak with Zidormi south of Lor'danel to switch timelines.",
+    PHASE_TIP_ARATHI = "Arathi Highlands has two historical phases: 'Stromgarde Warfront' and 'Classic'. If camps, rares, or quest NPCs do not match, speak with Zidormi south of Refuge Pointe to switch timelines.",
+    PHASE_TIP_THERAMORE = "Theramore has two historical phases: 'Post-Mana Bomb Ruins' and 'Pre-Bombing Classic'. If town NPCs, ships, or buildings are missing, speak with Zidormi near the western bridge entrance to switch timelines.",
 }
 
 -- =========================================================================
@@ -463,6 +487,17 @@ local L_zhCN = {
     ALT_DESC_HEARTHSTONE = "常规炉石回城",
     ALT_DIST_HEARTHSTONE = "炉石",
     ALT_OPTION_FALLBACK_FMT = "方案 %d",
+    ALT_VIA_DARKMOON_NPC_FMT = "经【%s】暗月马戏团秘法师",
+
+    -- 暗月马戏团与千禧阈限动态时效提示
+    STEP_DARKMOON_NPC = "在【%s】前往坐标 %s%s，与【暗月马戏团秘法师】对话传送到暗月马戏团入口%s",
+    STEP_DARKMOON_NPC_HOP = "在【%s】前往坐标 %s，与【暗月马戏团秘法师】对话传送到暗月马戏团入口%s",
+    DARKMOON_FAIRE_OPEN_TAG = " |cff00ff00[暗月马戏团进行中]|r",
+    DARKMOON_FAIRE_CLOSED_TAG_FMT = " |cffff4444[活动未开放 (下次开放: %s)]|r",
+    DARKMOON_FAIRE_OPEN_DESC = "暗月马戏团正在举行中！可通过主城暗月马戏团秘法师直达。",
+    DARKMOON_FAIRE_CLOSED_DESC_FMT = "暗月马戏团当前未开放（下次开放：%s）。活动仅在每月首个周日开始持续一周。",
+    DARKMOON_NEXT_DATE_FMT = "%d月%d日",
+    ERR_TIMEWAYS_INACTIVE = "千禧阈限传送门仅在11.0地心之战大秘境周期内有效，当前12.1版本已关闭。",
 
     TAG_REQ_ENG = "需工程学",
     TAG_ENG_UNMET = "工程学条件不符",
@@ -647,6 +682,19 @@ local L_zhCN = {
     HUD_WARN_QUEST_FALLBACK_FMT = "|cffff4444⚠ 传送门未解锁|r\n当前角色需在%s接取%s开启；或请队友在副本门口拉人。",
     HUD_WARN_CAPITAL_FALLBACK = "主城",
     HUD_WARN_PREREQ_FALLBACK = "前置任务",
+
+    NPC_ZIDORMI = "兹多米",
+    DEST_CHAMBER_OF_HEART = "心之密室",
+    HUD_WARN_PHASE_SHIFT_FMT = "|cffffaa00⏱ 【时间线位面提醒】%s|r\n%s\n|cffffd100位面切换 NPC：【%s】%s|r",
+    STEP_ARRIVE_PHASE_HINT = "\n|cffffaa00【位面提醒】该区域存在多个历史时间线位面。若未看到目标入口/NPC，可前往坐标 %s 与【%s】对话切换。|r",
+    PHASE_TIP_SILITHUS = "希利苏斯存在「萨格拉斯之剑创伤（含心之密室入口与麦格尼营地）」与「经典旧世」两个历史位面。若看不到心之密室入口或安其拉相关NPC/任务，请前往地图东北边缘对话切换时间线。",
+    PHASE_TIP_TIRISFAL = "提瑞斯法林地存在「战后废墟（幽暗城被瘟疫覆盖）」与「战前经典主城」两个历史位面。若幽暗城被瘟疫覆盖或看不到城内NPC/传家宝商人，请前往洛丹伦废墟东侧山坡对话切换时间线。",
+    PHASE_TIP_VALE = "锦绣谷存在「8.3 恩佐斯突袭（黑暗帝国）」与「经典潘达利亚」两个历史位面。若看不到对应版本的日常任务、NPC或魔古山宫殿入口，请在魔古山宫殿上方露台对话切换时间线。",
+    PHASE_TIP_ULDUM = "奥丹姆存在「8.3 恩佐斯突袭」与「大地的裂变」两个历史位面。若地下城/团队副本集合石、日常任务或对应NPC不显示，请前往拉穆卡恒以东对话切换时间线。",
+    PHASE_TIP_BLASTED_LANDS = "诅咒之地存在「德拉诺之王前夕（红门/钢铁部落入侵）」与「经典/外域时代（绿门穿行）」两个历史位面。若黑暗之门颜色不对或任务NPC缺失，请在北侧山道旁对话切换时间线。",
+    PHASE_TIP_DARKSHORE = "黑海岸存在「泰达希尔烧毁后（战争前线）」与「战前经典主城」两个历史位面。若达纳苏斯被烧毁无法进入或看不到NPC，请前往洛丹诺以南对话切换时间线。",
+    PHASE_TIP_ARATHI = "阿拉希高地存在「激流堡战争前线」与「经典旧世」两个历史位面。若地图上的营地、稀有怪或任务状态不符，请前往避难谷地以南对话切换时间线。",
+    PHASE_TIP_THERAMORE = "塞拉摩存在「法力炸弹爆炸后（废墟弹坑）」与「爆炸前经典城堡」两个历史位面。若看不到塞拉摩城内NPC、船只或建筑，请在大桥入口旁对话切换时间线。",
 }
 
 -- =========================================================================
@@ -962,6 +1010,19 @@ local L_zhTW = {
     HUD_WARN_QUEST_FALLBACK_FMT = "|cffff4444⚠ 傳送門未解鎖|r\n目前角色需在%s接取%s開啟；或請隊友在副本門口拉人。",
     HUD_WARN_CAPITAL_FALLBACK = "主城",
     HUD_WARN_PREREQ_FALLBACK = "前置任務",
+
+    NPC_ZIDORMI = "茲多米",
+    DEST_CHAMBER_OF_HEART = "心之密室",
+    HUD_WARN_PHASE_SHIFT_FMT = "|cffffaa00⏱ 【時間線位面提醒】%s|r\n%s\n|cffffd100位面切換 NPC：【%s】%s|r",
+    STEP_ARRIVE_PHASE_HINT = "\n|cffffaa00【位面提醒】該區域存在多個歷史時間線位面。若未看到目標入口/NPC，可前往坐標 %s 與【%s】對話切換。|r",
+    PHASE_TIP_SILITHUS = "希利蘇斯存在「薩格拉斯之劍創傷（含心之密室入口與麥格尼營地）」與「經典舊世」兩個歷史位面。若看不到心之密室入口或安其拉相關NPC/任務，請前往地圖東北邊緣對話切換時間線。",
+    PHASE_TIP_TIRISFAL = "提瑞斯法林地存在「戰後廢墟（幽暗城被瘟疫覆蓋）」與「戰前經典主城」兩個歷史位面。若幽暗城被瘟疫覆蓋或看不到城內NPC/傳家寶商人，請前往洛丹倫廢墟東側山坡對話切換時間線。",
+    PHASE_TIP_VALE = "錦繡谷存在「8.3 恩佐斯突襲（黑暗帝國）」與「經典潘達利亞」兩個歷史位面。若看不到對應版本的日常任務、NPC或魔古山宮殿入口，請在魔古山宮殿上方露臺對話切換時間線。",
+    PHASE_TIP_ULDUM = "奧丹姆存在「8.3 恩佐斯突襲」與「大地的裂變」兩個歷史位面。若地下城/團隊副本集合石、日常任務或對應NPC不顯示，請前往拉穆卡恒以東對話切換時間線。",
+    PHASE_TIP_BLASTED_LANDS = "詛咒之地存在「德拉諾之王前夕（紅門/鋼鐵部落入侵）」與「經典/外域時代（綠門穿行）」兩個歷史位面。若黑暗之門顏色不對或任務NPC缺失，請在北側山道旁對話切換時間線。",
+    PHASE_TIP_DARKSHORE = "黑海岸存在「泰達希爾燒毀後（戰爭前線）」與「戰前經典主城」兩個歷史位面。若達納蘇斯被燒毀無法進入或看不到NPC，請前往洛丹諾以南對話切換時間線。",
+    PHASE_TIP_ARATHI = "阿拉希高地存在「激流堡戰爭前線」與「經典舊世」兩個歷史位面。若地圖上的營地、稀有怪或任務狀態不符，請前往避難谷地以南對話切換時間線。",
+    PHASE_TIP_THERAMORE = "塞拉摩存在「法力炸彈爆炸後（廢墟彈坑）」與「爆炸前經典城堡」兩個歷史位面。若看不到塞拉摩城內NPC、船隻或建築，請在大橋入口旁對話切換時間線。",
 }
 
 -- 构造最终语言表 L（按客户端 GetLocale 自动合并，缺失键自动回退至 L_enUS）

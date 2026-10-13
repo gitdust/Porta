@@ -84,6 +84,19 @@ local function NormalizeTextForms(textLower)
     return spaced, compact
 end
 
+-- 经典与多版本特殊地标/任务枢纽（非传统地下城，但玩家频繁前往的著名传送/任务地点）
+local SPECIAL_LANDMARKS = {
+    {
+        nameKey = "DEST_CHAMBER_OF_HEART",
+        nameFallback = "心之密室",
+        mapID = 81,
+        x = 0.422,
+        y = 0.445,
+        type = "zone",
+        comment = "Chamber of Heart",
+    },
+}
+
 -- 初始化搜索索引（在 PLAYER_LOGIN 时调用）
 function SearchEngine:Initialize()
     if isInitialized then return end
@@ -95,6 +108,31 @@ function SearchEngine:Initialize()
     local seenInstanceNames = {}
     local seenContinentZoneNames = {}
     local seenGlobalZoneNames = {}
+
+    -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室等)
+    for _, lm in ipairs(SPECIAL_LANDMARKS) do
+        local lmName = (lm.nameKey and L[lm.nameKey]) or lm.nameFallback
+        local zName = L["UNKNOWN_ZONE"]
+        if C_Map and C_Map.GetMapInfo then
+            local mInfo = C_Map.GetMapInfo(lm.mapID)
+            if mInfo and mInfo.name then
+                zName = mInfo.name
+            end
+        end
+        local typeMeta = TYPE_INFO[lm.type] or TYPE_INFO.zone
+        table.insert(searchIndex, {
+            id = 0,
+            name = lmName,
+            zoneName = zName,
+            mapID = lm.mapID,
+            x = lm.x,
+            y = lm.y,
+            type = lm.type,
+            tag = typeMeta.tag,
+            color = typeMeta.color,
+            comment = lm.comment or "",
+        })
+    end
 
     -- 1. 建立副本目的地索引 (地下城、团队副本、地下堡)
     if ns.PortaData and ns.PortaData.destinations then

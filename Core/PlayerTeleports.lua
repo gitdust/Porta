@@ -172,7 +172,7 @@ local CLASS_TELEPORT_SPELLS = {
     { id = 18960, class = "DRUID", name = "Teleport: Moonglade", toMap = 80, x = 0.56, y = 0.30, priority = 8 },
 
     -- 死亡骑士：黑锋之门 (阿彻鲁斯黑锋要塞)
-    { id = 50977, class = "DEATHKNIGHT", name = "Death Gate", toMap = 647, x = 0.50, y = 0.50, priority = 8 },
+    { id = 50977, class = "DEATHKNIGHT", name = "Death Gate", toMap = 647, x = 0.50, y = 0.50, priority = 10 },
 
     -- 武僧：禅宗朝圣 (晴日峰 / 迷踪岛)
     { id = 126892, class = "MONK", name = "Zen Pilgrimage", toMap = 378, x = 0.50, y = 0.50, priority = 8 },

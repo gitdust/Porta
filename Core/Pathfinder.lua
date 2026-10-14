@@ -901,6 +901,9 @@ local function BuildFinalArriveStep(stepIndex, destination)
 
     if destination.type == "zone" or destination.type == "continent" then
         finalDesc = string.format(L["STEP_ARRIVE_ZONE"], destination.name)
+    elseif destination.type == "delve" then
+        local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
+        finalDesc = string.format(L["STEP_ARRIVE_DELVE"] or L["STEP_ARRIVE_INSTANCE"], GetMapDisplayName(destination.mapID), destination.name, entryCoord)
     else
         local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
         finalDesc = string.format(L["STEP_ARRIVE_INSTANCE"], GetMapDisplayName(destination.mapID), destination.name, entryCoord)
@@ -1214,6 +1217,9 @@ function Pathfinder:CalculateRoute(destination)
         local arriveDesc
         if destination.type == "zone" or destination.type == "continent" then
             arriveDesc = string.format(L["STEP_ALREADY_IN_ZONE"], destination.name)
+        elseif destination.type == "delve" then
+            local coordLink = self:FormatCoordLink(destMapID, destination.x, destination.y)
+            arriveDesc = string.format(L["STEP_ALREADY_IN_MAP_DELVE"] or L["STEP_ALREADY_IN_MAP_INSTANCE"], destination.name, coordLink)
         else
             local coordLink = self:FormatCoordLink(destMapID, destination.x, destination.y)
             arriveDesc = string.format(L["STEP_ALREADY_IN_MAP_INSTANCE"], destination.name, coordLink)

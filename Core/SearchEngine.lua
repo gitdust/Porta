@@ -98,6 +98,48 @@ local SPECIAL_LANDMARKS = {
     },
 }
 
+-- 权威地下堡多语言回退表 (覆盖 11.0 地心之战、11.1 安德麦/塞纳岛、12.0/12.1 至暗之夜)
+local DELVE_FALLBACK_NAMES = {
+    [2269] = { en = "Earthcrawl Mines", zhCN = "地匍矿洞", zhTW = "地行礦坑" },
+    [2249] = { en = "Fungal Folly", zhCN = "真菌之愚", zhTW = "菌菇愚行" },
+    [2250] = { en = "Kriegval's Rest", zhCN = "克莱格瓦之眠", zhTW = "克里格瓦之眠" },
+    [2251] = { en = "The Waterworks", zhCN = "水能堡", zhTW = "水力發電壩" },
+    [2302] = { en = "The Dread Pit", zhCN = "恐惧陷坑", zhTW = "恐怖地穴" },
+    [2277] = { en = "Nightfall Sanctum", zhCN = "夜幕圣所", zhTW = "夜暮聖所" },
+    [2301] = { en = "The Sinkhole", zhCN = "无底沉穴", zhTW = "陷坑" },
+    [2312] = { en = "Mycomancer Cavern", zhCN = "丝菌师洞穴", zhTW = "真菌法師洞窟" },
+    [2310] = { en = "Skittering Breach", zhCN = "飞掠裂口", zhTW = "奔蛛裂層" },
+    [2299] = { en = "The Underkeep", zhCN = "幽暗要塞", zhTW = "深淵堡" },
+    [2259] = { en = "Tak-Rethan Abyss", zhCN = "塔克-雷桑深渊", zhTW = "塔克-瑞桑深淵" },
+    [2347] = { en = "The Spiral Weave", zhCN = "螺旋织纹", zhTW = "迴繞地道" },
+    [2348] = { en = "Zekvir's Lair", zhCN = "泽克维尔的巢穴", zhTW = "澤克維爾巢穴" },
+    [2423] = { en = "Sidestreet Sluice", zhCN = "闸板陋巷", zhTW = "後街水閘" },
+    [2396] = { en = "Excavation Site 9", zhCN = "九号挖掘场", zhTW = "9號挖掘場" },
+    [2425] = { en = "Demolition Dome", zhCN = "破拆穹顶", zhTW = "爆鬥場" },
+    [2452] = { en = "Archival Assault", zhCN = "档案馆突袭", zhTW = "文庫襲擊" },
+    [2484] = { en = "Voidscar Cavern", zhCN = "虚空之锋庇护所", zhTW = "虛無剃刀庇護所" },
+    [2502] = { en = "Shadow Enclave", zhCN = "聚影领地", zhTW = "暗影領區" },
+    [2503] = { en = "Twilight Crypts", zhCN = "暮光地穴", zhTW = "暮光墓穴" },
+    [2505] = { en = "The Gulf of Memory", zhCN = "回忆深沟", zhTW = "回憶裂口" },
+    [2506] = { en = "Shadowguard Point", zhCN = "影卫营", zhTW = "影衛崗哨" },
+    [2510] = { en = "The Grudge Pit", zhCN = "憎怨斗坑", zhTW = "怨鬥坑洞" },
+    [2525] = { en = "The Darkway", zhCN = "黑暗回廊", zhTW = "黑暗之途" },
+    [2528] = { en = "Sunkiller Sanctum", zhCN = "戮日圣殿", zhTW = "戮日者聖所" },
+    [2535] = { en = "Atal'Aman", zhCN = "阿塔阿曼", zhTW = "阿塔阿曼" },
+    [2545] = { en = "Parhelion Plaza", zhCN = "幻日广场", zhTW = "幻日廣場" },
+    [2547] = { en = "Collegiate Calamity", zhCN = "学府骚动", zhTW = "學院災禍" },
+    [2633] = { en = "The Ring of Glory", zhCN = "荣耀之环", zhTW = "榮耀競技場" },
+    [2635] = { en = "Gnarldor Isle", zhCN = "纳拉多尔岛", zhTW = "納爾多島" },
+}
+
+-- 包含地下堡的各大洲野外地图列表（用于动态查询 C_AreaPoiInfo）
+local DELVE_SEARCH_MAPS = {
+    -- Khaz Algar
+    2248, 2214, 2215, 2255, 2256, 2213, 2216, 2369, 2322, 2346, 2371, 2472,
+    -- Quel'Thalas / Midnight
+    2393, 2395, 2437, 2424, 2405, 2444, 2413, 2536, 2576, 2509, 2512,
+}
+
 -- 初始化搜索索引（在 PLAYER_LOGIN 时调用）
 function SearchEngine:Initialize()
     if isInitialized then return end
@@ -140,18 +182,40 @@ function SearchEngine:Initialize()
         for _, dest in ipairs(ns.PortaData.destinations) do
             if not (dest.id and seenDestIDs[dest.id]) then
                 local instanceName = nil
-                -- 通过暴雪原生 Journal API 获取当前客户端语言的名称
+                -- 通过暴雪原生 API 获取当前客户端语言的名称
                 if dest.id and dest.id > 0 then
-                    if C_EncounterJournal and C_EncounterJournal.GetInstanceInfo then
-                        local name = C_EncounterJournal.GetInstanceInfo(dest.id)
-                        if name and name ~= "" then
-                            instanceName = name
+                    if dest.type == "delve" then
+                        if C_Map and C_Map.GetMapInfo then
+                            local mInfo = C_Map.GetMapInfo(dest.id)
+                            if mInfo and mInfo.name and mInfo.name ~= "" then
+                                instanceName = mInfo.name
+                            end
                         end
-                    end
-                    if not instanceName and EJ_GetInstanceInfo then
-                        local name = EJ_GetInstanceInfo(dest.id)
-                        if name and name ~= "" then
-                            instanceName = name
+                        if not instanceName or instanceName == "" then
+                            local fallback = DELVE_FALLBACK_NAMES[dest.id]
+                            if fallback then
+                                local loc = (GetLocale and GetLocale()) or "enUS"
+                                if loc == "zhCN" then
+                                    instanceName = fallback.zhCN
+                                elseif loc == "zhTW" then
+                                    instanceName = fallback.zhTW
+                                else
+                                    instanceName = fallback.en
+                                end
+                            end
+                        end
+                    else
+                        if C_EncounterJournal and C_EncounterJournal.GetInstanceInfo then
+                            local name = C_EncounterJournal.GetInstanceInfo(dest.id)
+                            if name and name ~= "" then
+                                instanceName = name
+                            end
+                        end
+                        if not instanceName and EJ_GetInstanceInfo then
+                            local name = EJ_GetInstanceInfo(dest.id)
+                            if name and name ~= "" then
+                                instanceName = name
+                            end
                         end
                     end
                 end
@@ -196,6 +260,51 @@ function SearchEngine:Initialize()
                         color = typeMeta.color,
                         comment = dest.comment or "",
                     })
+                end
+            end
+        end
+    end
+
+    -- 1b. 动态扫描暴雪官方地下堡 AreaPOI (获取实时地名、入口及最新版本内容)
+    if C_AreaPoiInfo and C_AreaPoiInfo.GetDelvesForMap and C_AreaPoiInfo.GetAreaPOIInfo then
+        for _, zoneMapID in ipairs(DELVE_SEARCH_MAPS) do
+            local delvePoiList = C_AreaPoiInfo.GetDelvesForMap(zoneMapID)
+            if delvePoiList then
+                for _, areaPoiID in ipairs(delvePoiList) do
+                    local poiInfo = C_AreaPoiInfo.GetAreaPOIInfo(zoneMapID, areaPoiID)
+                    if poiInfo and poiInfo.name and poiInfo.name ~= "" and poiInfo.position then
+                        local px, py = poiInfo.position:GetXY()
+                        if px and py and px > 0 and py > 0 then
+                            local delveName = TrimText(poiInfo.name)
+                            local delveNameLower = string.lower(delveName)
+                            local delveTypeKey = "delve:" .. delveNameLower
+                            if not seenDestTypeNames[delveTypeKey] then
+                                seenDestTypeNames[delveTypeKey] = true
+                                seenInstanceNames[delveNameLower] = true
+
+                                local zName = L["UNKNOWN_ZONE"]
+                                if C_Map and C_Map.GetMapInfo then
+                                    local mInfo = C_Map.GetMapInfo(zoneMapID)
+                                    if mInfo and mInfo.name then
+                                        zName = mInfo.name
+                                    end
+                                end
+
+                                table.insert(searchIndex, {
+                                    id = areaPoiID,
+                                    name = delveName,
+                                    zoneName = zName,
+                                    mapID = zoneMapID,
+                                    x = px,
+                                    y = py,
+                                    type = "delve",
+                                    tag = TYPE_INFO.delve.tag,
+                                    color = TYPE_INFO.delve.color,
+                                    comment = poiInfo.description or "",
+                                })
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -412,6 +521,24 @@ function SearchEngine:Search(query, limit)
 
     for _, item in ipairs(searchIndex) do
         local isMatch, score = MatchText(item.name, queryLower, querySpaced, queryCompact)
+
+        -- 1. 若名称未命中，支持英文备注/原名匹配（跨语言检索，如中文客户端输入 Earthcrawl）
+        if not isMatch and item.comment and item.comment ~= "" then
+            local cMatch, cScore = MatchText(item.comment, queryLower, querySpaced, queryCompact)
+            if cMatch then
+                isMatch = true
+                score = math.floor(cScore * 0.85)
+            end
+        end
+
+        -- 2. 若仍未命中，支持分类标签检索（如输入“地下堡”/“delve”列出全部地下堡，“团本”/“raid”列出团队副本）
+        if not isMatch and item.tag and item.tag ~= "" then
+            local tMatch = MatchText(item.tag, queryLower, querySpaced, queryCompact)
+            if tMatch then
+                isMatch = true
+                score = 65
+            end
+        end
 
         if isMatch then
             if score == 100 then

@@ -114,8 +114,10 @@ local L_enUS = {
     STEP_SAME_CONT_FLY = "In [%s], mount up and fly directly to [%s]",
     STEP_ALREADY_IN_ZONE = "You are already in [%s]!",
     STEP_ALREADY_IN_MAP_INSTANCE = "You are already in this zone. Head directly to [%s] entrance %s",
+    STEP_ALREADY_IN_MAP_DELVE = "You are already in this zone. Head directly to [%s] Delve entrance %s",
     STEP_ARRIVE_ZONE = "Arrive at [%s]. You have reached the target zone!",
     STEP_ARRIVE_INSTANCE = "Arrive at [%s], head to [%s] entrance %s",
+    STEP_ARRIVE_DELVE = "Arrive at [%s], head to [%s] Delve entrance %s",
     STEP_ARRIVE_MC_HINT = "\n\n|cff00ff00[Tip]|r You can also speak to [Lothos Riftwaker] at %s in Blackrock Mountain to teleport directly inside!",
 
     -- 备选路线方案名称与描述模板
@@ -466,8 +468,10 @@ local L_zhCN = {
     STEP_SAME_CONT_FLY = "在【%s】直接飞行前往【%s】",
     STEP_ALREADY_IN_ZONE = "你当前已在【%s】，已抵达目标区域！",
     STEP_ALREADY_IN_MAP_INSTANCE = "你已在该地图，直接前往【%s】入口 %s",
+    STEP_ALREADY_IN_MAP_DELVE = "你已在该地图，直接前往【%s】地下堡入口 %s",
     STEP_ARRIVE_ZONE = "抵达【%s】，已成功进入目标区域！",
     STEP_ARRIVE_INSTANCE = "抵达【%s】，前往【%s】入口 %s",
+    STEP_ARRIVE_DELVE = "抵达【%s】，前往【%s】地下堡入口 %s",
     STEP_ARRIVE_MC_HINT = "\n\n|cff00ff00[便捷提示]|r 在黑石山坐标 %s 亦可直接与【洛索斯·天痕】对话传送进入！",
 
     ALT_CAST_FMT = "施放【%s】",
@@ -811,8 +815,10 @@ local L_zhTW = {
     STEP_SAME_CONT_FLY = "在【%s】直接飛行前往【%s】",
     STEP_ALREADY_IN_ZONE = "你目前已在【%s】，已抵達目標區域！",
     STEP_ALREADY_IN_MAP_INSTANCE = "你已在該地圖，直接前往【%s】入口 %s",
+    STEP_ALREADY_IN_MAP_DELVE = "你已在該地圖，直接前往【%s】探究入口 %s",
     STEP_ARRIVE_ZONE = "抵達【%s】，已成功進入目標區域！",
     STEP_ARRIVE_INSTANCE = "抵達【%s】，前往【%s】入口 %s",
+    STEP_ARRIVE_DELVE = "抵達【%s】，前往【%s】探究入口 %s",
     STEP_ARRIVE_MC_HINT = "\n\n|cff00ff00[便捷提示]|r 在黑石山座標 %s 亦可直接與【洛索斯·天痕】對話傳送進入！",
 
     ALT_CAST_FMT = "施放【%s】",

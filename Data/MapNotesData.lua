@@ -1,8 +1,8 @@
 -- =========================================================================
 -- Porta Data - Auto-generated from HandyNotes_MapNotes (Retail)
 -- Build Date: 2026-10-14
--- Destinations: 201
--- Transport Edges: 654
+-- Destinations: 231
+-- Transport Edges: 658
 -- =========================================================================
 
 local _, ns = ...
@@ -194,7 +194,7 @@ ns.PortaData = {
         { id = 1272, mapID = 2248, x = 0.7700, y = 0.4400, type = "dungeon", comment = "Cinderbrew Meadery" },
         { id = 1273, mapID = 2255, x = 0.4400, y = 0.9000, type = "raid", comment = "Nerub-ar Palace" },
         { id = 1274, mapID = 2255, x = 0.4700, y = 0.6900, type = "dungeon", comment = "City of Threads" },
-        { id = 1276, mapID = 69, x = 0.6600, y = 0.3500, type = "dungeon", comment = "Dire Maul - Warpwood Quarter - East above Camp Mojache" },
+        { id = 1276, mapID = 69, x = 0.7600, y = 0.3600, type = "dungeon", comment = "Dire Maul - Warpwood Quarter - East above Camp Mojache -- only Minimap" },
         { id = 1277, mapID = 69, x = 0.6300, y = 0.2500, type = "dungeon", comment = "Dire Maul - Gordok Commons - North" },
         { id = 1292, mapID = 23, x = 0.4300, y = 0.1900, type = "dungeon", comment = "Stratholme Service Entrance" },
         { id = 1296, mapID = 2346, x = 0.4200, y = 0.5000, type = "raid", comment = "Liberation of Undermine" },
@@ -215,6 +215,36 @@ ns.PortaData = {
         { id = 1316, mapID = 2405, x = 0.6500, y = 0.6200, type = "dungeon", comment = "Nexuspunkt Xenas" },
         { id = 1320, mapID = 2509, x = 0.4700, y = 0.2300, type = "raid", comment = "Der giftige Abgrund" },
         { id = 1322, mapID = 2509, x = 0.4700, y = 0.6800, type = "dungeon", comment = "Altar der Fänge" },
+        { id = 2249, mapID = 2248, x = 0.5252, y = 0.6626, type = "delve", comment = "Fungal Folly" },
+        { id = 2250, mapID = 2248, x = 0.6164, y = 0.4271, type = "delve", comment = "Kriegval's Rest" },
+        { id = 2251, mapID = 2214, x = 0.4611, y = 0.4791, type = "delve", comment = "The Waterworks" },
+        { id = 2259, mapID = 2255, x = 0.5491, y = 0.7231, type = "delve", comment = "Tak-Rethan Abyss" },
+        { id = 2269, mapID = 2248, x = 0.3890, y = 0.7328, type = "delve", comment = "Earthcrawl Mines" },
+        { id = 2277, mapID = 2215, x = 0.3532, y = 0.4593, type = "delve", comment = "Nightfall Sanctum" },
+        { id = 2299, mapID = 2255, x = 0.5185, y = 0.8822, type = "delve", comment = "The Underkeep" },
+        { id = 2301, mapID = 2215, x = 0.5071, y = 0.5050, type = "delve", comment = "The Sinkhole" },
+        { id = 2302, mapID = 2214, x = 0.6940, y = 0.3862, type = "delve", comment = "The Dread Pit" },
+        { id = 2310, mapID = 2215, x = 0.6671, y = 0.6170, type = "delve", comment = "Skittering Breach" },
+        { id = 2312, mapID = 2215, x = 0.7064, y = 0.3095, type = "delve", comment = "Mycomancer Cavern" },
+        { id = 2347, mapID = 2255, x = 0.4573, y = 0.2253, type = "delve", comment = "The Spiral Weave" },
+        { id = 2348, mapID = 2214, x = 0.3275, y = 0.7683, type = "delve", comment = "Zekvir's Lair" },
+        { id = 2396, mapID = 2346, x = 0.6380, y = 0.6540, type = "delve", comment = "Excavation Site 9" },
+        { id = 2423, mapID = 2346, x = 0.4892, y = 0.6758, type = "delve", comment = "Sidestreet Sluice" },
+        { id = 2425, mapID = 2346, x = 0.5387, y = 0.0930, type = "delve", comment = "Demolition Dome" },
+        { id = 2452, mapID = 2371, x = 0.3924, y = 0.8845, type = "delve", comment = "Archival Assault" },
+        { id = 2484, mapID = 2472, x = 0.5380, y = 0.8881, type = "delve", comment = "Voidscar Cavern" },
+        { id = 2502, mapID = 2395, x = 0.1498, y = 0.5760, type = "delve", comment = "Shadow Enclave" },
+        { id = 2503, mapID = 2437, x = 0.4903, y = 0.1152, type = "delve", comment = "Twilight Crypts" },
+        { id = 2505, mapID = 2413, x = 0.5151, y = 0.0829, type = "delve", comment = "The Gulf of Memory" },
+        { id = 2506, mapID = 2405, x = 0.4720, y = 0.7941, type = "delve", comment = "Shadowguard Point" },
+        { id = 2510, mapID = 2413, x = 0.3090, y = 0.2770, type = "delve", comment = "The Grudge Pit" },
+        { id = 2525, mapID = 2393, x = 0.4792, y = 0.2145, type = "delve", comment = "The Darkway" },
+        { id = 2528, mapID = 2405, x = 0.6493, y = 0.3005, type = "delve", comment = "Sunkiller Sanctum" },
+        { id = 2535, mapID = 2437, x = 0.2482, y = 0.4941, type = "delve", comment = "Atal'Aman" },
+        { id = 2545, mapID = 2393, x = 0.5000, y = 0.5000, type = "delve", comment = "Parhelion Plaza" },
+        { id = 2547, mapID = 2393, x = 0.7047, y = 0.4532, type = "delve", comment = "Collegiate Calamity" },
+        { id = 2633, mapID = 2512, x = 0.8010, y = 0.5369, type = "delve", comment = "The Ring of Glory" },
+        { id = 2635, mapID = 2512, x = 0.7666, y = 0.4689, type = "delve", comment = "Gnarldor Isle" },
     },
 
     -- 交通拓扑图：传送门、飞艇、船只、传送镜等连接边
@@ -253,6 +283,10 @@ ns.PortaData = {
         { from = 18, to = 90, x = 0.6200, y = 0.7300, type = "PORTAL", faction = "HORDE", note = "ns.HellfirePeninsula .. \" (\" .. L[\"Portal\"] ..\")\"" },
         { from = 18, to = 110, x = 0.5900, y = 0.6700, type = "PORTAL", faction = "HORDE", note = "Portal to Silvermoon from Tirisfal" },
         { from = 18, to = 117, x = 0.5900, y = 0.5900, type = "PORTAL", faction = "HORDE", note = "Portal to Howling Fjord from Tirisfal" },
+        { from = 18, to = 302, x = 0.8500, y = 0.3000, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery - Graveyard" },
+        { from = 18, to = 303, x = 0.8500, y = 0.3200, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery - Library" },
+        { from = 18, to = 304, x = 0.8500, y = 0.3000, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery - Cathedral" },
+        { from = 18, to = 304, x = 0.8600, y = 0.3100, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery - Armory" },
         { from = 19, to = 302, x = 0.6900, y = 0.2400, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery - Graveyard" },
         { from = 19, to = 303, x = 0.7800, y = 0.5800, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery -\"" },
         { from = 19, to = 304, x = 0.7900, y = 0.2200, type = "TRANSPORT", faction = "NEUTRAL", note = "Scarlet Monastery - Cathedral\"" },

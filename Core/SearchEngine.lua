@@ -86,7 +86,7 @@ local function NormalizeTextForms(textLower)
 end
 
 -- 创建搜索项辅助函数：预计算所有规范化检索字段，杜绝后续高频键入时的重复 gsub 与临时字符串重分配
-local function CreateSearchItem(id, name, zoneName, mapID, x, y, itemType, tag, color, comment)
+local function CreateSearchItem(id, name, zoneName, mapID, x, y, itemType, tag, color, comment, aliases)
     local trimmedName = TrimText(name)
     local nameLower = string.lower(trimmedName)
     local noArticle = StripLeadingArticle(nameLower)
@@ -95,6 +95,33 @@ local function CreateSearchItem(id, name, zoneName, mapID, x, y, itemType, tag, 
     local commentLower = (comment and comment ~= "") and string.lower(TrimText(comment)) or nil
     local tagLower = (tag and tag ~= "") and string.lower(TrimText(tag)) or nil
     local resultKey = tostring(itemType or "") .. ":" .. nameLower .. ":" .. string.lower(zoneName or "")
+
+    local normalizedAliases = nil
+    if aliases and #aliases > 0 then
+        normalizedAliases = {}
+        for _, alias in ipairs(aliases) do
+            local aTrimmed = TrimText(alias)
+            if aTrimmed ~= "" and string.lower(aTrimmed) ~= nameLower then
+                local aLower = string.lower(aTrimmed)
+                local aNoArt = StripLeadingArticle(aLower)
+                local aSpaced, aCompact = NormalizeTextForms(aLower)
+                local aNoArtSpaced, aNoArtCompact = NormalizeTextForms(aNoArt)
+                table.insert(normalizedAliases, {
+                    name = aTrimmed,
+                    _lower = aLower,
+                    _noArticle = aNoArt,
+                    _spaced = aSpaced,
+                    _compact = aCompact,
+                    _noArtSpaced = aNoArtSpaced,
+                    _noArtCompact = aNoArtCompact,
+                    _spacedLead = " " .. aSpaced,
+                })
+            end
+        end
+        if #normalizedAliases == 0 then
+            normalizedAliases = nil
+        end
+    end
 
     return {
         id = id,
@@ -114,6 +141,7 @@ local function CreateSearchItem(id, name, zoneName, mapID, x, y, itemType, tag, 
         _noArtSpaced = noArtSpaced,
         _noArtCompact = noArtCompact,
         _spacedLead = " " .. spaced,
+        _aliases = normalizedAliases,
         _commentLower = commentLower,
         _tagLower = tagLower,
         _resultKey = resultKey,
@@ -130,6 +158,19 @@ local SPECIAL_LANDMARKS = {
         y = 0.445,
         type = "zone",
         comment = "Chamber of Heart",
+    },
+    {
+        nameKey = "DEST_DARKMOON_ISLAND",
+        nameFallback = "暗月岛",
+        zoneKey = "DEST_DARKMOON_FAIRE",
+        zoneFallback = "暗月马戏团",
+        mapID = 407,
+        x = 0.500,
+        y = 0.600,
+        type = "zone",
+        comment = "Darkmoon Island / Darkmoon Faire",
+        aliasesKey = "DEST_DARKMOON_FAIRE",
+        aliases = { "Darkmoon Faire", "暗月马戏团", "暗月馬戲團" },
     },
 }
 
@@ -187,18 +228,45 @@ function SearchEngine:Initialize()
     local seenContinentZoneNames = {}
     local seenGlobalZoneNames = {}
 
-    -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室等)
+    -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室、暗月岛等)
     for _, lm in ipairs(SPECIAL_LANDMARKS) do
         local lmName = (lm.nameKey and L[lm.nameKey]) or lm.nameFallback
-        local zName = L["UNKNOWN_ZONE"]
-        if C_Map and C_Map.GetMapInfo then
+        local zName = (lm.zoneKey and L[lm.zoneKey]) or lm.zoneFallback
+        if not zName and C_Map and C_Map.GetMapInfo then
             local mInfo = C_Map.GetMapInfo(lm.mapID)
             if mInfo and mInfo.name then
                 zName = mInfo.name
             end
         end
+        zName = zName or L["UNKNOWN_ZONE"]
+
+        local aliases = {}
+        if lm.aliases then
+            for _, a in ipairs(lm.aliases) do
+                table.insert(aliases, a)
+            end
+        end
+        if lm.aliasesKey and L[lm.aliasesKey] then
+            table.insert(aliases, L[lm.aliasesKey])
+        end
+
         local typeMeta = TYPE_INFO[lm.type] or TYPE_INFO.zone
-        table.insert(searchIndex, CreateSearchItem(0, lmName, zName, lm.mapID, lm.x, lm.y, lm.type, typeMeta.tag, typeMeta.color, lm.comment or ""))
+        seenMapIDs[lm.mapID] = true
+        seenGlobalZoneNames[string.lower(lmName)] = true
+
+        table.insert(searchIndex, CreateSearchItem(
+            0,
+            lmName,
+            zName,
+            lm.mapID,
+            lm.x,
+            lm.y,
+            lm.type,
+            typeMeta.tag,
+            typeMeta.color,
+            lm.comment or "",
+            aliases
+        ))
     end
 
     -- 1. 建立副本目的地索引 (地下城、团队副本、地下堡)
@@ -455,9 +523,8 @@ local function AcquireMatchEntry(item, score)
     return entry
 end
 
--- 当前客户端语言地名智能匹配（使用预计算字段，避免检索热路径下的任何 gsub 与字符串重分配）
-local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpacedLead, queryWords)
-    local targetLower = item._lower
+-- 基础字段匹配评估辅助函数
+local function MatchItemForm(targetLower, targetNoArt, targetSpaced, targetCompact, targetNoArtSpaced, targetNoArtCompact, targetSpacedLead, queryLower, querySpaced, queryCompact, querySpacedLead, queryWords)
     if not targetLower or targetLower == "" then return false, 0 end
 
     -- 1. 完全一致
@@ -466,7 +533,7 @@ local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpace
     end
 
     -- 1b. 去除前导冠词或标点符号后完全一致 (例如输入 "stonevault" 匹配 "The Stonevault"，或 "motherlode" 匹配 "The MOTHERLODE!!")
-    if item._noArticle == queryLower or (queryCompact ~= "" and (item._compact == queryCompact or item._noArtCompact == queryCompact)) then
+    if targetNoArt == queryLower or (queryCompact ~= "" and (targetCompact == queryCompact or targetNoArtCompact == queryCompact)) then
         return true, 95
     end
 
@@ -476,24 +543,24 @@ local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpace
         return true, 85
     end
 
-    if string.find(item._noArticle, queryLower, 1, true) == 1 then
+    if string.find(targetNoArt, queryLower, 1, true) == 1 then
         return true, 82
     end
 
     if querySpaced ~= "" then
-        if string.find(item._spaced, querySpaced, 1, true) == 1 or string.find(item._noArtSpaced, querySpaced, 1, true) == 1 then
+        if string.find(targetSpaced, querySpaced, 1, true) == 1 or string.find(targetNoArtSpaced, querySpaced, 1, true) == 1 then
             return true, 80
         end
     end
 
     if queryCompact ~= "" then
-        if string.find(item._compact, queryCompact, 1, true) == 1 or string.find(item._noArtCompact, queryCompact, 1, true) == 1 then
+        if string.find(targetCompact, queryCompact, 1, true) == 1 or string.find(targetNoArtCompact, queryCompact, 1, true) == 1 then
             return true, 78
         end
     end
 
     -- 3. 单词词首边界匹配 (例如英文输入 "echoes" 匹配 "Ara-Kara, City of Echoes" 中的单词首部)
-    if querySpacedLead and string.find(item._spacedLead, querySpacedLead, 1, true) then
+    if querySpacedLead and string.find(targetSpacedLead, querySpacedLead, 1, true) then
         return true, 72
     end
 
@@ -502,11 +569,11 @@ local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpace
         return true, 60
     end
 
-    if querySpaced ~= "" and string.find(item._spaced, querySpaced, 1, true) then
+    if querySpaced ~= "" and string.find(targetSpaced, querySpaced, 1, true) then
         return true, 58
     end
 
-    if queryCompact ~= "" and string.find(item._compact, queryCompact, 1, true) then
+    if queryCompact ~= "" and string.find(targetCompact, queryCompact, 1, true) then
         return true, 56
     end
 
@@ -515,7 +582,7 @@ local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpace
         local allMatch = true
         for i = 1, #queryWords do
             local w = queryWords[i]
-            if not (string.find(targetLower, w, 1, true) or string.find(item._spaced, w, 1, true) or string.find(item._compact, w, 1, true)) then
+            if not (string.find(targetLower, w, 1, true) or string.find(targetSpaced, w, 1, true) or string.find(targetCompact, w, 1, true)) then
                 allMatch = false
                 break
             end
@@ -526,6 +593,53 @@ local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpace
     end
 
     return false, 0
+end
+
+-- 当前客户端语言地名智能匹配（使用预计算字段，避免检索热路径下的任何 gsub 与字符串重分配）
+local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpacedLead, queryWords)
+    local isMatch, score = MatchItemForm(
+        item._lower,
+        item._noArticle,
+        item._spaced,
+        item._compact,
+        item._noArtSpaced,
+        item._noArtCompact,
+        item._spacedLead,
+        queryLower,
+        querySpaced,
+        queryCompact,
+        querySpacedLead,
+        queryWords
+    )
+
+    -- 若主地名未达完全一致，检查是否命中预设别名 (如 "暗月马戏团" / "Darkmoon Faire" 等别名)
+    if item._aliases then
+        for _, alias in ipairs(item._aliases) do
+            local aMatch, aScore = MatchItemForm(
+                alias._lower,
+                alias._noArticle,
+                alias._spaced,
+                alias._compact,
+                alias._noArtSpaced,
+                alias._noArtCompact,
+                alias._spacedLead,
+                queryLower,
+                querySpaced,
+                queryCompact,
+                querySpacedLead,
+                queryWords
+            )
+            if aMatch and aScore > score then
+                isMatch = true
+                score = aScore
+                if score == 100 then
+                    break
+                end
+            end
+        end
+    end
+
+    return isMatch, score
 end
 
 -- 搜索核心方法（仅匹配当前客户端语言名称，优先精确匹配，杜绝无关项与重复项）

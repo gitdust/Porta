@@ -276,6 +276,7 @@ local function InitHUD()
     mapBtn:SetPoint("TOPLEFT", titleText, "TOPLEFT", -2, 2)
     mapBtn:SetPoint("BOTTOMRIGHT", titleText, "BOTTOMRIGHT", 2, -2)
     mapBtn:SetScript("OnClick", function()
+        if InCombatLockdown and InCombatLockdown() then return end
         local activeRoute = ns.Navigation:GetActiveRoute()
         if activeRoute and activeRoute.destination and activeRoute.destination.mapID then
             ns.Navigation:OpenWorldMap(activeRoute.destination.mapID)
@@ -449,6 +450,7 @@ local function InitHUD()
     viewMapBtn:SetPoint("RIGHT", prevBtn, "LEFT", -5, 0)
     viewMapBtn:SetText(L["HUD_BTN_MAP"])
     viewMapBtn:SetScript("OnClick", function()
+        if InCombatLockdown and InCombatLockdown() then return end
         local activeRoute, stepIdx = ns.Navigation:GetActiveRoute()
         if activeRoute and activeRoute.steps and activeRoute.steps[stepIdx] then
             local s = activeRoute.steps[stepIdx]
@@ -639,8 +641,11 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     local isCombat = (InCombatLockdown and InCombatLockdown()) or false
 
     if hasActionSlot and actionSlotBtn then
-        actionSlotBtn:ClearAllPoints()
-        actionSlotBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -16, -36 - altOffset)
+        if not isCombat then
+            actionSlotBtn:ClearAllPoints()
+            actionSlotBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -16, -36 - altOffset)
+            actionSlotBtn:Show()
+        end
         actionSlotBtn.parsedLink = parsedLink
 
         local hasIt, missingReason = true, nil
@@ -707,8 +712,6 @@ function NavigationHUD:UpdateStep(route, stepIndex)
                 end
             end
         end
-
-        actionSlotBtn:Show()
     else
         if actionSlotBtn and not isCombat then
             actionSlotBtn:Hide()

@@ -72,18 +72,33 @@ local function ClearTomTomWaypoint()
     end
 end
 
--- 打开世界地图并定位到指定地图
+-- 打开世界地图并定位到指定地图 (安全规避 Taint 与战斗阻断)
 function Navigation:OpenWorldMap(mapID)
+    if InCombatLockdown and InCombatLockdown() then
+        return
+    end
     if not mapID or mapID <= 0 then return end
     pcall(function()
-        if not WorldMapFrame:IsShown() then
-            ShowUIPanel(WorldMapFrame)
+        if _G.OpenWorldMap then
+            _G.OpenWorldMap(mapID)
+        else
+            if WorldMapFrame then
+                if not WorldMapFrame:IsShown() then
+                    if ToggleWorldMap then
+                        ToggleWorldMap()
+                    else
+                        ShowUIPanel(WorldMapFrame)
+                    end
+                end
+                if WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() ~= mapID and WorldMapFrame.SetMapID then
+                    WorldMapFrame:SetMapID(mapID)
+                end
+            end
         end
-        WorldMapFrame:SetMapID(mapID)
     end)
 end
 
--- 点击步骤中的坐标时：设置暴雪/TomTom 航标并打开世界地图查看
+-- 点击步骤中的坐标时：设置暴雪超追踪与 TomTom 航标 (无需强开大地图遮挡视野与引发 Taint)
 function Navigation:FocusCoordinate(mapID, x, y, label)
     if not mapID or not x or not y then return end
     local normX = (x > 1.0) and (x / 100.0) or x
@@ -99,7 +114,6 @@ function Navigation:FocusCoordinate(mapID, x, y, label)
 
     SetBlizzardWaypoint(mapID, normX, normY)
     SetTomTomWaypoint(mapID, normX, normY, label or string.format("%s (%.1f, %.1f)", mapName, normX * 100, normY * 100))
-    self:OpenWorldMap(mapID)
 
     ns.Print(string.format(L["MSG_FOCUS_COORD_FMT"], mapName, normX * 100, normY * 100))
 end

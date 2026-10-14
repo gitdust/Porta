@@ -8,9 +8,12 @@
 ## Notes-zhTW: 遊戲內快速搜尋目標地點與副本，提供最優前往步驟與導航
 ## Notes-enUS: Fast in-game search for destinations and dungeons, step-by-step route planning.
 ## Author: PORTA Team
-## Version: 1.1.0
+## Version: 1.1.1
 ## SavedVariables: PortaDB
 ## IconTexture: Interface\AddOns\Porta\Images\Logo
+
+# 按键绑定
+Bindings.xml
 
 # 数据表 (由本地脚本自动生成)
 Data\MapNotesData.lua
@@ -26,6 +29,7 @@ Core\Navigation.lua
 # 用户界面
 UI\SearchDialog.lua
 UI\NavigationHUD.lua
+UI\MinimapButton.lua
 
 # 主入口
 Porta.lua

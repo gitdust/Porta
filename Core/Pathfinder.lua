@@ -273,7 +273,8 @@ function Pathfinder:GetDistanceInYards(mapID, targetX, targetY)
             local dx = playerWorld.x - targetWorld.x
             local dy = playerWorld.y - targetWorld.y
             local dist = math.sqrt(dx * dx + dy * dy)
-            if dist and dist >= 0 then
+            -- 仅当在同一有效世界坐标实例内 (距离小于 20,000 码) 时采纳世界坐标
+            if dist and dist >= 0 and dist < 20000 then
                 return math.floor(dist)
             end
         end
@@ -318,8 +319,6 @@ function Pathfinder:FormatTeleportLink(kind, id, name)
         color = "|cff71d5ff"
         if C_Spell and C_Spell.GetSpellTexture then
             icon = C_Spell.GetSpellTexture(id)
-        elseif GetSpellTexture then
-            icon = GetSpellTexture(id)
         end
     elseif uKind == "TOY" then
         linkKind = "toy"
@@ -392,6 +391,9 @@ local CONTIGUOUS_CONTINENTS = {
     [2274] = {
         2248, 2339, 2213, 2214, 2215, 2216, 2255, 2256
     },
+    [2400] = {
+        2401, 2402, 2403, 2404, 2405, 2406, 2407
+    },
 }
 
 local ZONE_TO_CONTINENT = {}
@@ -427,6 +429,7 @@ local CONTINENT_CAPITAL_HUBS = {
     [876] = { HORDE = {}, ALLIANCE = { 1161 } },
     [1978] = { HORDE = { 2112 }, ALLIANCE = { 2112 } },
     [2274] = { HORDE = { 2339 }, ALLIANCE = { 2339 } },
+    [2400] = { HORDE = { 2401 }, ALLIANCE = { 2401 } },
 }
 
 -- =========================================================================
@@ -434,6 +437,10 @@ local CONTINENT_CAPITAL_HUBS = {
 -- =========================================================================
 local SUBZONE_CONNECTIONS = {
     -- 【主城传送大厅直达枢纽】
+    { from = 85, to = 2401, x = 0.58, y = 0.90, type = "PORTAL", faction = "HORDE", note = "传送大厅：新银月城传送门", cost = 1.0 },
+    { from = 2401, to = 85, x = 0.50, y = 0.50, type = "PORTAL", faction = "HORDE", note = "新银月城：奥格瑞玛传送门", cost = 1.0 },
+    { from = 84, to = 2401, x = 0.41, y = 0.93, type = "PORTAL", faction = "ALLIANCE", note = "法师圣所：新银月城传送门", cost = 1.0 },
+    { from = 2401, to = 84, x = 0.50, y = 0.50, type = "PORTAL", faction = "ALLIANCE", note = "新银月城：暴风城传送门", cost = 1.0 },
     { from = 85, to = 1163, x = 0.58, y = 0.90, type = "PORTAL", faction = "HORDE", note = "传送大厅：达萨罗传送门", cost = 1.0 },
     { from = 1163, to = 85, x = 0.74, y = 0.70, type = "PORTAL", faction = "HORDE", note = "大封印：奥格瑞玛传送门", cost = 1.0 },
     { from = 84, to = 1161, x = 0.41, y = 0.93, type = "PORTAL", faction = "ALLIANCE", note = "法师圣所：伯拉勒斯传送门", cost = 1.0 },

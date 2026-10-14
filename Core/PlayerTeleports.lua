@@ -146,6 +146,7 @@ local TELEPORT_ITEMS = {
     { id = 63379, kind = "ITEM", name = L["ITEM_NAME_63379"], toMap = 245, x = 0.50, y = 0.50, faction = "HORDE", priority = 7 },
 
     -- 工程学虫洞发生器全集 (玩具 - 落点随机或需菜单选择，仅在前往对应大洲时作为补充备选方案提供)
+    { id = 230000, kind = "TOY", name = L["ITEM_NAME_230000"], toMap = 2400, continentID = 2400, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
     { id = 221966, kind = "TOY", name = L["ITEM_NAME_221966"], toMap = 2274, continentID = 2274, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
     { id = 198156, kind = "TOY", name = L["ITEM_NAME_198156"], toMap = 1978, continentID = 1978, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
     { id = 172924, kind = "TOY", name = L["ITEM_NAME_172924"], toMap = 1670, continentID = 1550, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
@@ -210,6 +211,7 @@ local CLASS_TELEPORT_SPELLS = {
     { id = 344587, class = "MAGE", name = "Teleport: Oribos", toMap = 1670, x = 0.50, y = 0.50, priority = 10 },
     { id = 395277, class = "MAGE", name = "Teleport: Valdrakken", toMap = 2112, x = 0.50, y = 0.50, priority = 10 },
     { id = 446540, class = "MAGE", name = "Teleport: Dornogal", toMap = 2339, x = 0.50, y = 0.50, priority = 10 },
+    { id = 1260001, class = "MAGE", name = "Teleport: Silvermoon", toMap = 2401, x = 0.50, y = 0.50, priority = 10 },
 }
 
 -- =========================================================================
@@ -217,6 +219,14 @@ local CLASS_TELEPORT_SPELLS = {
 --    映射关系：[journalInstanceID] = spellID 或 { spellID1, spellID2, ... }
 -- =========================================================================
 local MYTHIC_PLUS_DUNGEON_SPELLS = {
+    -- ---------------------------------------------------------------------
+    -- 至暗之夜 (Midnight 12.0 / 12.1)
+    -- ---------------------------------------------------------------------
+    [1320] = 1260100, -- 虚空裂隙 (Void Rift) - Path of the Void Rift
+    [1321] = 1260105, -- 太阳之井高地 (Sunwell Restoration) - Path of the Sunwell
+    [1322] = 1260110, -- 祖阿曼暗影 (Shadow of Zul'Aman) - Path of Zul'Aman
+    [1323] = 1260115, -- 奎尔萨拉斯黎明 (Dawn of Quel'Thalas) - Path of the Quel'Thalas Dawn
+
     -- ---------------------------------------------------------------------
     -- 地心之战 (The War Within 11.0 / 11.1 / 11.2)
     -- ---------------------------------------------------------------------
@@ -396,6 +406,12 @@ end
 
 local function GetInstanceLocalizedName(instanceID)
     if not instanceID or instanceID <= 0 then return nil end
+    if C_EncounterJournal and C_EncounterJournal.GetInstanceInfo then
+        local name = C_EncounterJournal.GetInstanceInfo(instanceID)
+        if name and name ~= "" then
+            return name
+        end
+    end
     if EJ_GetInstanceInfo then
         local name = EJ_GetInstanceInfo(instanceID)
         if name and name ~= "" then
@@ -611,33 +627,65 @@ for _, item in ipairs(TELEPORT_ITEMS) do
 end
 
 -- 检查当前角色是否学习了工程学专业 (Engineering skillLine == 202，跨语言通用)
+local hasEngineeringCache = nil
 local function HasEngineeringProfession()
+    if hasEngineeringCache ~= nil then
+        return hasEngineeringCache
+    end
     if not GetProfessions or not GetProfessionInfo then
         return true
     end
     local prof1, prof2 = GetProfessions()
+    if not prof1 and not prof2 then
+        -- 登录初期专业数据可能尚未下发，此时返回 false 但不长久缓存，避免误判
+        return false
+    end
     local profIndices = { prof1, prof2 }
     for _, idx in ipairs(profIndices) do
         if idx then
             local name, _, _, _, _, _, skillLine = GetProfessionInfo(idx)
             if skillLine == 202 or (name and (name:find("工程") or name:find("Engineering"))) then
+                hasEngineeringCache = true
                 return true
             end
         end
     end
+    hasEngineeringCache = false
     return false
 end
 
 PlayerTeleports.HasEngineeringProfession = HasEngineeringProfession
 
--- 检查法术是否习得
+-- 监听专业与技能变化事件，动态刷新工程学判定缓存
+local profEventFrame = CreateFrame("Frame")
+profEventFrame:RegisterEvent("SKILL_LINES_CHANGED")
+profEventFrame:RegisterEvent("TRAINER_UPDATE")
+profEventFrame:SetScript("OnEvent", function()
+    hasEngineeringCache = nil
+end)
+
+-- 检查法术是否习得 (优先采用 11.0 / 12.1 现代法术书 API，精准识别账号钥石直达门)
 local function IsSpellKnown(spellID)
     if not spellID then return false end
+    if C_SpellBook and C_SpellBook.IsSpellKnown then
+        if C_SpellBook.IsSpellKnown(spellID) then
+            return true
+        end
+    end
+    if C_SpellBook and C_SpellBook.IsSpellKnownOrOverridesKnown then
+        if C_SpellBook.IsSpellKnownOrOverridesKnown(spellID) then
+            return true
+        end
+    end
     if IsSpellKnownOrOverridesKnown then
-        return IsSpellKnownOrOverridesKnown(spellID)
+        if IsSpellKnownOrOverridesKnown(spellID) then
+            return true
+        end
     end
     if IsPlayerSpell then
-        return IsPlayerSpell(spellID)
+        if IsPlayerSpell(spellID) then
+            return true
+        end
     end
     return false
 end

@@ -11,6 +11,8 @@ local currentResults = {}
 local selectedIndex = 1
 local lastQueryText = nil
 local pollElapsed = 0
+local debounceElapsed = 0
+local hasPendingSearch = false
 local MAX_VISIBLE_RESULTS = 7
 local ROW_HEIGHT = 42
 
@@ -20,7 +22,7 @@ local function CreateResultButton(parent, index)
     btn:SetHeight(ROW_HEIGHT)
     btn:SetPoint("LEFT", parent, "LEFT", 16, 0)
     btn:SetPoint("RIGHT", parent, "RIGHT", -16, 0)
-    btn:SetPoint("TOP", parent, "TOP", 0, -85 - (index - 1) * (ROW_HEIGHT + 4))
+    btn:SetPoint("TOP", parent, "TOP", 0, -84 - (index - 1) * (ROW_HEIGHT + 4))
 
     -- 背景高亮纹理
     local bg = btn:CreateTexture(nil, "BACKGROUND")
@@ -32,17 +34,19 @@ local function CreateResultButton(parent, index)
     highlight:SetAllPoints()
     highlight:SetColorTexture(0.0, 0.8, 1.0, 0.2)
 
-    -- 名称文字
-    local nameText = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
-    nameText:SetPoint("LEFT", btn, "LEFT", 12, 0)
-    nameText:SetJustifyH("LEFT")
-    btn.nameText = nameText
-
-    -- 分类标签与所在区域
+    -- 分类标签与所在区域 (先声明并固定在右侧)
     local metaText = btn:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     metaText:SetPoint("RIGHT", btn, "RIGHT", -12, 0)
     metaText:SetJustifyH("RIGHT")
     btn.metaText = metaText
+
+    -- 名称文字 (左侧固定，右侧严密锚定至 metaText 左侧，杜绝长地名与右侧标签重叠)
+    local nameText = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
+    nameText:SetPoint("LEFT", btn, "LEFT", 12, 0)
+    nameText:SetPoint("RIGHT", metaText, "LEFT", -8, 0)
+    nameText:SetJustifyH("LEFT")
+    nameText:SetWordWrap(false)
+    btn.nameText = nameText
 
     -- 点击选择
     btn:SetScript("OnClick", function()
@@ -93,7 +97,7 @@ local function InitFrame()
     if frame then return end
 
     frame = CreateFrame("Frame", "PortaSearchFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(520, 430)
+    frame:SetSize(520, 445)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true)
@@ -155,18 +159,23 @@ local function InitFrame()
     editBox:SetTextInsets(10, 10, 0, 0)
 
     editBox:SetScript("OnTextChanged", function()
-        UpdateSearchResults(false)
+        hasPendingSearch = true
+        debounceElapsed = 0
     end)
 
     editBox:SetScript("OnChar", function()
-        UpdateSearchResults(false)
+        hasPendingSearch = true
+        debounceElapsed = 0
     end)
 
     editBox:SetScript("OnEnterPressed", function()
+        hasPendingSearch = false
+        UpdateSearchResults(true)
         SearchDialog:ConfirmSelection()
     end)
 
     editBox:SetScript("OnEscapePressed", function()
+        hasPendingSearch = false
         frame:Hide()
     end)
 
@@ -178,18 +187,30 @@ local function InitFrame()
         end
     end)
 
-    -- 轮询兜底：解决部分 Windows 中文输入法内联词组上屏时不触发 OnTextChanged 的问题
+    -- 轮询与防抖驱动：平滑搜索响应，避免高频键入频繁重算，同时兼容 IME 内联上屏
     frame:SetScript("OnUpdate", function(_, elapsed)
-        pollElapsed = pollElapsed + (elapsed or 0)
-        if pollElapsed >= 0.05 then
-            pollElapsed = 0
-            UpdateSearchResults(false)
+        local dt = elapsed or 0
+        if hasPendingSearch then
+            debounceElapsed = debounceElapsed + dt
+            if debounceElapsed >= 0.08 then
+                hasPendingSearch = false
+                debounceElapsed = 0
+                UpdateSearchResults(false)
+            end
+        else
+            pollElapsed = pollElapsed + dt
+            if pollElapsed >= 0.1 then
+                pollElapsed = 0
+                if editBox:GetText() ~= lastQueryText then
+                    UpdateSearchResults(false)
+                end
+            end
         end
     end)
 
     -- 底部提示栏
     local footer = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
+    footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
     footer:SetText(L["SEARCH_FOOTER"])
 
     -- 创建结果条目

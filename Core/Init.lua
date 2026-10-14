@@ -3,7 +3,7 @@ local ADDON_NAME, ns = ...
 _G.Porta = ns
 
 ns.name = ADDON_NAME
-ns.version = "1.0.0"
+ns.version = "1.1.0"
 
 -- 默认配置
 ns.defaultConfig = {

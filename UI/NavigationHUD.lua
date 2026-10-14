@@ -14,7 +14,8 @@ local altContainer = nil
 local altButtons = {}
 local questWarnBox = nil
 local questWarnText = nil
-local secureOverlayBtn = nil
+local actionSlotBtn = nil
+local dragHeader = nil
 
 local ACTION_LABELS = {
     PORTAL       = L["HUD_ACTION_PORTAL"],
@@ -58,7 +59,7 @@ local function ParsePortaHyperlink(link)
     return nil
 end
 
--- 打开玩具/物品/技能的独立详情浮窗 (ItemRefTooltip)，并在玩具箱未解锁时辅助定位
+-- 打开玩具/物品/技能的独立详情浮窗 (ItemRefTooltip)
 local function OpenTeleportDetailView(parsed)
     if not parsed or not parsed.id then return end
     pcall(function()
@@ -126,13 +127,6 @@ local function ShowPortaLinkTooltip(owner, parsed)
                 GameTooltip:AddLine(L["HUD_TOOLTIP_STATUS_READY"], 0.0, 1.0, 0.2)
             end
         end
-        if parsed.kind == "SPELL" then
-            GameTooltip:AddLine(L["HUD_TOOLTIP_LCLICK_SPELL"], 0.0, 1.0, 0.6)
-        elseif parsed.kind == "TOY" then
-            GameTooltip:AddLine(L["HUD_TOOLTIP_LCLICK_TOY"], 0.0, 1.0, 0.6)
-        else
-            GameTooltip:AddLine(L["HUD_TOOLTIP_LCLICK_ITEM"], 0.0, 1.0, 0.6)
-        end
         GameTooltip:AddLine(L["HUD_TOOLTIP_RCLICK_DETAIL"], 0.75, 0.75, 0.75)
     else
         GameTooltip:AddLine("⚠ " .. (missingReason or L["HUD_TOOLTIP_MISSING_FALLBACK"]), 1.0, 0.35, 0.25, true)
@@ -142,83 +136,18 @@ local function ShowPortaLinkTooltip(owner, parsed)
     GameTooltip:Show()
 end
 
--- 将安全点击按钮定位到当前鼠标悬停的超链接处，支持左键直接使用玩具/物品/技能、右键查看详情
-local function ActivateSecureOverlayForLink(parsed)
-    if not secureOverlayBtn or not hudFrame or not parsed then return end
-    if InCombatLockdown and InCombatLockdown() then return end
-
-    local hasIt, missingReason = true, nil
-    if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
-        hasIt, missingReason = ns.PlayerTeleports:CheckTeleportOwnership(parsed.kind, parsed.id)
-    end
-
-    secureOverlayBtn.parsedLink = parsed
-    secureOverlayBtn.hasIt = hasIt
-    secureOverlayBtn.missingReason = missingReason
-
-    secureOverlayBtn:SetAttribute("type", nil)
-    secureOverlayBtn:SetAttribute("type1", nil)
-    secureOverlayBtn:SetAttribute("type2", nil)
-    secureOverlayBtn:SetAttribute("spell", nil)
-    secureOverlayBtn:SetAttribute("spell1", nil)
-    secureOverlayBtn:SetAttribute("toy", nil)
-    secureOverlayBtn:SetAttribute("toy1", nil)
-    secureOverlayBtn:SetAttribute("item", nil)
-    secureOverlayBtn:SetAttribute("item1", nil)
-
-    if hasIt then
-        if parsed.kind == "SPELL" then
-            secureOverlayBtn:SetAttribute("type1", "spell")
-            secureOverlayBtn:SetAttribute("spell1", parsed.id)
-        elseif parsed.kind == "TOY" then
-            if PlayerHasToy and PlayerHasToy(parsed.id) then
-                secureOverlayBtn:SetAttribute("type1", "toy")
-                secureOverlayBtn:SetAttribute("toy1", parsed.id)
-            else
-                secureOverlayBtn:SetAttribute("type1", "item")
-                secureOverlayBtn:SetAttribute("item1", "item:" .. tostring(parsed.id))
-            end
-        else
-            secureOverlayBtn:SetAttribute("type1", "item")
-            secureOverlayBtn:SetAttribute("item1", "item:" .. tostring(parsed.id))
-        end
-    end
-
-    local scale = hudFrame:GetEffectiveScale()
-    local cx, cy = GetCursorPosition()
-    cx = cx / scale
-    cy = cy / scale
-    local left = hudFrame:GetLeft() or 0
-    local bottom = hudFrame:GetBottom() or 0
-
-    secureOverlayBtn:ClearAllPoints()
-    secureOverlayBtn:SetPoint("CENTER", hudFrame, "BOTTOMLEFT", cx - left, cy - bottom)
-    secureOverlayBtn:SetSize(96, 20)
-    secureOverlayBtn:Show()
-end
-
 -- 统一绑定富文本区域的超链接交互事件
 local function BindHyperlinkScripts(targetFrame)
     targetFrame:SetHyperlinksEnabled(true)
 
     targetFrame:SetScript("OnHyperlinkEnter", function(_, link)
         local parsed = ParsePortaHyperlink(link)
-        if not parsed then return end
-
-        ShowPortaLinkTooltip(hudFrame, parsed)
-        if parsed.kind == "COORD" then
-            if secureOverlayBtn and secureOverlayBtn:IsShown() and not (InCombatLockdown and InCombatLockdown()) then
-                secureOverlayBtn:Hide()
-            end
-        else
-            ActivateSecureOverlayForLink(parsed)
+        if parsed then
+            ShowPortaLinkTooltip(hudFrame, parsed)
         end
     end)
 
     targetFrame:SetScript("OnHyperlinkLeave", function()
-        if secureOverlayBtn and secureOverlayBtn:IsShown() and secureOverlayBtn:IsMouseOver() then
-            return
-        end
         GameTooltip:Hide()
     end)
 
@@ -231,15 +160,66 @@ local function BindHyperlinkScripts(targetFrame)
                 ns.Navigation:FocusCoordinate(parsed.mapID, parsed.x, parsed.y)
             end
         else
-            -- 战斗中或回退状态下点击玩具/物品/技能链接，打开详情窗口
+            -- 点击玩具/物品/技能链接，在安全上下文中打开原生说明窗口
             OpenTeleportDetailView(parsed)
-            if InCombatLockdown and InCombatLockdown() then
-                ns.Print(L["MSG_COMBAT_LOCKDOWN_CLICK"])
-            end
         end
     end)
 end
 
+-- 辅助：计算 UTF-8 真实显示宽度 (ASCII 字符占 1 宽度，中文字符占 2 宽度)
+local function GetDisplayWidth(str)
+    if not str or str == "" then return 0 end
+    local width = 0
+    local i = 1
+    local len = #str
+    while i <= len do
+        local b = str:byte(i)
+        if b < 128 then
+            width = width + 1
+            i = i + 1
+        elseif b >= 192 and b < 224 then
+            width = width + 2
+            i = i + 2
+        elseif b >= 224 and b < 240 then
+            width = width + 2
+            i = i + 3
+        elseif b >= 240 then
+            width = width + 2
+            i = i + 4
+        else
+            i = i + 1
+        end
+    end
+    return width
+end
+
+-- 辅助：计算带自动换行的中英文混排文本安全高度（剥离颜色控制码与超链接协议头后按真实显示宽度折行）
+local function GetSafeFontStringHeight(fontString, rawText, maxCharsPerLine, lineHeight, minHeight)
+    local measured = (fontString and fontString.GetStringHeight and fontString:GetStringHeight()) or 0
+    if not rawText or rawText == "" then
+        return math.max(measured, minHeight or 18)
+    end
+
+    local clean = rawText
+        :gsub("|c%x%x%x%x%x%x%x%x", "")
+        :gsub("|r", "")
+        :gsub("|H[^|]*|h", "")
+        :gsub("|h", "")
+        :gsub("|T[^|]*|t", "  ")
+
+    local totalLines = 0
+    local targetChars = maxCharsPerLine or 48
+    for line in (clean .. "\n"):gmatch("([^\n]*)\n") do
+        local dispWidth = GetDisplayWidth(line)
+        local wrappedLines = math.max(1, math.ceil(dispWidth / targetChars))
+        totalLines = totalLines + wrappedLines
+    end
+
+    local estimated = totalLines * (lineHeight or 16)
+    return math.max(measured, estimated, minHeight or 18)
+end
+
+-- 初始化 HUD 界面
 local function InitHUD()
     if hudFrame then return end
 
@@ -247,10 +227,6 @@ local function InitHUD()
     hudFrame:SetSize(420, 140)
     hudFrame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -220, -180)
     hudFrame:SetMovable(true)
-    hudFrame:EnableMouse(true)
-    hudFrame:RegisterForDrag("LeftButton")
-    hudFrame:SetScript("OnDragStart", hudFrame.StartMoving)
-    hudFrame:SetScript("OnDragStop", hudFrame.StopMovingOrSizing)
     hudFrame:SetClampedToScreen(true)
 
     -- 背景与边框
@@ -263,16 +239,26 @@ local function InitHUD()
     hudFrame:SetBackdropColor(0.06, 0.08, 0.12, 0.92)
     hudFrame:SetBackdropBorderColor(0.0, 0.8, 1.0, 0.85)
 
+    -- 专用顶部拖拽把手区（避免点击背景或内容误触拖动）
+    dragHeader = CreateFrame("Frame", nil, hudFrame)
+    dragHeader:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 0, 0)
+    dragHeader:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -32, 0)
+    dragHeader:SetHeight(32)
+    dragHeader:EnableMouse(true)
+    dragHeader:RegisterForDrag("LeftButton")
+    dragHeader:SetScript("OnDragStart", function() hudFrame:StartMoving() end)
+    dragHeader:SetScript("OnDragStop", function() hudFrame:StopMovingOrSizing() end)
+
     -- 标题：目的地
-    titleText = hudFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
-    titleText:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -14)
-    titleText:SetPoint("RIGHT", hudFrame, "TOPRIGHT", -80, -14)
+    titleText = dragHeader:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
+    titleText:SetPoint("LEFT", dragHeader, "LEFT", 16, 0)
+    titleText:SetPoint("RIGHT", dragHeader, "RIGHT", -120, 0)
     titleText:SetJustifyH("LEFT")
     titleText:SetWordWrap(false)
     titleText:SetText(L["HUD_DEFAULT_TITLE"])
 
     -- 点击目的地标题打开世界地图定位目的地
-    local mapBtn = CreateFrame("Button", nil, hudFrame)
+    local mapBtn = CreateFrame("Button", nil, dragHeader)
     mapBtn:SetPoint("TOPLEFT", titleText, "TOPLEFT", -2, 2)
     mapBtn:SetPoint("BOTTOMRIGHT", titleText, "BOTTOMRIGHT", 2, -2)
     mapBtn:SetScript("OnClick", function()
@@ -291,26 +277,27 @@ local function InitHUD()
     end)
 
     -- 步骤计数 (例如 "第 1/3 步" / "Step 1/3")
-    stepCounterText = hudFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    stepCounterText:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -36, -14)
+    stepCounterText = dragHeader:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    stepCounterText:SetPoint("RIGHT", dragHeader, "RIGHT", -10, 0)
     stepCounterText:SetText(string.format(L["HUD_STEP_COUNTER_FMT"], 1, 1))
 
-    -- 关闭 / 取消导航按钮
+    -- 关闭 / 取消导航按钮 (提高 FrameLevel 保证易点击性)
     local closeBtn = CreateFrame("Button", nil, hudFrame, "UIPanelCloseButton")
-    closeBtn:SetSize(20, 20)
-    closeBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -5, -5)
+    closeBtn:SetSize(22, 22)
+    closeBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -4, -4)
+    closeBtn:SetFrameLevel(hudFrame:GetFrameLevel() + 10)
     closeBtn:SetScript("OnClick", function()
         ns.Navigation:CancelRoute()
     end)
 
-    -- 多路线单选选项容器 (垂直堆叠排列，杜绝横向挤压文字)
+    -- 多路线单选选项容器
     altContainer = CreateFrame("Frame", nil, hudFrame)
     altContainer:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36)
     altContainer:SetPoint("RIGHT", hudFrame, "RIGHT", -16, 0)
     altContainer:SetHeight(26)
     altContainer:Hide()
 
-    -- 当前步骤富文本容器（启用超链接交互，支持点击【玩具/物品/技能】与(坐标)）
+    -- 当前步骤富文本容器
     stepTextFrame = CreateFrame("Frame", nil, hudFrame)
     stepTextFrame:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -38)
     stepTextFrame:SetSize(388, 24)
@@ -328,55 +315,43 @@ local function InitHUD()
     end
     currentStepText:SetSpacing(3)
 
-    -- 前置任务解锁 & 缺失玩具/道具提醒专属提示框 (高度随文本行数动态伸缩，同样支持超链接点击)
-    questWarnBox = CreateFrame("Frame", nil, hudFrame, "BackdropTemplate")
-    questWarnBox:SetWidth(388)
-    questWarnBox:SetHeight(48)
-    questWarnBox:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
+    -- 固定的安全动作快捷插槽按钮 (Action Slot Button)
+    actionSlotBtn = CreateFrame("Button", "PortaStepActionSlotButton", hudFrame, "SecureActionButtonTemplate, BackdropTemplate")
+    actionSlotBtn:SetSize(36, 36)
+    actionSlotBtn:SetFrameLevel(hudFrame:GetFrameLevel() + 5)
+    actionSlotBtn:RegisterForClicks("AnyUp", "AnyDown")
+    actionSlotBtn:SetBackdrop({
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         edgeSize = 10,
         insets = { left = 2, right = 2, top = 2, bottom = 2 },
     })
-    questWarnBox:SetBackdropColor(0.25, 0.05, 0.05, 0.90)
-    questWarnBox:SetBackdropBorderColor(0.95, 0.35, 0.1, 0.95)
-    BindHyperlinkScripts(questWarnBox)
+    actionSlotBtn:SetBackdropBorderColor(0.0, 0.85, 1.0, 0.9)
 
-    questWarnText = questWarnBox:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    questWarnText:SetPoint("TOPLEFT", questWarnBox, "TOPLEFT", 10, -8)
-    questWarnText:SetPoint("RIGHT", questWarnBox, "RIGHT", -10, 0)
-    questWarnText:SetWidth(368)
-    questWarnText:SetJustifyH("LEFT")
-    questWarnText:SetJustifyV("TOP")
-    questWarnText:SetWordWrap(true)
-    if questWarnText.SetNonSpaceWrap then
-        questWarnText:SetNonSpaceWrap(true)
-    end
-    questWarnText:SetSpacing(3)
-    questWarnBox:Hide()
+    local slotIcon = actionSlotBtn:CreateTexture(nil, "ARTWORK")
+    slotIcon:SetPoint("TOPLEFT", 3, -3)
+    slotIcon:SetPoint("BOTTOMRIGHT", -3, 3)
+    slotIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    actionSlotBtn.icon = slotIcon
 
-    -- 动态安全动作浮层按钮（使点击步骤文本中的【玩具/物品/技能】能够直接触发暴雪安全施法/使用接口）
-    secureOverlayBtn = CreateFrame("Button", "PortaStepSecureOverlayButton", hudFrame, "SecureActionButtonTemplate")
-    secureOverlayBtn:SetSize(96, 20)
-    secureOverlayBtn:SetFrameLevel(hudFrame:GetFrameLevel() + 25)
-    secureOverlayBtn:RegisterForClicks("AnyUp", "AnyDown")
+    local slotHighlight = actionSlotBtn:CreateTexture(nil, "HIGHLIGHT")
+    slotHighlight:SetAllPoints(slotIcon)
+    slotHighlight:SetColorTexture(1.0, 1.0, 1.0, 0.25)
 
-    local overlayHighlight = secureOverlayBtn:CreateTexture(nil, "HIGHLIGHT")
-    overlayHighlight:SetAllPoints()
-    overlayHighlight:SetColorTexture(0.0, 0.85, 1.0, 0.18)
+    local slotCooldown = CreateFrame("Cooldown", nil, actionSlotBtn, "CooldownFrameTemplate")
+    slotCooldown:SetAllPoints(slotIcon)
+    slotCooldown:SetDrawEdge(true)
+    actionSlotBtn.cooldown = slotCooldown
 
-    secureOverlayBtn:SetScript("OnEnter", function(self)
+    actionSlotBtn:SetScript("OnEnter", function(self)
         if self.parsedLink then
-            ShowPortaLinkTooltip(hudFrame, self.parsedLink)
+            ShowPortaLinkTooltip(self, self.parsedLink)
         end
     end)
-    secureOverlayBtn:SetScript("OnLeave", function(self)
+    actionSlotBtn:SetScript("OnLeave", function()
         GameTooltip:Hide()
-        if not (InCombatLockdown and InCombatLockdown()) then
-            self:Hide()
-        end
     end)
-    secureOverlayBtn:SetScript("PostClick", function(self, button, down)
+
+    actionSlotBtn:SetScript("PostClick", function(self, button, down)
         local useKeyDown = (GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")) or false
         if (useKeyDown and not down) or (not useKeyDown and down) then
             return
@@ -405,7 +380,34 @@ local function InitHUD()
             end
         end
     end)
-    secureOverlayBtn:Hide()
+    actionSlotBtn:Hide()
+
+    -- 前置任务解锁 & 缺失玩具/道具提醒专属提示框
+    questWarnBox = CreateFrame("Frame", nil, hudFrame, "BackdropTemplate")
+    questWarnBox:SetWidth(388)
+    questWarnBox:SetHeight(48)
+    questWarnBox:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 10,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+    questWarnBox:SetBackdropColor(0.25, 0.05, 0.05, 0.90)
+    questWarnBox:SetBackdropBorderColor(0.95, 0.35, 0.1, 0.95)
+    BindHyperlinkScripts(questWarnBox)
+
+    questWarnText = questWarnBox:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    questWarnText:SetPoint("TOPLEFT", questWarnBox, "TOPLEFT", 10, -8)
+    questWarnText:SetPoint("RIGHT", questWarnBox, "RIGHT", -10, 0)
+    questWarnText:SetWidth(368)
+    questWarnText:SetJustifyH("LEFT")
+    questWarnText:SetJustifyV("TOP")
+    questWarnText:SetWordWrap(true)
+    if questWarnText.SetNonSpaceWrap then
+        questWarnText:SetNonSpaceWrap(true)
+    end
+    questWarnText:SetSpacing(3)
+    questWarnBox:Hide()
 
     -- 下一步快捷按钮
     local nextBtn = CreateFrame("Button", nil, hudFrame, "UIPanelButtonTemplate")
@@ -456,40 +458,32 @@ local function InitHUD()
     nextStepText:SetJustifyH("LEFT")
     nextStepText:SetWordWrap(false)
 
+    -- 战斗状态事件监听：脱战安全更新属性，进战提示保护
+    local combatFrame = CreateFrame("Frame")
+    combatFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+    combatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+    combatFrame:SetScript("OnEvent", function(_, event)
+        if event == "PLAYER_REGEN_DISABLED" then
+            if actionSlotBtn and actionSlotBtn:IsShown() then
+                actionSlotBtn.icon:SetDesaturated(true)
+            end
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            if hudFrame and hudFrame:IsShown() and ns.Navigation then
+                local activeRoute, stepIdx = ns.Navigation:GetActiveRoute()
+                if activeRoute and stepIdx then
+                    NavigationHUD:UpdateStep(activeRoute, stepIdx)
+                end
+            end
+        end
+    end)
+
     hudFrame:Hide()
 end
 
--- 辅助：计算带自动换行的中英文混排文本安全高度（剥离超链接与纹理标签后再估算折行）
-local function GetSafeFontStringHeight(fontString, rawText, bytesPerLine, lineHeight, minHeight)
-    local measured = (fontString and fontString.GetStringHeight and fontString:GetStringHeight()) or 0
-    if not rawText or rawText == "" then
-        return math.max(measured, minHeight or 18)
-    end
-
-    -- 剥离魔兽颜色控制码、超链接协议头与纹理标签后按真实可见字符估算折行高度
-    local clean = rawText
-        :gsub("|c%x%x%x%x%x%x%x%x", "")
-        :gsub("|r", "")
-        :gsub("|H[^|]*|h", "")
-        :gsub("|h", "")
-        :gsub("|T[^|]*|t", "xx")
-
-    local totalLines = 0
-    for line in (clean .. "\n"):gmatch("([^\n]*)\n") do
-        local byteLen = #line
-        local wrappedLines = math.max(1, math.ceil(byteLen / (bytesPerLine or 72)))
-        totalLines = totalLines + wrappedLines
-    end
-
-    local estimated = totalLines * (lineHeight or 16)
-    return math.max(measured, estimated, minHeight or 18)
-end
-
--- 刷新多路线单选按钮栏 (独占行垂直排列，支持文本自动换行与高度自适应，杜绝超出框体)
+-- 刷新多路线单选按钮栏
 local function UpdateAlternativeButtons(route, stepIndex)
     if not altContainer then return 0 end
 
-    -- 仅在第 1 步且存在 2 个以上可行起点时展示方案单选
     if stepIndex ~= 1 or not route.alternatives or #route.alternatives <= 1 then
         altContainer:Hide()
         return 0
@@ -543,7 +537,7 @@ local function UpdateAlternativeButtons(route, stepIndex)
         end
         btn.text:SetText(label)
 
-        local textH = GetSafeFontStringHeight(btn.text, label, 66, 14, 14)
+        local textH = GetSafeFontStringHeight(btn.text, label, 46, 14, 14)
         local btnHeight = math.max(22, textH + 8)
 
         btn:ClearAllPoints()
@@ -610,55 +604,143 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     local currentStep = route.steps[stepIndex]
     if not currentStep then return end
 
-    if secureOverlayBtn and secureOverlayBtn:IsShown() and not (InCombatLockdown and InCombatLockdown()) then
-        secureOverlayBtn:Hide()
-    end
-
     -- 标题显示
     titleText:SetText(string.format("|cff00ccff%s|r", route.destination.name or L["HUD_DEST_FALLBACK"]))
     stepCounterText:SetText(string.format(L["HUD_STEP_COUNTER_FMT"], stepIndex, route.totalSteps))
 
-    -- 1. 多路线单选选项栏渲染 (自适应高度)
+    -- 1. 多路线单选选项栏渲染
     local altOffset = UpdateAlternativeButtons(route, stepIndex)
 
-    -- 2. 步骤描述文本排版（内含可点击的【玩具/物品/技能】与(坐标)超链接）
+    -- 2. 检查当前步骤是否包含传送动作（技能/玩具/物品）
+    local tp = currentStep.teleportInfo
+    local hasActionSlot = false
+    local parsedLink = nil
+
+    if tp and tp.id and (currentStep.action == "SPELL" or currentStep.action == "TOY" or currentStep.action == "ITEM" or tp.type) then
+        hasActionSlot = true
+        parsedLink = { kind = tp.type or currentStep.action, id = tp.id }
+    end
+
+    local isCombat = (InCombatLockdown and InCombatLockdown()) or false
+
+    if hasActionSlot and actionSlotBtn then
+        actionSlotBtn:ClearAllPoints()
+        actionSlotBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -16, -36 - altOffset)
+        actionSlotBtn.parsedLink = parsedLink
+
+        local hasIt, missingReason = true, nil
+        if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
+            hasIt, missingReason = ns.PlayerTeleports:CheckTeleportOwnership(parsedLink.kind, parsedLink.id)
+        end
+        actionSlotBtn.hasIt = hasIt
+        actionSlotBtn.missingReason = missingReason
+
+        -- 动态获取材质图标
+        local texture = nil
+        if parsedLink.kind == "SPELL" then
+            if C_Spell and C_Spell.GetSpellTexture then
+                texture = C_Spell.GetSpellTexture(parsedLink.id)
+            end
+        else
+            if C_Item and C_Item.GetItemIconByID then
+                texture = C_Item.GetItemIconByID(parsedLink.id)
+            end
+        end
+        if not texture then
+            texture = "Interface\\Icons\\INV_Misc_QuestionMark"
+        end
+        actionSlotBtn.icon:SetTexture(texture)
+        actionSlotBtn.icon:SetDesaturated(isCombat or (not hasIt))
+
+        -- 冷却状态监测
+        if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
+            local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsedLink.kind == "SPELL" and "SPELL" or "ITEM", parsedLink.id)
+            if not isReady and cdSec > 0 then
+                actionSlotBtn.cooldown:SetCooldown(GetTime() - 1, cdSec)
+            else
+                actionSlotBtn.cooldown:Clear()
+            end
+        end
+
+        -- 在脱战状态下安全设置动作插槽属性
+        if not isCombat then
+            actionSlotBtn:SetAttribute("type", nil)
+            actionSlotBtn:SetAttribute("type1", nil)
+            actionSlotBtn:SetAttribute("type2", nil)
+            actionSlotBtn:SetAttribute("spell", nil)
+            actionSlotBtn:SetAttribute("spell1", nil)
+            actionSlotBtn:SetAttribute("toy", nil)
+            actionSlotBtn:SetAttribute("toy1", nil)
+            actionSlotBtn:SetAttribute("item", nil)
+            actionSlotBtn:SetAttribute("item1", nil)
+
+            if hasIt then
+                if parsedLink.kind == "SPELL" then
+                    actionSlotBtn:SetAttribute("type1", "spell")
+                    actionSlotBtn:SetAttribute("spell1", parsedLink.id)
+                elseif parsedLink.kind == "TOY" then
+                    if PlayerHasToy and PlayerHasToy(parsedLink.id) then
+                        actionSlotBtn:SetAttribute("type1", "toy")
+                        actionSlotBtn:SetAttribute("toy1", parsedLink.id)
+                    else
+                        actionSlotBtn:SetAttribute("type1", "item")
+                        actionSlotBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
+                    end
+                else
+                    actionSlotBtn:SetAttribute("type1", "item")
+                    actionSlotBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
+                end
+            end
+        end
+
+        actionSlotBtn:Show()
+    else
+        if actionSlotBtn and not isCombat then
+            actionSlotBtn:Hide()
+        end
+    end
+
+    -- 3. 步骤描述文本排版（若存在动作插槽，留出右侧空间给按钮）
+    local textWidth = hasActionSlot and 344 or 388
+    local charsPerLine = hasActionSlot and 42 or 48
+
     local descStr = string.format("|cffffffff%s|r", currentStep.description or "")
     stepTextFrame:ClearAllPoints()
     stepTextFrame:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36 - altOffset)
-    stepTextFrame:SetWidth(388)
+    stepTextFrame:SetWidth(textWidth)
 
-    currentStepText:SetWidth(388)
+    currentStepText:SetWidth(textWidth)
     currentStepText:SetText(descStr)
 
-    local descHeight = GetSafeFontStringHeight(currentStepText, descStr, 68, 17, 20)
+    local descHeight = GetSafeFontStringHeight(currentStepText, descStr, charsPerLine, 17, hasActionSlot and 38 or 20)
     stepTextFrame:SetHeight(descHeight + 4)
 
-    -- 3. 缺失玩具/物品提示 & 前置任务提醒框排版 (位于步骤描述下方，高度随内容行数完全自适应)
+    -- 4. 缺失玩具/物品提示 & 前置任务提醒框排版
     local warnBlocks = {}
 
     if currentStep.isMissingTeleport and currentStep.teleportInfo then
-        local tp = currentStep.teleportInfo
-        local kindLabel = (tp.type == "TOY" and L["KIND_TOY"]) or (tp.type == "SPELL" and L["KIND_SPELL"]) or L["KIND_ITEM"]
-        local tpLink = (ns.Pathfinder and ns.Pathfinder.FormatTeleportLink and ns.Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)) or ns.FormatBracket(tp.name or "")
+        local tpInfo = currentStep.teleportInfo
+        local kindLabel = (tpInfo.type == "TOY" and L["KIND_TOY"]) or (tpInfo.type == "SPELL" and L["KIND_SPELL"]) or L["KIND_ITEM"]
+        local tpLink = (ns.Pathfinder and ns.Pathfinder.FormatTeleportLink and ns.Pathfinder:FormatTeleportLink(tpInfo.type, tpInfo.id, tpInfo.name)) or ns.FormatBracket(tpInfo.name or "")
         local headerLabel
-        if tp.isOwned and (tp.missingEngineering or tp.isToyUnusable) then
-            headerLabel = string.format(L["HUD_WARN_COND_UNMET_FMT"], kindLabel, tp.missingShortTag or L["TAG_REQ_ENG"])
-        elseif tp.missingEngineering then
+        if tpInfo.isOwned and (tpInfo.missingEngineering or tpInfo.isToyUnusable) then
+            headerLabel = string.format(L["HUD_WARN_COND_UNMET_FMT"], kindLabel, tpInfo.missingShortTag or L["TAG_REQ_ENG"])
+        elseif tpInfo.missingEngineering then
             headerLabel = string.format(L["HUD_WARN_MISSING_ENG_FMT"], kindLabel)
         else
             headerLabel = string.format(L["HUD_WARN_MISSING_FMT"], kindLabel)
         end
-        local reasonText = tp.missingReason or string.format(L["HUD_WARN_REASON_FALLBACK_FMT"], kindLabel, tpLink)
-        local noteLine = (tp.note and tp.note ~= "") and (L["HUD_WARN_NOTE_PREFIX"] .. tp.note) or ""
+        local reasonText = tpInfo.missingReason or string.format(L["HUD_WARN_REASON_FALLBACK_FMT"], kindLabel, tpLink)
+        local noteLine = (tpInfo.note and tpInfo.note ~= "") and (L["HUD_WARN_NOTE_PREFIX"] .. tpInfo.note) or ""
         table.insert(warnBlocks, string.format(
             L["HUD_WARN_MISSING_BLOCK_FMT"],
             headerLabel, reasonText, noteLine, tpLink
         ))
     elseif currentStep.isUncertainWormhole and currentStep.teleportInfo then
-        local tp = currentStep.teleportInfo
+        local tpInfo = currentStep.teleportInfo
         table.insert(warnBlocks, string.format(
             L["HUD_WARN_WORMHOLE_BLOCK_FMT"],
-            tp.name or L["KIND_TOY"]
+            tpInfo.name or L["KIND_TOY"]
         ))
     end
 
@@ -696,7 +778,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         questWarnText:SetText(warnStr)
         questWarnBox:Show()
 
-        local warnTextH = GetSafeFontStringHeight(questWarnText, warnStr, 66, 16, 20)
+        local warnTextH = GetSafeFontStringHeight(questWarnText, warnStr, 46, 16, 20)
         local boxHeight = warnTextH + 18
         questWarnBox:SetHeight(boxHeight)
         questWarnHeight = boxHeight + 8
@@ -704,14 +786,14 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         questWarnBox:Hide()
     end
 
-    -- 4. 按钮状态控制：第 1 步时禁用“上一步”
+    -- 5. 按钮状态控制
     if stepIndex > 1 then
         hudFrame.prevBtn:Enable()
     else
         hudFrame.prevBtn:Disable()
     end
 
-    -- 5. 下一步预告与“下一步/完成”按钮文本
+    -- 6. 下一步预告与按钮文本
     if stepIndex < route.totalSteps then
         local nextStep = route.steps[stepIndex + 1]
         local actionLabel = (nextStep and ACTION_LABELS[nextStep.action]) or (nextStep and nextStep.action) or L["HUD_ACTION_DEFAULT"]
@@ -722,11 +804,11 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         hudFrame.nextBtn:SetText(L["HUD_BTN_DONE"])
     end
 
-    -- 6. 动态总高度计算：顶部(36) + 方案栏(altOffset) + 描述(descHeight) + 警告框(questWarnHeight) + 底部按钮间距(48)
+    -- 7. 动态总高度设置
     local totalFrameHeight = 36 + altOffset + descHeight + questWarnHeight + 48
     hudFrame:SetHeight(math.max(130, totalFrameHeight))
 
-    -- 7. 下一渲染帧二次校准：待客户端引擎完成字形折行后，自动对齐真实渲染高度
+    -- 8. 下一渲染帧基于原生排版引擎二次精准校准 (移除锁死旧高度的错误逻辑)
     if C_Timer and C_Timer.After then
         C_Timer.After(0, function()
             if not hudFrame or not hudFrame:IsShown() then return end
@@ -753,7 +835,8 @@ function NavigationHUD:UpdateStep(route, stepIndex)
                 realAltOffset = altOffset
             end
 
-            local realDescH = math.max(descHeight, currentStepText:GetStringHeight() or 0)
+            local rawDescH = (currentStepText and currentStepText.GetStringHeight and currentStepText:GetStringHeight()) or 0
+            local realDescH = math.max(hasActionSlot and 38 or 18, rawDescH)
             stepTextFrame:ClearAllPoints()
             stepTextFrame:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36 - realAltOffset)
             stepTextFrame:SetHeight(realDescH + 4)
@@ -762,8 +845,8 @@ function NavigationHUD:UpdateStep(route, stepIndex)
             if questWarnBox:IsShown() then
                 questWarnBox:ClearAllPoints()
                 questWarnBox:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -36 - realAltOffset - realDescH - 8)
-                local actualWarnTextH = questWarnText:GetStringHeight() or 0
-                local finalBoxH = math.max(questWarnBox:GetHeight(), actualWarnTextH + 18)
+                local actualWarnTextH = (questWarnText and questWarnText.GetStringHeight and questWarnText:GetStringHeight()) or 0
+                local finalBoxH = math.max(28, actualWarnTextH + 16)
                 questWarnBox:SetHeight(finalBoxH)
                 realWarnH = finalBoxH + 8
             end
@@ -775,10 +858,6 @@ end
 -- 隐藏 HUD
 function NavigationHUD:Hide()
     if hudFrame then
-        if secureOverlayBtn and not (InCombatLockdown and InCombatLockdown()) then
-            secureOverlayBtn:Hide()
-        end
         hudFrame:Hide()
     end
 end
-

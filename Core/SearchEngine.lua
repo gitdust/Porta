@@ -30,6 +30,7 @@ local MAJOR_CONTINENTS = {
     1550, -- 暗影界 (Shadowlands)
     1978, -- 巨龙群岛 (Dragon Isles)
     2274, -- 卡兹阿加 (Khaz Algar)
+    2400, -- 至暗之夜 / 奎尔萨拉斯 (Midnight / Quel'Thalas)
     947,  -- 艾泽拉斯全局 (Azeroth)
 }
 
@@ -140,10 +141,18 @@ function SearchEngine:Initialize()
             if not (dest.id and seenDestIDs[dest.id]) then
                 local instanceName = nil
                 -- 通过暴雪原生 Journal API 获取当前客户端语言的名称
-                if dest.id and dest.id > 0 and EJ_GetInstanceInfo then
-                    local name = EJ_GetInstanceInfo(dest.id)
-                    if name and name ~= "" then
-                        instanceName = name
+                if dest.id and dest.id > 0 then
+                    if C_EncounterJournal and C_EncounterJournal.GetInstanceInfo then
+                        local name = C_EncounterJournal.GetInstanceInfo(dest.id)
+                        if name and name ~= "" then
+                            instanceName = name
+                        end
+                    end
+                    if not instanceName and EJ_GetInstanceInfo then
+                        local name = EJ_GetInstanceInfo(dest.id)
+                        if name and name ~= "" then
+                            instanceName = name
+                        end
                     end
                 end
 

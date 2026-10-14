@@ -533,59 +533,71 @@ local SUBZONE_CONNECTIONS = {
 }
 
 -- =========================================================================
--- 5. 最小优先队列 (Min-Heap 实现)
+-- 5. 零内存分配最小优先队列 (Flat Array Min-Heap 实现)
 -- =========================================================================
-local function CreateMinHeap()
-    local heap = {}
+local heapNodes = {}
+local heapCosts = {}
+local heapSize = 0
 
-    local function push(item)
-        table.insert(heap, item)
-        local idx = #heap
-        while idx > 1 do
-            local parent = math.floor(idx / 2)
-            if heap[idx].cost < heap[parent].cost then
-                heap[idx], heap[parent] = heap[parent], heap[idx]
-                idx = parent
+local function HeapPush(node, cost)
+    heapSize = heapSize + 1
+    local idx = heapSize
+    heapNodes[idx] = node
+    heapCosts[idx] = cost
+    while idx > 1 do
+        local parent = math.floor(idx / 2)
+        if heapCosts[idx] < heapCosts[parent] then
+            heapNodes[idx], heapNodes[parent] = heapNodes[parent], heapNodes[idx]
+            heapCosts[idx], heapCosts[parent] = heapCosts[parent], heapCosts[idx]
+            idx = parent
+        else
+            break
+        end
+    end
+end
+
+local function HeapPop()
+    if heapSize == 0 then return nil, nil end
+    local topNode = heapNodes[1]
+    local topCost = heapCosts[1]
+    local lastNode = heapNodes[heapSize]
+    local lastCost = heapCosts[heapSize]
+    heapNodes[heapSize] = nil
+    heapCosts[heapSize] = nil
+    heapSize = heapSize - 1
+
+    if heapSize > 0 then
+        heapNodes[1] = lastNode
+        heapCosts[1] = lastCost
+        local idx = 1
+        while true do
+            local left = idx * 2
+            local right = idx * 2 + 1
+            local smallest = idx
+            if left <= heapSize and heapCosts[left] < heapCosts[smallest] then
+                smallest = left
+            end
+            if right <= heapSize and heapCosts[right] < heapCosts[smallest] then
+                smallest = right
+            end
+            if smallest ~= idx then
+                heapNodes[idx], heapNodes[smallest] = heapNodes[smallest], heapNodes[idx]
+                heapCosts[idx], heapCosts[smallest] = heapCosts[smallest], heapCosts[idx]
+                idx = smallest
             else
                 break
             end
         end
     end
+    return topNode, topCost
+end
 
-    local function pop()
-        if #heap == 0 then return nil end
-        local top = heap[1]
-        local last = table.remove(heap)
-        if #heap > 0 then
-            heap[1] = last
-            local idx = 1
-            local size = #heap
-            while true do
-                local left = idx * 2
-                local right = idx * 2 + 1
-                local smallest = idx
-                if left <= size and heap[left].cost < heap[smallest].cost then
-                    smallest = left
-                end
-                if right <= size and heap[right].cost < heap[smallest].cost then
-                    smallest = right
-                end
-                if smallest ~= idx then
-                    heap[idx], heap[smallest] = heap[smallest], heap[idx]
-                    idx = smallest
-                else
-                    break
-                end
-            end
-        end
-        return top
+local function HeapReset()
+    for i = 1, heapSize do
+        heapNodes[i] = nil
+        heapCosts[i] = nil
     end
-
-    local function empty()
-        return #heap == 0
-    end
-
-    return { push = push, pop = pop, empty = empty }
+    heapSize = 0
 end
 
 -- 军团再临职业大厅专属地图（仅对应职业可进出，严禁跨职业借道）
@@ -692,19 +704,25 @@ function Pathfinder:GetPhaseShiftInfo(mapID)
 end
 
 -- =========================================================================
--- 6. 构建双向拓扑图 (支持正向与反向遍历及动态生命周期/活动守卫)
+-- 6. 构建双向拓扑图 (支持正向与反向遍历及常驻内存缓存，杜绝重复构图 GC)
 -- =========================================================================
-local function BuildGraphData(playerFaction, destMapID)
+local cachedRevAdj = nil
+local cachedFwdAdj = nil
+local cachedGraphFaction = nil
+
+local function GetGraphData(playerFaction)
+    playerFaction = playerFaction or ns.GetPlayerFaction()
+    if cachedRevAdj and cachedGraphFaction == playerFaction then
+        return cachedRevAdj, cachedFwdAdj
+    end
+
     local revAdj = {}
     local fwdAdj = {}
-    playerFaction = playerFaction or ns.GetPlayerFaction()
 
     local _, _, playerRaceID = UnitRace("player")
     local isDarkIron = (playerRaceID == 34)
     local _, playerClass = UnitClass("player")
-
     local isTimeways = IsTimewaysActive()
-    local isDarkmoonOpen = GetDarkmoonFaireStatus()
 
     local function addEdge(fromNode, toNode, x, y, edgeType, faction, note, cost, questID, achievementID, isDarkmoon)
         if not fromNode or not toNode or fromNode == toNode then return end
@@ -715,21 +733,7 @@ local function BuildGraphData(playerFaction, destMapID)
             return
         end
 
-        -- 2. 暗月马戏团 (407) 周期时效守卫
-        if fromNode == 407 or toNode == 407 or isDarkmoon then
-            if not isDarkmoonOpen then
-                -- 活动未开放期间：不可将暗月岛作为中间过路中转；若目的地非暗月岛，彻底过滤
-                if destMapID ~= 407 then
-                    return
-                end
-                -- 若目的地即为暗月岛，仅允许单向进入（方便查看路线与未开放提示），禁止逆向离开
-                if fromNode == 407 then
-                    return
-                end
-            end
-        end
-
-        -- 3. 职业专属大厅地图隔离（防止跨职业穿梭圣所/大厅通道）
+        -- 2. 职业专属大厅地图隔离（防止跨职业穿梭圣所/大厅通道）
         local reqClass = CLASS_HALL_MAPS[fromNode] or CLASS_HALL_MAPS[toNode]
         if reqClass and reqClass ~= playerClass then
             return
@@ -769,7 +773,11 @@ local function BuildGraphData(playerFaction, destMapID)
         addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID, s.isDarkmoon)
     end
 
-    return revAdj, fwdAdj
+    cachedRevAdj = revAdj
+    cachedFwdAdj = fwdAdj
+    cachedGraphFaction = playerFaction
+
+    return cachedRevAdj, cachedFwdAdj
 end
 
 -- =========================================================================
@@ -778,32 +786,43 @@ end
 function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
     if not destMapID then return {}, {}, {} end
 
-    local revAdj, fwdAdj = BuildGraphData(playerFaction, destMapID)
+    local revAdj, fwdAdj = GetGraphData(playerFaction)
     local dist = {}
     local nextEdge = {}
 
-    local heap = CreateMinHeap()
-    dist[destMapID] = 0
-    heap.push({ node = destMapID, cost = 0 })
+    local isDarkmoonOpen = GetDarkmoonFaireStatus()
 
-    while not heap.empty() do
-        local top = heap.pop()
-        local curr = top.node
-        local currCost = top.cost
+    HeapReset()
+    dist[destMapID] = 0
+    HeapPush(destMapID, 0)
+
+    while heapSize > 0 do
+        local curr, currCost = HeapPop()
 
         if currCost <= dist[curr] then
             -- 1. 沿所有真实物理入边 (u -> curr) 逆向回溯
             local incoming = revAdj[curr]
             if incoming then
                 for _, edge in ipairs(incoming) do
-                    local u = edge.from
-                    local edgeCost = edge.cost or (EDGE_COSTS[edge.type] or 1.5)
-                    local newCost = currCost + edgeCost
+                    -- 暗月马戏团周期守卫：未开放期间禁止经暗月岛中转；目的地非暗月岛时跳过；若是暗月岛则仅允许单向进入
+                    local isDarkmoonEdge = edge.isDarkmoon or (edge.from == 407) or (edge.to == 407)
+                    local skipEdge = false
+                    if isDarkmoonEdge and not isDarkmoonOpen then
+                        if destMapID ~= 407 or edge.from == 407 then
+                            skipEdge = true
+                        end
+                    end
 
-                    if not dist[u] or newCost < dist[u] then
-                        dist[u] = newCost
-                        nextEdge[u] = edge
-                        heap.push({ node = u, cost = newCost })
+                    if not skipEdge then
+                        local u = edge.from
+                        local edgeCost = edge.cost or (EDGE_COSTS[edge.type] or 1.5)
+                        local newCost = currCost + edgeCost
+
+                        if not dist[u] or newCost < dist[u] then
+                            dist[u] = newCost
+                            nextEdge[u] = edge
+                            HeapPush(u, newCost)
+                        end
                     end
                 end
             end
@@ -828,7 +847,7 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                                 cost = EDGE_COSTS.FLY or 2.0,
                                 note = "跨区域飞行前往",
                             }
-                            heap.push({ node = h, cost = flyCost })
+                            HeapPush(h, flyCost)
                         end
                     end
                 end
@@ -848,7 +867,7 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                             cost = EDGE_COSTS.FLY or 2.0,
                             note = "在大洲内飞行前往目标区域",
                         }
-                        heap.push({ node = contID, cost = contFlyCost })
+                        HeapPush(contID, contFlyCost)
                     end
                 end
 
@@ -867,13 +886,14 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                             cost = EDGE_COSTS.FLY or 2.0,
                             note = "飞行前往",
                         }
-                        heap.push({ node = currentMapID, cost = flyCost })
+                        HeapPush(currentMapID, flyCost)
                     end
                 end
             end
         end
     end
 
+    HeapReset()
     return dist, nextEdge, fwdAdj
 end
 

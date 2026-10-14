@@ -36,27 +36,41 @@ local ACTION_LABELS = {
     DIRECT       = L["HUD_ACTION_DIRECT"],
 }
 
+-- 缓存解析后的超链接结构，避免鼠标划过/点击富文本时频繁重复正则匹配与表对象分配
+local linkCache = {}
+
 -- 解析 Porta 自定义超链接 (porta:toy:id / porta:item:id / porta:spell:id / porta:coord:mapID:x:y)
 local function ParsePortaHyperlink(link)
     if type(link) ~= "string" then return nil end
+    local cached = linkCache[link]
+    if cached ~= nil then
+        return cached or nil
+    end
+
     local kind, a1, a2, a3 = string.match(link, "^porta:([^:]+):([^:]+):?([^:]*):?([^:]*)$")
-    if not kind then return nil end
+    if not kind then
+        linkCache[link] = false
+        return nil
+    end
     kind = string.upper(kind)
 
+    local res = nil
     if kind == "COORD" then
         local mapID = tonumber(a1)
         local x = tonumber(a2)
         local y = tonumber(a3)
         if x and y then
-            return { kind = "COORD", mapID = mapID or 0, x = x, y = y }
+            res = { kind = "COORD", mapID = mapID or 0, x = x, y = y }
         end
     elseif kind == "TOY" or kind == "ITEM" or kind == "SPELL" then
         local id = tonumber(a1)
         if id then
-            return { kind = kind, id = id }
+            res = { kind = kind, id = id }
         end
     end
-    return nil
+
+    linkCache[link] = res or false
+    return res
 end
 
 -- 打开玩具/物品/技能的独立详情浮窗 (ItemRefTooltip)
@@ -618,7 +632,8 @@ function NavigationHUD:UpdateStep(route, stepIndex)
 
     if tp and tp.id and (currentStep.action == "SPELL" or currentStep.action == "TOY" or currentStep.action == "ITEM" or tp.type) then
         hasActionSlot = true
-        parsedLink = { kind = tp.type or currentStep.action, id = tp.id }
+        local k = tp.type or currentStep.action
+        parsedLink = ParsePortaHyperlink(string.format("porta:%s:%d", string.lower(k), tp.id))
     end
 
     local isCombat = (InCombatLockdown and InCombatLockdown()) or false

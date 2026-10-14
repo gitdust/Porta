@@ -228,6 +228,15 @@ local function InitFrame()
         editBox:SetFocus()
         UpdateSearchResults(true)
     end)
+
+    -- 隐藏时主动清理结果引用并重置定时器，促使垃圾回收与内存释放
+    frame:SetScript("OnHide", function()
+        hasPendingSearch = false
+        debounceElapsed = 0
+        pollElapsed = 0
+        lastQueryText = nil
+        wipe(currentResults)
+    end)
 end
 
 -- 选中指定索引

@@ -367,9 +367,9 @@ local L_enUS = {
 }
 
 -- =========================================================================
--- 2. 简体中文语言表 (zhCN)
+-- 2. 简体中文语言表 (zhCN) - 仅在 CJK 环境下实例化以节省内存
 -- =========================================================================
-local L_zhCN = {
+local L_zhCN = (locale == "zhCN" or locale == "zhTW") and {
     BINDING_HEADER = "Porta 路线导航",
     BINDING_TOGGLE = "唤出/关闭导航搜索框",
     ADDON_LOADED_MSG = "已加载完成！输入 |cffffcc00/porta|r 快速打开目的地搜索。",
@@ -711,12 +711,12 @@ local L_zhCN = {
     PHASE_TIP_DARKSHORE = "黑海岸存在「泰达希尔烧毁后（战争前线）」与「战前经典主城」两个历史位面。若达纳苏斯被烧毁无法进入或看不到NPC，请前往洛丹诺以南对话切换时间线。",
     PHASE_TIP_ARATHI = "阿拉希高地存在「激流堡战争前线」与「经典旧世」两个历史位面。若地图上的营地、稀有怪或任务状态不符，请前往避难谷地以南对话切换时间线。",
     PHASE_TIP_THERAMORE = "塞拉摩存在「法力炸弹爆炸后（废墟弹坑）」与「爆炸前经典城堡」两个历史位面。若看不到塞拉摩城内NPC、船只或建筑，请在大桥入口旁对话切换时间线。",
-}
+} or nil
 
 -- =========================================================================
--- 3. 繁体中文语言表 (zhTW)
+-- 3. 繁体中文语言表 (zhTW) - 仅在 zhTW 客户端下实例化以节省内存
 -- =========================================================================
-local L_zhTW = {
+local L_zhTW = (locale == "zhTW") and {
     BINDING_HEADER = "Porta 路線導航",
     BINDING_TOGGLE = "喚出/關閉導航搜尋框",
     ADDON_LOADED_MSG = "已載入完成！輸入 |cffffcc00/porta|r 快速開啟目的地搜尋。",
@@ -1047,7 +1047,7 @@ local L_zhTW = {
     PHASE_TIP_DARKSHORE = "黑海岸存在「泰達希爾燒毀後（戰爭前線）」與「戰前經典主城」兩個歷史位面。若達納蘇斯被燒毀無法進入或看不到NPC，請前往洛丹諾以南對話切換時間線。",
     PHASE_TIP_ARATHI = "阿拉希高地存在「激流堡戰爭前線」與「經典舊世」兩個歷史位面。若地圖上的營地、稀有怪或任務狀態不符，請前往避難谷地以南對話切換時間線。",
     PHASE_TIP_THERAMORE = "塞拉摩存在「法力炸彈爆炸後（廢墟彈坑）」與「爆炸前經典城堡」兩個歷史位面。若看不到塞拉摩城內NPC、船隻或建築，請在大橋入口旁對話切換時間線。",
-}
+} or nil
 
 -- 构造最终语言表 L（按客户端 GetLocale 自动合并，缺失键自动回退至 L_enUS）
 local activeTable = {}
@@ -1055,19 +1055,21 @@ for k, v in pairs(L_enUS) do
     activeTable[k] = v
 end
 
-if locale == "zhCN" then
+if L_zhCN then
     for k, v in pairs(L_zhCN) do
         activeTable[k] = v
     end
-elseif locale == "zhTW" then
-    -- 繁体中文优先继承简体中文，再覆盖繁体专属词条
-    for k, v in pairs(L_zhCN) do
-        activeTable[k] = v
-    end
+end
+
+if L_zhTW then
     for k, v in pairs(L_zhTW) do
         activeTable[k] = v
     end
 end
+
+-- 显式解引用闲置的多语言原始字典，促使垃圾回收器释放内存
+L_zhCN = nil
+L_zhTW = nil
 
 ns.L = setmetatable(activeTable, {
     __index = function(_, key)

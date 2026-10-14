@@ -85,6 +85,41 @@ local function NormalizeTextForms(textLower)
     return spaced, compact
 end
 
+-- 创建搜索项辅助函数：预计算所有规范化检索字段，杜绝后续高频键入时的重复 gsub 与临时字符串重分配
+local function CreateSearchItem(id, name, zoneName, mapID, x, y, itemType, tag, color, comment)
+    local trimmedName = TrimText(name)
+    local nameLower = string.lower(trimmedName)
+    local noArticle = StripLeadingArticle(nameLower)
+    local spaced, compact = NormalizeTextForms(nameLower)
+    local noArtSpaced, noArtCompact = NormalizeTextForms(noArticle)
+    local commentLower = (comment and comment ~= "") and string.lower(TrimText(comment)) or nil
+    local tagLower = (tag and tag ~= "") and string.lower(TrimText(tag)) or nil
+    local resultKey = tostring(itemType or "") .. ":" .. nameLower .. ":" .. string.lower(zoneName or "")
+
+    return {
+        id = id,
+        name = trimmedName,
+        zoneName = zoneName,
+        mapID = mapID,
+        x = x,
+        y = y,
+        type = itemType,
+        tag = tag,
+        color = color,
+        comment = comment or "",
+        _lower = nameLower,
+        _noArticle = noArticle,
+        _spaced = spaced,
+        _compact = compact,
+        _noArtSpaced = noArtSpaced,
+        _noArtCompact = noArtCompact,
+        _spacedLead = " " .. spaced,
+        _commentLower = commentLower,
+        _tagLower = tagLower,
+        _resultKey = resultKey,
+    }
+end
+
 -- 经典与多版本特殊地标/任务枢纽（非传统地下城，但玩家频繁前往的著名传送/任务地点）
 local SPECIAL_LANDMARKS = {
     {
@@ -163,18 +198,7 @@ function SearchEngine:Initialize()
             end
         end
         local typeMeta = TYPE_INFO[lm.type] or TYPE_INFO.zone
-        table.insert(searchIndex, {
-            id = 0,
-            name = lmName,
-            zoneName = zName,
-            mapID = lm.mapID,
-            x = lm.x,
-            y = lm.y,
-            type = lm.type,
-            tag = typeMeta.tag,
-            color = typeMeta.color,
-            comment = lm.comment or "",
-        })
+        table.insert(searchIndex, CreateSearchItem(0, lmName, zName, lm.mapID, lm.x, lm.y, lm.type, typeMeta.tag, typeMeta.color, lm.comment or ""))
     end
 
     -- 1. 建立副本目的地索引 (地下城、团队副本、地下堡)
@@ -248,18 +272,18 @@ function SearchEngine:Initialize()
 
                     local typeMeta = TYPE_INFO[destType] or TYPE_INFO.dungeon
 
-                    table.insert(searchIndex, {
-                        id = dest.id,
-                        name = instanceName,
-                        zoneName = zoneName,
-                        mapID = dest.mapID,
-                        x = dest.x,
-                        y = dest.y,
-                        type = destType,
-                        tag = typeMeta.tag,
-                        color = typeMeta.color,
-                        comment = dest.comment or "",
-                    })
+                    table.insert(searchIndex, CreateSearchItem(
+                        dest.id,
+                        instanceName,
+                        zoneName,
+                        dest.mapID,
+                        dest.x,
+                        dest.y,
+                        destType,
+                        typeMeta.tag,
+                        typeMeta.color,
+                        dest.comment or ""
+                    ))
                 end
             end
         end
@@ -290,18 +314,18 @@ function SearchEngine:Initialize()
                                     end
                                 end
 
-                                table.insert(searchIndex, {
-                                    id = areaPoiID,
-                                    name = delveName,
-                                    zoneName = zName,
-                                    mapID = zoneMapID,
-                                    x = px,
-                                    y = py,
-                                    type = "delve",
-                                    tag = TYPE_INFO.delve.tag,
-                                    color = TYPE_INFO.delve.color,
-                                    comment = poiInfo.description or "",
-                                })
+                                table.insert(searchIndex, CreateSearchItem(
+                                    areaPoiID,
+                                    delveName,
+                                    zName,
+                                    zoneMapID,
+                                    px,
+                                    py,
+                                    "delve",
+                                    TYPE_INFO.delve.tag,
+                                    TYPE_INFO.delve.color,
+                                    poiInfo.description or ""
+                                ))
                             end
                         end
                     end
@@ -327,18 +351,18 @@ function SearchEngine:Initialize()
                 if not seenMapIDs[contID] and not seenGlobalZoneNames[contNameLower] then
                     seenMapIDs[contID] = true
                     seenGlobalZoneNames[contNameLower] = true
-                    table.insert(searchIndex, {
-                        id = 0,
-                        name = contName,
-                        zoneName = L["WORLD_CONTINENT"],
-                        mapID = contID,
-                        x = 0.5,
-                        y = 0.5,
-                        type = "zone",
-                        tag = TYPE_INFO.continent.tag,
-                        color = TYPE_INFO.continent.color,
-                        comment = "",
-                    })
+                    table.insert(searchIndex, CreateSearchItem(
+                        0,
+                        contName,
+                        L["WORLD_CONTINENT"],
+                        contID,
+                        0.5,
+                        0.5,
+                        "zone",
+                        TYPE_INFO.continent.tag,
+                        TYPE_INFO.continent.color,
+                        ""
+                    ))
                 end
             end
         end
@@ -358,18 +382,18 @@ function SearchEngine:Initialize()
                             seenMapIDs[childMapID] = true
                             seenContinentZoneNames[contZoneKey] = true
                             seenGlobalZoneNames[childNameLower] = true
-                            table.insert(searchIndex, {
-                                id = 0,
-                                name = childName,
-                                zoneName = contName,
-                                mapID = childMapID,
-                                x = 0.5,
-                                y = 0.5,
-                                type = "zone",
-                                tag = TYPE_INFO.zone.tag,
-                                color = TYPE_INFO.zone.color,
-                                comment = "",
-                            })
+                            table.insert(searchIndex, CreateSearchItem(
+                                0,
+                                childName,
+                                contName,
+                                childMapID,
+                                0.5,
+                                0.5,
+                                "zone",
+                                TYPE_INFO.zone.tag,
+                                TYPE_INFO.zone.color,
+                                ""
+                            ))
                         end
                     end
                 end
@@ -392,18 +416,18 @@ function SearchEngine:Initialize()
                         if not isIgnoredMapType and not seenGlobalZoneNames[mapNameLower] and not seenInstanceNames[mapNameLower] then
                             seenMapIDs[targetMapID] = true
                             seenGlobalZoneNames[mapNameLower] = true
-                            table.insert(searchIndex, {
-                                id = 0,
-                                name = mapName,
-                                zoneName = L["TRANSPORT_HUB"],
-                                mapID = targetMapID,
-                                x = 0.5,
-                                y = 0.5,
-                                type = "zone",
-                                tag = TYPE_INFO.zone.tag,
-                                color = TYPE_INFO.zone.color,
-                                comment = "",
-                            })
+                            table.insert(searchIndex, CreateSearchItem(
+                                0,
+                                mapName,
+                                L["TRANSPORT_HUB"],
+                                targetMapID,
+                                0.5,
+                                0.5,
+                                "zone",
+                                TYPE_INFO.zone.tag,
+                                TYPE_INFO.zone.color,
+                                ""
+                            ))
                         end
                     end
                 end
@@ -414,24 +438,35 @@ function SearchEngine:Initialize()
     isInitialized = true
 end
 
--- 当前客户端语言地名智能匹配（兼顾中文子串与英文/拉丁语系冠词、连字符/撇号忽略、词首前缀匹配）
-local function MatchText(targetText, queryLower, querySpaced, queryCompact)
-    if not targetText or not queryLower or queryLower == "" then return false, 0 end
+-- 对象池：复用搜索匹配条目包装对象，避免每次按键触发大量小表 GC
+local matchPool = {}
+local matchPoolCount = 0
 
-    local targetLower = string.lower(TrimText(targetText))
-    if targetLower == "" then return false, 0 end
+local function AcquireMatchEntry(item, score)
+    matchPoolCount = matchPoolCount + 1
+    local entry = matchPool[matchPoolCount]
+    if not entry then
+        entry = { item = item, score = score }
+        matchPool[matchPoolCount] = entry
+    else
+        entry.item = item
+        entry.score = score
+    end
+    return entry
+end
+
+-- 当前客户端语言地名智能匹配（使用预计算字段，避免检索热路径下的任何 gsub 与字符串重分配）
+local function MatchItem(item, queryLower, querySpaced, queryCompact, querySpacedLead, queryWords)
+    local targetLower = item._lower
+    if not targetLower or targetLower == "" then return false, 0 end
 
     -- 1. 完全一致
     if targetLower == queryLower then
         return true, 100
     end
 
-    local noArticleTarget = StripLeadingArticle(targetLower)
-    local targetSpaced, targetCompact = NormalizeTextForms(targetLower)
-    local noArtSpaced, noArtCompact = NormalizeTextForms(noArticleTarget)
-
     -- 1b. 去除前导冠词或标点符号后完全一致 (例如输入 "stonevault" 匹配 "The Stonevault"，或 "motherlode" 匹配 "The MOTHERLODE!!")
-    if noArticleTarget == queryLower or (queryCompact ~= "" and (targetCompact == queryCompact or noArtCompact == queryCompact)) then
+    if item._noArticle == queryLower or (queryCompact ~= "" and (item._compact == queryCompact or item._noArtCompact == queryCompact)) then
         return true, 95
     end
 
@@ -441,25 +476,24 @@ local function MatchText(targetText, queryLower, querySpaced, queryCompact)
         return true, 85
     end
 
-    local sNoArt = string.find(noArticleTarget, queryLower, 1, true)
-    if sNoArt == 1 then
+    if string.find(item._noArticle, queryLower, 1, true) == 1 then
         return true, 82
     end
 
     if querySpaced ~= "" then
-        if string.find(targetSpaced, querySpaced, 1, true) == 1 or string.find(noArtSpaced, querySpaced, 1, true) == 1 then
+        if string.find(item._spaced, querySpaced, 1, true) == 1 or string.find(item._noArtSpaced, querySpaced, 1, true) == 1 then
             return true, 80
         end
     end
 
     if queryCompact ~= "" then
-        if string.find(targetCompact, queryCompact, 1, true) == 1 or string.find(noArtCompact, queryCompact, 1, true) == 1 then
+        if string.find(item._compact, queryCompact, 1, true) == 1 or string.find(item._noArtCompact, queryCompact, 1, true) == 1 then
             return true, 78
         end
     end
 
     -- 3. 单词词首边界匹配 (例如英文输入 "echoes" 匹配 "Ara-Kara, City of Echoes" 中的单词首部)
-    if querySpaced ~= "" and string.find(" " .. targetSpaced, " " .. querySpaced, 1, true) then
+    if querySpacedLead and string.find(item._spacedLead, querySpacedLead, 1, true) then
         return true, 72
     end
 
@@ -468,23 +502,20 @@ local function MatchText(targetText, queryLower, querySpaced, queryCompact)
         return true, 60
     end
 
-    if querySpaced ~= "" and string.find(targetSpaced, querySpaced, 1, true) then
+    if querySpaced ~= "" and string.find(item._spaced, querySpaced, 1, true) then
         return true, 58
     end
 
-    if queryCompact ~= "" and string.find(targetCompact, queryCompact, 1, true) then
+    if queryCompact ~= "" and string.find(item._compact, queryCompact, 1, true) then
         return true, 56
     end
 
     -- 5. 多关键词分词包含 (支持空格分隔，如 "永恒 王宫" 或 "city echoes")
-    local words = {}
-    for word in string.gmatch(querySpaced ~= "" and querySpaced or queryLower, "%S+") do
-        table.insert(words, word)
-    end
-    if #words > 1 then
+    if queryWords and #queryWords > 1 then
         local allMatch = true
-        for _, w in ipairs(words) do
-            if not (string.find(targetLower, w, 1, true) or string.find(targetSpaced, w, 1, true) or string.find(targetCompact, w, 1, true)) then
+        for i = 1, #queryWords do
+            local w = queryWords[i]
+            if not (string.find(targetLower, w, 1, true) or string.find(item._spaced, w, 1, true) or string.find(item._compact, w, 1, true)) then
                 allMatch = false
                 break
             end
@@ -516,25 +547,38 @@ function SearchEngine:Search(query, limit)
 
     local queryLower = string.lower(queryTrimmed)
     local querySpaced, queryCompact = NormalizeTextForms(queryLower)
+    local querySpacedLead = (querySpaced ~= "") and (" " .. querySpaced) or nil
+
+    -- 预分词：在循环外部完成分词，杜绝在每个索引项中重复分配分词表与执行 gmatch
+    local queryWords = nil
+    local queryWordSource = (querySpaced ~= "") and querySpaced or queryLower
+    for word in string.gmatch(queryWordSource, "%S+") do
+        if not queryWords then queryWords = {} end
+        table.insert(queryWords, word)
+    end
+
+    matchPoolCount = 0
     local matched = {}
     local hasExactMatch = false
 
-    for _, item in ipairs(searchIndex) do
-        local isMatch, score = MatchText(item.name, queryLower, querySpaced, queryCompact)
+    for i = 1, #searchIndex do
+        local item = searchIndex[i]
+        local isMatch, score = MatchItem(item, queryLower, querySpaced, queryCompact, querySpacedLead, queryWords)
 
         -- 1. 若名称未命中，支持英文备注/原名匹配（跨语言检索，如中文客户端输入 Earthcrawl）
-        if not isMatch and item.comment and item.comment ~= "" then
-            local cMatch, cScore = MatchText(item.comment, queryLower, querySpaced, queryCompact)
-            if cMatch then
+        if not isMatch and item._commentLower then
+            if item._commentLower == queryLower then
                 isMatch = true
-                score = math.floor(cScore * 0.85)
+                score = 85
+            elseif string.find(item._commentLower, queryLower, 1, true) then
+                isMatch = true
+                score = 55
             end
         end
 
         -- 2. 若仍未命中，支持分类标签检索（如输入“地下堡”/“delve”列出全部地下堡，“团本”/“raid”列出团队副本）
-        if not isMatch and item.tag and item.tag ~= "" then
-            local tMatch = MatchText(item.tag, queryLower, querySpaced, queryCompact)
-            if tMatch then
+        if not isMatch and item._tagLower then
+            if item._tagLower == queryLower or string.find(item._tagLower, queryLower, 1, true) then
                 isMatch = true
                 score = 65
             end
@@ -544,22 +588,23 @@ function SearchEngine:Search(query, limit)
             if score == 100 then
                 hasExactMatch = true
             end
-            table.insert(matched, {
-                item = item,
-                score = score,
-            })
+            table.insert(matched, AcquireMatchEntry(item, score))
         end
     end
 
-    -- 如果存在名称完全一致的精确匹配（如输入“永恒王宫”或“Freehold”），只保留完全匹配项，过滤掉其他模糊/前缀结果
+    -- 如果存在名称完全一致的精确匹配（如输入“永恒王宫”或“Freehold”），原地过滤仅保留完全匹配项
     if hasExactMatch then
-        local exactMatches = {}
-        for _, entry in ipairs(matched) do
+        local exactCount = 0
+        for i = 1, #matched do
+            local entry = matched[i]
             if entry.score == 100 then
-                table.insert(exactMatches, entry)
+                exactCount = exactCount + 1
+                matched[exactCount] = entry
             end
         end
-        matched = exactMatches
+        for i = #matched, exactCount + 1, -1 do
+            matched[i] = nil
+        end
     end
 
     -- 按匹配分数高低、类别优先级（副本优先于普通地图）与名字长短排序
@@ -578,12 +623,13 @@ function SearchEngine:Search(query, limit)
         return (a.item.id or 0) < (b.item.id or 0)
     end)
 
-    -- 截取前 limit 个结果并做最终去重保护
+    -- 截取前 limit 个结果并做最终去重保护（直接使用预计算的 _resultKey 避免字符串拼接）
     local results = {}
     local seenResultKeys = {}
-    for _, entry in ipairs(matched) do
+    for i = 1, #matched do
+        local entry = matched[i]
         local item = entry.item
-        local resultKey = tostring(item.type or "") .. ":" .. string.lower(item.name or "") .. ":" .. tostring(item.zoneName or "")
+        local resultKey = item._resultKey
         if not seenResultKeys[resultKey] then
             seenResultKeys[resultKey] = true
             table.insert(results, item)
@@ -591,6 +637,11 @@ function SearchEngine:Search(query, limit)
                 break
             end
         end
+    end
+
+    -- 释放对象池中临时引用的对象，促使 GC 处于轻载状态
+    for i = 1, matchPoolCount do
+        matchPool[i].item = nil
     end
 
     return results

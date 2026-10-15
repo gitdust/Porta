@@ -155,9 +155,6 @@ function Navigation:StartRoute(route)
     SetBlizzardWaypoint(dest.mapID, dest.x, dest.y)
     SetTomTomWaypoint(dest.mapID, dest.x, dest.y, dest.name)
 
-    ns.Print(string.format(L["MSG_ROUTE_STARTED_FMT"], dest.name, route.totalSteps))
-    ns.Print(string.format(L["MSG_WAYPOINT_SET_FMT"], dest.zoneName or string.format(L["MAP_FALLBACK_FMT"], tostring(dest.mapID)), dest.x * 100, dest.y * 100))
-
     -- 若当前默认方案使用了玩家尚未拥有的玩具/物品，主动提示
     NotifyMissingTeleportIfAny(activeRoute)
 

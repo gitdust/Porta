@@ -923,10 +923,10 @@ local function BuildFinalArriveStep(stepIndex, destination)
         finalDesc = string.format(L["STEP_ARRIVE_ZONE"], destination.name)
     elseif destination.type == "delve" then
         local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
-        finalDesc = string.format(L["STEP_ARRIVE_DELVE"] or L["STEP_ARRIVE_INSTANCE"], GetMapDisplayName(destination.mapID), destination.name, entryCoord)
+        finalDesc = string.format(L["STEP_ARRIVE_DELVE"] or L["STEP_ARRIVE_INSTANCE"], destination.name, entryCoord)
     else
         local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
-        finalDesc = string.format(L["STEP_ARRIVE_INSTANCE"], GetMapDisplayName(destination.mapID), destination.name, entryCoord)
+        finalDesc = string.format(L["STEP_ARRIVE_INSTANCE"], destination.name, entryCoord)
         if isMoltenCore then
             local mcNpcCoord = Pathfinder:FormatCoordLink(33, 0.543, 0.848)
             finalDesc = finalDesc .. string.format(L["STEP_ARRIVE_MC_HINT"], mcNpcCoord)
@@ -1164,7 +1164,7 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
     return tpSteps
 end
 
--- 辅助：构建工程学虫洞发生器补充方案步骤（明确标注落点随机或需自选的不确定性）
+-- 辅助：构建工程学虫洞发生器方案步骤（直接指引选择对应子区域）
 local function BuildWormholeRouteSteps(tp, destMapID, destination)
     local linkStr = Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)
     local statusTag
@@ -1176,20 +1176,8 @@ local function BuildWormholeRouteSteps(tp, destMapID, destination)
         statusTag = L["STATUS_READY_TAG"]
     end
 
-    local contName = GetMapDisplayName(tp.continentID or tp.toMap)
     local destZoneName = GetMapDisplayName(destMapID)
-    local uncertainDesc
-    if tp.wormholeMode == "MENU" then
-        uncertainDesc = string.format(
-            L["STEP_WORMHOLE_MENU"],
-            linkStr, statusTag, contName, destZoneName, destZoneName
-        )
-    else
-        uncertainDesc = string.format(
-            L["STEP_WORMHOLE_RANDOM"],
-            linkStr, statusTag, contName, destZoneName
-        )
-    end
+    local stepDesc = string.format(L["STEP_WORMHOLE"] or L["STEP_WORMHOLE_MENU"], linkStr, statusTag, destZoneName)
 
     return {
         {
@@ -1199,10 +1187,9 @@ local function BuildWormholeRouteSteps(tp, destMapID, destination)
             y = tp.y or 0.5,
             toMapID = destMapID,
             action = tp.type,
-            description = uncertainDesc,
+            description = stepDesc,
             isFinal = false,
             isMissingTeleport = (not tp.hasItem),
-            isUncertainWormhole = true,
             teleportInfo = tp,
         },
         BuildFinalArriveStep(2, destination),
@@ -1595,21 +1582,20 @@ function Pathfinder:CalculateRoute(destination)
             end
         end
 
-        -- 追加目标大洲对应的工程学虫洞发生器补充方案（明确标识随机/不确定落点）
+        -- 追加目标大洲对应的工程学虫洞发生器方案
         for _, wTp in ipairs(wormholeCandidates) do
             local wSteps = BuildWormholeRouteSteps(wTp, destMapID, destination)
             if wSteps then
-                local uncertainLabel = (wTp.wormholeMode == "MENU") and L["ALT_DIST_WORMHOLE_MENU"] or L["ALT_DIST_WORMHOLE_RANDOM"]
+                local destZoneName = GetMapDisplayName(destMapID)
                 table.insert(alternatives, {
                     name = string.format(L["ALT_USE_FMT"], wTp.name),
-                    viaDesc = wTp.note or L["ALT_DESC_WORMHOLE"],
+                    viaDesc = string.format(L["ALT_DESC_WORMHOLE_FMT"] or L["ALT_DESC_WORMHOLE"], destZoneName),
                     distanceYards = 0,
-                    distanceText = uncertainLabel,
+                    distanceText = L["ALT_DIST_WORMHOLE"],
                     isMissingTeleport = (not wTp.hasItem),
                     missingShortTag = wTp.missingShortTag,
                     missingReason = wTp.missingReason,
-                    isUncertainWormhole = true,
-                    score = math.min(bestPhysicalScore, 10.0) + 1.5,
+                    score = math.min(bestPhysicalScore, 10.0) + 0.5,
                     steps = wSteps,
                     totalSteps = #wSteps,
                 })

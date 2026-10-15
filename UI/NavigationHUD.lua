@@ -605,7 +605,7 @@ local function UpdateAlternativeButtons(route, stepIndex)
         local radio = isSelected and "|cff00ffff●|r " or "|cff888888○|r "
         local distTag = (alt.distanceText and alt.distanceText ~= "") and (" - " .. alt.distanceText) or ""
         local missingTag = alt.isMissingTeleport and string.format(L["STATUS_MISSING_TAG_FMT"], alt.missingShortTag or L["TAG_MISSING"]) or ""
-        local tag = (i == 1) and L["HUD_ALT_TAG_RECOMMENDED"] or (alt.isUncertainWormhole and L["HUD_ALT_TAG_UNCERTAIN"] or "")
+        local tag = (i == 1) and L["HUD_ALT_TAG_RECOMMENDED"] or ""
         local label = string.format(L["HUD_ALT_LABEL_FMT"], radio, i, alt.name, distTag, missingTag, tag)
 
         btn.text:ClearAllPoints()
@@ -647,9 +647,6 @@ local function UpdateAlternativeButtons(route, stepIndex)
             GameTooltip:SetText(string.format(L["HUD_ALT_TOOLTIP_TITLE_FMT"], altIndex, alt.name))
             if alt.viaDesc then
                 GameTooltip:AddLine(alt.viaDesc, 0.8, 0.8, 0.8, true)
-            end
-            if alt.isUncertainWormhole then
-                GameTooltip:AddLine(L["HUD_ALT_TOOLTIP_WORMHOLE"], 1.0, 0.75, 0.25, true)
             end
             if alt.isMissingTeleport then
                 GameTooltip:AddLine("⚠ " .. (alt.missingReason or L["HUD_ALT_TOOLTIP_MISSING_FALLBACK"]), 1.0, 0.35, 0.25, true)
@@ -818,28 +815,15 @@ function NavigationHUD:UpdateStep(route, stepIndex)
 
     if currentStep.isMissingTeleport and currentStep.teleportInfo then
         local tpInfo = currentStep.teleportInfo
-        local kindLabel = (tpInfo.type == "TOY" and L["KIND_TOY"]) or (tpInfo.type == "SPELL" and L["KIND_SPELL"]) or L["KIND_ITEM"]
-        local tpLink = (ns.Pathfinder and ns.Pathfinder.FormatTeleportLink and ns.Pathfinder:FormatTeleportLink(tpInfo.type, tpInfo.id, tpInfo.name)) or ns.FormatBracket(tpInfo.name or "")
-        local headerLabel
-        if tpInfo.isOwned and (tpInfo.missingEngineering or tpInfo.isToyUnusable) then
-            headerLabel = string.format(L["HUD_WARN_COND_UNMET_FMT"], kindLabel, tpInfo.missingShortTag or L["TAG_REQ_ENG"])
-        elseif tpInfo.missingEngineering then
-            headerLabel = string.format(L["HUD_WARN_MISSING_ENG_FMT"], kindLabel)
+        local warnText
+        if tpInfo.inBank then
+            warnText = L["HUD_WARN_IN_BANK"]
+        elseif tpInfo.isOwned and (tpInfo.missingEngineering or tpInfo.isToyUnusable) then
+            warnText = L["HUD_WARN_UNUSABLE"]
         else
-            headerLabel = string.format(L["HUD_WARN_MISSING_FMT"], kindLabel)
+            warnText = L["HUD_WARN_MISSING"]
         end
-        local reasonText = tpInfo.missingReason or string.format(L["HUD_WARN_REASON_FALLBACK_FMT"], kindLabel, tpLink)
-        local noteLine = (tpInfo.note and tpInfo.note ~= "") and (L["HUD_WARN_NOTE_PREFIX"] .. tpInfo.note) or ""
-        table.insert(warnBlocks, string.format(
-            L["HUD_WARN_MISSING_BLOCK_FMT"],
-            headerLabel, reasonText, noteLine, tpLink
-        ))
-    elseif currentStep.isUncertainWormhole and currentStep.teleportInfo then
-        local tpInfo = currentStep.teleportInfo
-        table.insert(warnBlocks, string.format(
-            L["HUD_WARN_WORMHOLE_BLOCK_FMT"],
-            tpInfo.name or L["KIND_TOY"]
-        ))
+        table.insert(warnBlocks, warnText)
     end
 
     if currentStep.isQuestGated and currentStep.questGateInfo then

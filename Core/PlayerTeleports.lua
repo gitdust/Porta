@@ -821,35 +821,14 @@ local function InspectItemOrToyEntry(entry)
     local missingShortTag = nil
     if not hasIt then
         if isOwned then
-            if reqEng and not hasEng then
-                missingShortTag = L["TAG_REQ_ENG"]
-                missingReason = string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
-            else
-                missingShortTag = reqEng and L["TAG_ENG_UNMET"] or L["TAG_COND_UNMET"]
-                missingReason = string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
-            end
+            missingShortTag = L["TAG_UNUSABLE"]
+            missingReason = string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
         elseif inBank then
-            if reqEng and not hasEng then
-                missingShortTag = L["TAG_IN_BANK_ENG"]
-                missingReason = string.format(L["REASON_BANK_NO_ENG_FMT"], label)
-            else
-                missingShortTag = L["TAG_IN_BANK"]
-                missingReason = string.format(L["REASON_BANK_FMT"], label)
-            end
+            missingShortTag = L["TAG_IN_BANK"]
+            missingReason = string.format(L["REASON_BANK_FMT"], label)
         else
-            if reqEng and not hasEng then
-                missingShortTag = L["TAG_MISSING_ENG"]
-                missingReason = string.format(L["REASON_ITEM_MISSING_ENG_FMT"], label)
-            elseif reqEng then
-                missingShortTag = L["TAG_MISSING"]
-                missingReason = string.format(L["REASON_ENG_DEVICE_MISSING_FMT"], label)
-            elseif actualKind == "TOY" then
-                missingShortTag = L["TAG_MISSING"]
-                missingReason = string.format(L["REASON_TOY_MISSING_FMT"], label)
-            else
-                missingShortTag = L["TAG_MISSING"]
-                missingReason = string.format(L["REASON_ITEM_MISSING_FMT"], label)
-            end
+            missingShortTag = L["TAG_MISSING"]
+            missingReason = string.format(L["REASON_ITEM_MISSING_FMT"], label)
         end
     end
 

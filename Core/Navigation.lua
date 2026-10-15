@@ -75,6 +75,11 @@ end
 -- 打开世界地图并定位到指定地图 (安全规避 Taint 与战斗阻断)
 function Navigation:OpenWorldMap(mapID)
     if InCombatLockdown and InCombatLockdown() then
+        local combatMsg = L["MSG_COMBAT_MAP_RESTRICTED"]
+        if UIErrorsFrame and UIErrorsFrame.AddMessage then
+            UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
+        end
+        ns.Print(combatMsg)
         return
     end
     if not mapID or mapID <= 0 then return end
@@ -250,21 +255,25 @@ end
 -- 路线结束
 function Navigation:FinishRoute()
     if not activeRoute then return end
-    ns.Print(string.format(L["MSG_ROUTE_FINISHED_FMT"], activeRoute.destination.name))
+    local destName = (activeRoute.destination and activeRoute.destination.name) or L["HUD_DEST_FALLBACK"]
+    ns.Print(string.format(L["MSG_ROUTE_FINISHED_FMT"], destName))
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
     activeRoute = nil
     currentStepIndex = 1
 
-    if ns.NavigationHUD then
+    if ns.NavigationHUD and ns.NavigationHUD.ShowArrived then
+        ns.NavigationHUD:ShowArrived(destName)
+    elseif ns.NavigationHUD then
         ns.NavigationHUD:Hide()
     end
 end
 
 -- 取消导航
 function Navigation:CancelRoute()
-    if not activeRoute then return end
-    ns.Print(L["MSG_ROUTE_CANCELLED"])
+    if activeRoute then
+        ns.Print(L["MSG_ROUTE_CANCELLED"])
+    end
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
     activeRoute = nil

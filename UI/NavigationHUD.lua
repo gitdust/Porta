@@ -15,6 +15,7 @@ local altButtons = {}
 local questWarnBox = nil
 local questWarnText = nil
 local actionSlotBtn = nil
+local secureActionBtn = nil
 local dragHeader = nil
 
 local ACTION_LABELS = {
@@ -131,6 +132,8 @@ local function ShowPortaLinkTooltip(owner, parsed)
         hasIt, missingReason = ns.PlayerTeleports:CheckTeleportOwnership(parsed.kind, parsed.id)
     end
 
+    local isCombat = (InCombatLockdown and InCombatLockdown()) or false
+
     GameTooltip:AddLine(" ")
     if hasIt then
         if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
@@ -140,6 +143,9 @@ local function ShowPortaLinkTooltip(owner, parsed)
             else
                 GameTooltip:AddLine(L["HUD_TOOLTIP_STATUS_READY"], 0.0, 1.0, 0.2)
             end
+        end
+        if isCombat then
+            GameTooltip:AddLine(L["HUD_TOOLTIP_COMBAT_RESTRICTED"], 1.0, 0.35, 0.35)
         end
         GameTooltip:AddLine(L["HUD_TOOLTIP_RCLICK_DETAIL"], 0.75, 0.75, 0.75)
     else
@@ -276,7 +282,14 @@ local function InitHUD()
     mapBtn:SetPoint("TOPLEFT", titleText, "TOPLEFT", -2, 2)
     mapBtn:SetPoint("BOTTOMRIGHT", titleText, "BOTTOMRIGHT", 2, -2)
     mapBtn:SetScript("OnClick", function()
-        if InCombatLockdown and InCombatLockdown() then return end
+        if InCombatLockdown and InCombatLockdown() then
+            local combatMsg = L["MSG_COMBAT_MAP_RESTRICTED"]
+            if UIErrorsFrame and UIErrorsFrame.AddMessage then
+                UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
+            end
+            ns.Print(combatMsg)
+            return
+        end
         local activeRoute = ns.Navigation:GetActiveRoute()
         if activeRoute and activeRoute.destination and activeRoute.destination.mapID then
             ns.Navigation:OpenWorldMap(activeRoute.destination.mapID)
@@ -330,8 +343,8 @@ local function InitHUD()
     end
     currentStepText:SetSpacing(3)
 
-    -- 固定的安全动作快捷插槽按钮 (Action Slot Button)
-    actionSlotBtn = CreateFrame("Button", "PortaStepActionSlotButton", hudFrame, "SecureActionButtonTemplate, BackdropTemplate")
+    -- 固定的动作快捷插槽按钮 (视觉与非战斗状态容器，纯普通按钮，不受战斗 Taint 阻断)
+    actionSlotBtn = CreateFrame("Button", "PortaStepActionSlotButton", hudFrame, "BackdropTemplate")
     actionSlotBtn:SetSize(36, 36)
     actionSlotBtn:SetFrameLevel(hudFrame:GetFrameLevel() + 5)
     actionSlotBtn:RegisterForClicks("AnyUp", "AnyDown")
@@ -366,9 +379,17 @@ local function InitHUD()
         GameTooltip:Hide()
     end)
 
-    actionSlotBtn:SetScript("PostClick", function(self, button, down)
-        local useKeyDown = (GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")) or false
-        if (useKeyDown and not down) or (not useKeyDown and down) then
+    -- 战斗中点击拦截提示，或在普通状态下打开说明
+    actionSlotBtn:SetScript("OnClick", function(self, button)
+        if InCombatLockdown and InCombatLockdown() then
+            local combatMsg = L["MSG_COMBAT_ACTION_RESTRICTED"]
+            if UIErrorsFrame and UIErrorsFrame.AddMessage then
+                UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.25, 0.25, 1.0, 3)
+            end
+            ns.Print(combatMsg)
+            if button == "RightButton" and self.parsedLink then
+                OpenTeleportDetailView(self.parsedLink)
+            end
             return
         end
 
@@ -379,6 +400,36 @@ local function InitHUD()
             OpenTeleportDetailView(parsed)
             if not self.hasIt and button == "LeftButton" then
                 ns.Print(string.format(L["MSG_CLICK_MISSING_NOTIFY_FMT"], self.missingReason or L["MSG_CLICK_MISSING_FALLBACK"]))
+            end
+        end
+    end)
+    actionSlotBtn:Hide()
+
+    -- 独立安全动作点击层 (仅脱战时激活，进战时由系统驱动隐藏并直接穿透至底层提示)
+    secureActionBtn = CreateFrame("Button", "PortaStepActionSecureBtn", UIParent, "SecureActionButtonTemplate")
+    secureActionBtn:SetFrameStrata("HIGH")
+    secureActionBtn:RegisterForClicks("AnyUp", "AnyDown")
+    secureActionBtn:SetScript("OnEnter", function()
+        if actionSlotBtn and actionSlotBtn.parsedLink then
+            ShowPortaLinkTooltip(actionSlotBtn, actionSlotBtn.parsedLink)
+        end
+    end)
+    secureActionBtn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    secureActionBtn:SetScript("PostClick", function(self, button, down)
+        local useKeyDown = (GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")) or false
+        if (useKeyDown and not down) or (not useKeyDown and down) then
+            return
+        end
+
+        local parsed = actionSlotBtn.parsedLink
+        if not parsed then return end
+
+        if button == "RightButton" or not actionSlotBtn.hasIt then
+            OpenTeleportDetailView(parsed)
+            if not actionSlotBtn.hasIt and button == "LeftButton" then
+                ns.Print(string.format(L["MSG_CLICK_MISSING_NOTIFY_FMT"], actionSlotBtn.missingReason or L["MSG_CLICK_MISSING_FALLBACK"]))
             end
         else
             if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
@@ -395,7 +446,7 @@ local function InitHUD()
             end
         end
     end)
-    actionSlotBtn:Hide()
+    secureActionBtn:Hide()
 
     -- 前置任务解锁 & 缺失玩具/道具提醒专属提示框
     questWarnBox = CreateFrame("Frame", nil, hudFrame, "BackdropTemplate")
@@ -450,7 +501,14 @@ local function InitHUD()
     viewMapBtn:SetPoint("RIGHT", prevBtn, "LEFT", -5, 0)
     viewMapBtn:SetText(L["HUD_BTN_MAP"])
     viewMapBtn:SetScript("OnClick", function()
-        if InCombatLockdown and InCombatLockdown() then return end
+        if InCombatLockdown and InCombatLockdown() then
+            local combatMsg = L["MSG_COMBAT_MAP_RESTRICTED"]
+            if UIErrorsFrame and UIErrorsFrame.AddMessage then
+                UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
+            end
+            ns.Print(combatMsg)
+            return
+        end
         local activeRoute, stepIdx = ns.Navigation:GetActiveRoute()
         if activeRoute and activeRoute.steps and activeRoute.steps[stepIdx] then
             local s = activeRoute.steps[stepIdx]
@@ -488,6 +546,13 @@ local function InitHUD()
                 local activeRoute, stepIdx = ns.Navigation:GetActiveRoute()
                 if activeRoute and stepIdx then
                     NavigationHUD:UpdateStep(activeRoute, stepIdx)
+                end
+            else
+                if secureActionBtn then
+                    pcall(function()
+                        UnregisterStateDriver(secureActionBtn, "visibility")
+                        secureActionBtn:Hide()
+                    end)
                 end
             end
         end
@@ -620,6 +685,13 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     local currentStep = route.steps[stepIndex]
     if not currentStep then return end
 
+    -- 确保导航控制按钮恢复可见并绑定默认行为
+    hudFrame.prevBtn:Show()
+    hudFrame.viewMapBtn:Show()
+    hudFrame.nextBtn:SetScript("OnClick", function()
+        ns.Navigation:NextStep()
+    end)
+
     -- 标题显示
     titleText:SetText(string.format("|cff00ccff%s|r", route.destination.name or L["HUD_DEST_FALLBACK"]))
     stepCounterText:SetText(string.format(L["HUD_STEP_COUNTER_FMT"], stepIndex, route.totalSteps))
@@ -641,11 +713,9 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     local isCombat = (InCombatLockdown and InCombatLockdown()) or false
 
     if hasActionSlot and actionSlotBtn then
-        if not isCombat then
-            actionSlotBtn:ClearAllPoints()
-            actionSlotBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -16, -36 - altOffset)
-            actionSlotBtn:Show()
-        end
+        actionSlotBtn:ClearAllPoints()
+        actionSlotBtn:SetPoint("TOPRIGHT", hudFrame, "TOPRIGHT", -16, -36 - altOffset)
+        actionSlotBtn:Show()
         actionSlotBtn.parsedLink = parsedLink
 
         local hasIt, missingReason = true, nil
@@ -683,38 +753,48 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         end
 
         -- 在脱战状态下安全设置动作插槽属性
-        if not isCombat then
-            actionSlotBtn:SetAttribute("type", nil)
-            actionSlotBtn:SetAttribute("type1", nil)
-            actionSlotBtn:SetAttribute("type2", nil)
-            actionSlotBtn:SetAttribute("spell", nil)
-            actionSlotBtn:SetAttribute("spell1", nil)
-            actionSlotBtn:SetAttribute("toy", nil)
-            actionSlotBtn:SetAttribute("toy1", nil)
-            actionSlotBtn:SetAttribute("item", nil)
-            actionSlotBtn:SetAttribute("item1", nil)
+        if not isCombat and secureActionBtn then
+            secureActionBtn:ClearAllPoints()
+            secureActionBtn:SetAllPoints(actionSlotBtn)
+            RegisterStateDriver(secureActionBtn, "visibility", "[combat] hide; show")
+
+            secureActionBtn:SetAttribute("type", nil)
+            secureActionBtn:SetAttribute("type1", nil)
+            secureActionBtn:SetAttribute("type2", nil)
+            secureActionBtn:SetAttribute("spell", nil)
+            secureActionBtn:SetAttribute("spell1", nil)
+            secureActionBtn:SetAttribute("toy", nil)
+            secureActionBtn:SetAttribute("toy1", nil)
+            secureActionBtn:SetAttribute("item", nil)
+            secureActionBtn:SetAttribute("item1", nil)
 
             if hasIt then
                 if parsedLink.kind == "SPELL" then
-                    actionSlotBtn:SetAttribute("type1", "spell")
-                    actionSlotBtn:SetAttribute("spell1", parsedLink.id)
+                    secureActionBtn:SetAttribute("type1", "spell")
+                    secureActionBtn:SetAttribute("spell1", parsedLink.id)
                 elseif parsedLink.kind == "TOY" then
                     if PlayerHasToy and PlayerHasToy(parsedLink.id) then
-                        actionSlotBtn:SetAttribute("type1", "toy")
-                        actionSlotBtn:SetAttribute("toy1", parsedLink.id)
+                        secureActionBtn:SetAttribute("type1", "toy")
+                        secureActionBtn:SetAttribute("toy1", parsedLink.id)
                     else
-                        actionSlotBtn:SetAttribute("type1", "item")
-                        actionSlotBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
+                        secureActionBtn:SetAttribute("type1", "item")
+                        secureActionBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
                     end
                 else
-                    actionSlotBtn:SetAttribute("type1", "item")
-                    actionSlotBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
+                    secureActionBtn:SetAttribute("type1", "item")
+                    secureActionBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
                 end
             end
         end
     else
-        if actionSlotBtn and not isCombat then
+        if actionSlotBtn then
             actionSlotBtn:Hide()
+        end
+        if not isCombat and secureActionBtn then
+            pcall(function()
+                UnregisterStateDriver(secureActionBtn, "visibility")
+                secureActionBtn:Hide()
+            end)
         end
     end
 
@@ -873,9 +953,61 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     end
 end
 
--- 隐藏 HUD
+-- 显示已抵达目的地状态（HUD 保持显示，直到玩家手动关闭）
+function NavigationHUD:ShowArrived(destName)
+    InitHUD()
+    if not hudFrame then return end
+    hudFrame:Show()
+
+    local name = destName or L["HUD_DEST_FALLBACK"]
+    titleText:SetText(string.format("|cff00ff00%s|r", L["HUD_DEST_ARRIVED"]))
+    stepCounterText:SetText("|cff00ff00[OK]|r")
+
+    if altContainer then altContainer:Hide() end
+    if actionSlotBtn then actionSlotBtn:Hide() end
+    if secureActionBtn and not InCombatLockdown() then
+        pcall(function()
+            UnregisterStateDriver(secureActionBtn, "visibility")
+            secureActionBtn:Hide()
+        end)
+    end
+    if questWarnBox then questWarnBox:Hide() end
+
+    local arrivedMsg = string.format(L["MSG_ROUTE_FINISHED_FMT"], name) .. "\n\n" .. L["HUD_ARRIVED_CLOSE_HINT"]
+    stepTextFrame:ClearAllPoints()
+    stepTextFrame:SetPoint("TOPLEFT", hudFrame, "TOPLEFT", 16, -38)
+    stepTextFrame:SetWidth(388)
+
+    currentStepText:SetWidth(388)
+    currentStepText:SetText(string.format("|cffffffff%s|r", arrivedMsg))
+
+    local textH = GetSafeFontStringHeight(currentStepText, arrivedMsg, 48, 17, 36)
+    stepTextFrame:SetHeight(textH + 4)
+
+    hudFrame.prevBtn:Hide()
+    hudFrame.viewMapBtn:Hide()
+    nextStepText:SetText("")
+
+    hudFrame.nextBtn:SetText(L["HUD_BTN_CLOSE"])
+    hudFrame.nextBtn:Show()
+    hudFrame.nextBtn:Enable()
+    hudFrame.nextBtn:SetScript("OnClick", function()
+        ns.Navigation:CancelRoute()
+    end)
+
+    local totalH = 38 + textH + 54
+    hudFrame:SetHeight(math.max(120, totalH))
+end
+
+-- 隐藏 HUD (仅在玩家主动关闭或取消导航时调用)
 function NavigationHUD:Hide()
     if hudFrame then
         hudFrame:Hide()
+    end
+    if secureActionBtn and not InCombatLockdown() then
+        pcall(function()
+            UnregisterStateDriver(secureActionBtn, "visibility")
+            secureActionBtn:Hide()
+        end)
     end
 end

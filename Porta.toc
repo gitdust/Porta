@@ -12,9 +12,6 @@
 ## SavedVariables: PortaDB
 ## IconTexture: Interface\AddOns\Porta\Images\Logo
 
-# 按键绑定
-Bindings.xml
-
 # 数据表 (由本地脚本自动生成)
 Data\MapNotesData.lua
 

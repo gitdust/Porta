@@ -1,7 +1,0 @@
-<Bindings>
-    <Binding name="PORTA_TOGGLE" header="PORTA" runOnUp="false">
-        if Porta and Porta.SearchDialog then
-            Porta.SearchDialog:Toggle()
-        end
-    </Binding>
-</Bindings>

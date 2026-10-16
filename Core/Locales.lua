@@ -8,28 +8,19 @@ ns.isCJK = (locale == "zhCN" or locale == "zhTW" or locale == "koKR")
 -- 1. 默认语言基准表 (enUS / enGB 及其他未单独翻译客户端的回退语言)
 -- =========================================================================
 local L_enUS = {
-    -- 基础与按键绑定
-    BINDING_HEADER = "Porta Navigation",
-    BINDING_TOGGLE = "Toggle Navigation Search",
+    -- 基础
     ADDON_LOADED_MSG = "Loaded! Type |cffffcc00/porta|r to open destination search.",
 
-    -- 小地图与快捷键设置提示
+    -- 小地图提示
     MINIMAP_TOOLTIP_TITLE = "Porta Navigation",
     MINIMAP_TOOLTIP_LCLICK = "Left Click: Toggle Search Dialog",
     MINIMAP_TOOLTIP_RCLICK = "Right Click: Stop Navigation / Close HUD",
     MINIMAP_TOOLTIP_DRAG = "Drag: Move Minimap Icon",
     CMD_MINIMAP_TOGGLE_ON = "Minimap button enabled.",
     CMD_MINIMAP_TOGGLE_OFF = "Minimap button hidden (type /porta minimap to show).",
-    CMD_BIND_CURRENT_FMT = "Current keybinding: |cff00ff00%s|r",
-    CMD_BIND_NONE = "No keybinding currently set for Porta.",
-    CMD_BIND_HINT = "Tip: Set via Game Menu (ESC) -> Options -> Keybindings -> AddOns -> Porta, or type: /porta bind [Key]",
-    CMD_BIND_SUCCESS_FMT = "Porta keybinding set to: |cff00ff00%s|r",
-    CMD_BIND_CLEARED = "Porta keybinding cleared.",
-    CMD_BIND_INVALID_FMT = "Failed to bind key '%s'. Please check key name (e.g. CTRL-P, F, ALT-Z).",
     CMD_HELP_HEADER = "Available commands:",
     CMD_HELP_SEARCH = "  /porta [keyword] - Open search dialog (or leave empty to open)",
     CMD_HELP_MINIMAP = "  /porta minimap - Show or hide minimap icon",
-    CMD_HELP_BIND = "  /porta bind [key] - View or set quick toggle keybinding",
 
     -- 通用括号与名称回退格式
     BRACKET_FMT = "[%s]",
@@ -403,27 +394,19 @@ local L_enUS = {
 -- 2. 简体中文语言表 (zhCN) - 仅在 CJK 环境下实例化以节省内存
 -- =========================================================================
 local L_zhCN = (locale == "zhCN" or locale == "zhTW") and {
-    BINDING_HEADER = "Porta 路线导航",
-    BINDING_TOGGLE = "唤出/关闭导航搜索框",
+    -- 基础
     ADDON_LOADED_MSG = "已加载完成！输入 |cffffcc00/porta|r 快速打开目的地搜索。",
 
-    -- 小地图与快捷键设置提示
+    -- 小地图提示
     MINIMAP_TOOLTIP_TITLE = "Porta 路线导航",
     MINIMAP_TOOLTIP_LCLICK = "左键点击：打开/关闭导航搜索框",
     MINIMAP_TOOLTIP_RCLICK = "右键点击：停止导航 / 关闭指引",
     MINIMAP_TOOLTIP_DRAG = "拖拽：移动小地图图标位置",
     CMD_MINIMAP_TOGGLE_ON = "小地图图标已显示。",
     CMD_MINIMAP_TOGGLE_OFF = "小地图图标已隐藏 (输入 /porta minimap 重新显示)。",
-    CMD_BIND_CURRENT_FMT = "当前快捷键绑定为：|cff00ff00%s|r",
-    CMD_BIND_NONE = "当前尚未为 Porta 设置快捷键。",
-    CMD_BIND_HINT = "提示：可在 游戏主菜单(ESC) -> 选项 -> 按键设置 -> 插件快捷键 中设置，或输入 /porta bind <按键> 设置",
-    CMD_BIND_SUCCESS_FMT = "Porta 快捷键已绑定为：|cff00ff00%s|r",
-    CMD_BIND_CLEARED = "已清除 Porta 快捷键绑定。",
-    CMD_BIND_INVALID_FMT = "无法绑定按键 '%s'，请检查按键名称（例如 CTRL-P, F, ALT-Z）。",
     CMD_HELP_HEADER = "常用命令列表：",
     CMD_HELP_SEARCH = "  /porta [关键词] - 呼出导航搜索框 (留空直接打开)",
     CMD_HELP_MINIMAP = "  /porta minimap - 显示/隐藏小地图图标",
-    CMD_HELP_BIND = "  /porta bind [按键] - 查看或设置快速呼出按键",
 
     BRACKET_FMT = "【%s】",
     QUEST_TITLE_FMT = "《%s》",
@@ -783,27 +766,19 @@ local L_zhCN = (locale == "zhCN" or locale == "zhTW") and {
 -- 3. 繁体中文语言表 (zhTW) - 仅在 zhTW 客户端下实例化以节省内存
 -- =========================================================================
 local L_zhTW = (locale == "zhTW") and {
-    BINDING_HEADER = "Porta 路線導航",
-    BINDING_TOGGLE = "喚出/關閉導航搜尋框",
+    -- 基础
     ADDON_LOADED_MSG = "已載入完成！輸入 |cffffcc00/porta|r 快速開啟目的地搜尋。",
 
-    -- 小地图与快捷键设置提示
+    -- 小地图提示
     MINIMAP_TOOLTIP_TITLE = "Porta 路線導航",
     MINIMAP_TOOLTIP_LCLICK = "左鍵點擊：打開/關閉導航搜尋框",
     MINIMAP_TOOLTIP_RCLICK = "右鍵點擊：停止導航 / 關閉指引",
     MINIMAP_TOOLTIP_DRAG = "拖曳：移動小地圖圖示位置",
     CMD_MINIMAP_TOGGLE_ON = "小地圖圖示已顯示。",
     CMD_MINIMAP_TOGGLE_OFF = "小地圖圖示已隱藏 (輸入 /porta minimap 重新顯示)。",
-    CMD_BIND_CURRENT_FMT = "目前快捷鍵綁定為：|cff00ff00%s|r",
-    CMD_BIND_NONE = "目前尚未為 Porta 設定快捷鍵。",
-    CMD_BIND_HINT = "提示：可在 遊戲主選單(ESC) -> 選項 -> 按鍵設定 -> 插件快捷鍵 中設定，或輸入 /porta bind <按鍵> 設定",
-    CMD_BIND_SUCCESS_FMT = "Porta 快捷鍵已綁定為：|cff00ff00%s|r",
-    CMD_BIND_CLEARED = "已清除 Porta 快捷鍵綁定。",
-    CMD_BIND_INVALID_FMT = "無法綁定按鍵 '%s'，請檢查按鍵名稱（例如 CTRL-P, F, ALT-Z）。",
     CMD_HELP_HEADER = "常用命令清單：",
     CMD_HELP_SEARCH = "  /porta [關鍵詞] - 呼出導航搜尋框 (留空直接打開)",
     CMD_HELP_MINIMAP = "  /porta minimap - 顯示/隱藏小地圖圖示",
-    CMD_HELP_BIND = "  /porta bind [按鍵] - 查看或設定快速呼出按鍵",
 
     BRACKET_FMT = "【%s】",
     QUEST_TITLE_FMT = "《%s》",

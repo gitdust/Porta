@@ -74,7 +74,8 @@ end
 
 -- 打开世界地图并定位到指定地图 (安全规避 Taint 与战斗阻断)
 function Navigation:OpenWorldMap(mapID)
-    if InCombatLockdown and InCombatLockdown() then
+    local inCombat = (InCombatLockdown and InCombatLockdown()) or (UnitAffectingCombat and UnitAffectingCombat("player"))
+    if inCombat then
         local combatMsg = L["MSG_COMBAT_MAP_RESTRICTED"]
         if UIErrorsFrame and UIErrorsFrame.AddMessage then
             UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
@@ -83,23 +84,30 @@ function Navigation:OpenWorldMap(mapID)
         return
     end
     if not mapID or mapID <= 0 then return end
-    pcall(function()
-        if _G.OpenWorldMap then
-            _G.OpenWorldMap(mapID)
-        else
-            if WorldMapFrame then
+
+    -- 异步延后执行，切断与外部点击事件栈的同步传递，规避暴雪原生 MapCanvas 的保护功能污染拦截
+    C_Timer.After(0, function()
+        local stillCombat = (InCombatLockdown and InCombatLockdown()) or (UnitAffectingCombat and UnitAffectingCombat("player"))
+        if stillCombat then return end
+
+        pcall(function()
+            if _G.OpenWorldMap then
+                _G.OpenWorldMap(mapID)
+            elseif WorldMapFrame then
                 if not WorldMapFrame:IsShown() then
                     if ToggleWorldMap then
                         ToggleWorldMap()
-                    else
+                    elseif ShowUIPanel then
                         ShowUIPanel(WorldMapFrame)
+                    else
+                        WorldMapFrame:Show()
                     end
                 end
                 if WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() ~= mapID and WorldMapFrame.SetMapID then
                     WorldMapFrame:SetMapID(mapID)
                 end
             end
-        end
+        end)
     end)
 end
 
@@ -284,6 +292,16 @@ end
 -- 获取当前活动路线
 function Navigation:GetActiveRoute()
     return activeRoute, currentStepIndex
+end
+
+-- 检查当前是否有活跃导航路线
+function Navigation:IsActive()
+    return activeRoute ~= nil
+end
+
+-- 停止/取消导航路线 (兼容 MinimapButton 等外部模块调用)
+function Navigation:StopRoute()
+    self:CancelRoute()
 end
 
 -- 监听地图切换事件，自动推进步骤

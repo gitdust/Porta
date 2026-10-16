@@ -44,6 +44,17 @@ local function OnDragUpdate(self)
     UpdatePosition(angle)
 end
 
+-- 安全辅助：判断当前是否有活跃导航路线 (防御 MBB 插件或异步初始化时方法未就绪)
+local function IsNavigationActive()
+    if not ns.Navigation then return false end
+    if type(ns.Navigation.IsActive) == "function" then
+        return ns.Navigation:IsActive()
+    elseif type(ns.Navigation.GetActiveRoute) == "function" then
+        return ns.Navigation:GetActiveRoute() ~= nil
+    end
+    return false
+end
+
 -- 创建小地图按钮
 local function CreateButton()
     if button then return button end
@@ -58,34 +69,33 @@ local function CreateButton()
     button:RegisterForDrag("LeftButton", "RightButton")
     button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-    -- 1. 核心图标 (32-bit RGBA Logo，精确居中于圆环内)
-    local icon = button:CreateTexture(nil, "BACKGROUND")
-    icon:SetSize(18, 18)
-    icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -6)
-    icon:SetTexture("Interface\\AddOns\\Porta\\Images\\Logo")
+    -- 1. 暴雪原生小地图深色背景 (BACKGROUND 层，20x20，居中对齐圆环镂空窗口)
+    local background = button:CreateTexture(nil, "BACKGROUND")
+    background:SetSize(20, 20)
+    background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+    background:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
+    button.background = background
 
-    -- 在现代魔兽版本中应用平滑圆形遮罩，裁切边缘
-    if button.CreateMaskTexture and icon.AddMaskTexture then
-        local mask = button:CreateMaskTexture()
-        mask:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-        mask:SetAllPoints(icon)
-        icon:AddMaskTexture(mask)
-    end
+    -- 2. 核心图标 (ARTWORK 层，20x20 精确居中于圆环内，圆心为 (17, -15))
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(20, 20)
+    icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
+    icon:SetTexture("Interface\\AddOns\\Porta\\Images\\Logo")
     button.icon = icon
 
-    -- 2. 暴雪原生小地图圆形圆环边框 (53x53 顶点对齐)
+    -- 3. 暴雪原生小地图圆形圆环边框 (OVERLAY 层，53x53 顶点对齐)
     local border = button:CreateTexture(nil, "OVERLAY")
     border:SetSize(53, 53)
     border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
     button.border = border
 
-    -- 按下与抬起视觉微移反馈
+    -- 按下与抬起视觉微移反馈 (沿斜对角微移 1 像素)
     button:SetScript("OnMouseDown", function()
-        icon:SetPoint("TOPLEFT", button, "TOPLEFT", 8, -7)
+        icon:SetPoint("TOPLEFT", button, "TOPLEFT", 8, -6)
     end)
     button:SetScript("OnMouseUp", function()
-        icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -6)
+        icon:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -5)
     end)
 
     -- 拖拽逻辑
@@ -109,8 +119,12 @@ local function CreateButton()
                 ns.SearchDialog:Toggle()
             end
         elseif btn == "RightButton" then
-            if ns.Navigation and ns.Navigation:IsActive() then
-                ns.Navigation:StopRoute()
+            if IsNavigationActive() then
+                if ns.Navigation and ns.Navigation.StopRoute then
+                    ns.Navigation:StopRoute()
+                elseif ns.Navigation and ns.Navigation.CancelRoute then
+                    ns.Navigation:CancelRoute()
+                end
             else
                 if ns.SearchDialog then
                     ns.SearchDialog:Toggle()
@@ -119,14 +133,14 @@ local function CreateButton()
         end
     end)
 
-    -- 悬停提示
+    -- 悬停提示 (完全兼容 MBB 及单体原生悬停)
     button:SetScript("OnEnter", function(self)
         if isDragging then return end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:ClearLines()
         GameTooltip:AddLine(L["MINIMAP_TOOLTIP_TITLE"] or "Porta", 0.0, 0.8, 1.0)
         GameTooltip:AddLine(L["MINIMAP_TOOLTIP_LCLICK"], 0.2, 1.0, 0.4)
-        if ns.Navigation and ns.Navigation:IsActive() then
+        if IsNavigationActive() then
             GameTooltip:AddLine(L["MINIMAP_TOOLTIP_RCLICK"], 1.0, 0.4, 0.2)
         end
         GameTooltip:AddLine(L["MINIMAP_TOOLTIP_DRAG"], 0.6, 0.6, 0.6)

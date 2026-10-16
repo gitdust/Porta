@@ -282,7 +282,8 @@ local function InitHUD()
     mapBtn:SetPoint("TOPLEFT", titleText, "TOPLEFT", -2, 2)
     mapBtn:SetPoint("BOTTOMRIGHT", titleText, "BOTTOMRIGHT", 2, -2)
     mapBtn:SetScript("OnClick", function()
-        if InCombatLockdown and InCombatLockdown() then
+        local inCombat = (InCombatLockdown and InCombatLockdown()) or (UnitAffectingCombat and UnitAffectingCombat("player"))
+        if inCombat then
             local combatMsg = L["MSG_COMBAT_MAP_RESTRICTED"]
             if UIErrorsFrame and UIErrorsFrame.AddMessage then
                 UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
@@ -501,7 +502,8 @@ local function InitHUD()
     viewMapBtn:SetPoint("RIGHT", prevBtn, "LEFT", -5, 0)
     viewMapBtn:SetText(L["HUD_BTN_MAP"])
     viewMapBtn:SetScript("OnClick", function()
-        if InCombatLockdown and InCombatLockdown() then
+        local inCombat = (InCombatLockdown and InCombatLockdown()) or (UnitAffectingCombat and UnitAffectingCombat("player"))
+        if inCombat then
             local combatMsg = L["MSG_COMBAT_MAP_RESTRICTED"]
             if UIErrorsFrame and UIErrorsFrame.AddMessage then
                 UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)

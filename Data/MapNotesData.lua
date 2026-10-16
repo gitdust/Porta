@@ -1,6 +1,6 @@
 -- =========================================================================
 -- Porta Data - Auto-generated from HandyNotes_MapNotes (Retail)
--- Build Date: 2026-10-15
+-- Build Date: 2026-10-16
 -- Destinations: 231
 -- Transport Edges: 658
 -- =========================================================================
@@ -9,7 +9,7 @@ local _, ns = ...
 
 ns.PortaData = {
     version = "1.0.0",
-    buildDate = "2026-10-15",
+    buildDate = "2026-10-16",
 
     -- 目的地表：地下城、团队副本、地下堡入口
     -- id 为 journalInstanceID（游戏内直接调用 EJ_GetInstanceInfo(id) 获取多语言名称）

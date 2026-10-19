@@ -50,6 +50,11 @@ local DEPRECATED_PHASE_MAPS = {
     [2070] = true, -- 提瑞斯法林地历史位面（优先使用 18）
     [2256] = true, -- 艾基-卡赫特下层重复图（优先使用 2255）
     [2216] = true, -- 千丝之城下层重复图（优先使用 2213）
+    [2311] = true, -- 11.0 陨圣峪点亮余火废弃位面地图 (Spreading the Light - Disabled)
+    [1469] = true, -- 奥格瑞玛的幻象（重访惊魂幻象统一导航至多恩诺嘉尔入口）
+    [1470] = true, -- 暴风城的幻象（重访惊魂幻象统一导航至多恩诺嘉尔入口）
+    [2403] = true, -- 奥格瑞玛的幻象（11.0 区域层地图，统一导航至多恩诺嘉尔入口）
+    [2404] = true, -- 暴风城的幻象（11.0 区域层地图，统一导航至多恩诺嘉尔入口）
 }
 
 -- 拉丁语系常见前导定冠词（用于在匹配时支持忽略冠词检索，如输入 "stonevault" 匹配 "The Stonevault"）
@@ -172,6 +177,38 @@ local SPECIAL_LANDMARKS = {
         aliasesKey = "DEST_DARKMOON_FAIRE",
         aliases = { "Darkmoon Faire", "暗月马戏团", "暗月馬戲團" },
     },
+    {
+        sourceMapID = 1470,
+        nameKey = "DEST_VISION_STORMWIND",
+        nameFallback = "暴风城的幻象",
+        zoneKey = "ZONE_DORNOGAL_VISION",
+        zoneFallback = "多恩诺嘉尔（重访惊魂幻象）",
+        mapID = 2339,
+        x = 0.346,
+        y = 0.684,
+        type = "zone",
+        isHorrificVision = true,
+        visionType = "STORMWIND",
+        isSubPoint = true,
+        comment = "Vision of Stormwind / Soridormi",
+        aliases = { "Vision of Stormwind", "暴风城的幻象", "暴风城幻象", "暴風城的幻象", "大幻象", "重访惊魂幻象" },
+    },
+    {
+        sourceMapID = 1469,
+        nameKey = "DEST_VISION_ORGRIMMAR",
+        nameFallback = "奥格瑞玛的幻象",
+        zoneKey = "ZONE_DORNOGAL_VISION",
+        zoneFallback = "多恩诺嘉尔（重访惊魂幻象）",
+        mapID = 2339,
+        x = 0.346,
+        y = 0.684,
+        type = "zone",
+        isHorrificVision = true,
+        visionType = "ORGRIMMAR",
+        isSubPoint = true,
+        comment = "Vision of Orgrimmar / Soridormi",
+        aliases = { "Vision of Orgrimmar", "奥格瑞玛的幻象", "奥格瑞玛幻象", "奧格瑪的幻象", "大幻象", "重访惊魂幻象" },
+    },
 }
 
 -- 权威地下堡多语言回退表 (覆盖 11.0 地心之战、11.1 安德麦/塞纳岛、12.0/12.1 至暗之夜)
@@ -206,6 +243,12 @@ local DELVE_FALLBACK_NAMES = {
     [2547] = { en = "Collegiate Calamity", zhCN = "学府骚动", zhTW = "學院災禍" },
     [2633] = { en = "The Ring of Glory", zhCN = "荣耀之环", zhTW = "榮耀競技場" },
     [2635] = { en = "Gnarldor Isle", zhCN = "纳拉多尔岛", zhTW = "納爾多島" },
+    [2647] = { en = "The Labyrinth of Kindo'jan", zhCN = "金多赞迷宫", zhTW = "金多贊迷宮" },
+}
+
+-- 权威团队副本多语言回退表 (覆盖最新版本与尚未缓存的团队副本)
+local RAID_FALLBACK_NAMES = {
+    [1324] = { en = "The Unbinding of Kith'ix", zhCN = "基西克斯破封", zhTW = "基西克斯破封" },
 }
 
 -- 包含地下堡的各大洲野外地图列表（用于动态查询 C_AreaPoiInfo）
@@ -228,9 +271,20 @@ function SearchEngine:Initialize()
     local seenContinentZoneNames = {}
     local seenGlobalZoneNames = {}
 
-    -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室、暗月岛等)
+    -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室、暗月岛、重访惊魂幻象等)
     for _, lm in ipairs(SPECIAL_LANDMARKS) do
-        local lmName = (lm.nameKey and L[lm.nameKey]) or lm.nameFallback
+        -- 优先通过暴雪原生 API 获取当前客户端语言的官方地图名称（完美适配任意语言客户端）
+        local lmName = nil
+        if lm.sourceMapID and C_Map and C_Map.GetMapInfo then
+            local sInfo = C_Map.GetMapInfo(lm.sourceMapID)
+            if sInfo and sInfo.name and sInfo.name ~= "" then
+                lmName = sInfo.name
+            end
+        end
+        if not lmName then
+            lmName = (lm.nameKey and L[lm.nameKey]) or lm.nameFallback
+        end
+
         local zName = (lm.zoneKey and L[lm.zoneKey]) or lm.zoneFallback
         if not zName and C_Map and C_Map.GetMapInfo then
             local mInfo = C_Map.GetMapInfo(lm.mapID)
@@ -251,10 +305,12 @@ function SearchEngine:Initialize()
         end
 
         local typeMeta = TYPE_INFO[lm.type] or TYPE_INFO.zone
-        seenMapIDs[lm.mapID] = true
+        if not lm.isSubPoint then
+            seenMapIDs[lm.mapID] = true
+        end
         seenGlobalZoneNames[string.lower(lmName)] = true
 
-        table.insert(searchIndex, CreateSearchItem(
+        local item = CreateSearchItem(
             0,
             lmName,
             zName,
@@ -266,7 +322,14 @@ function SearchEngine:Initialize()
             typeMeta.color,
             lm.comment or "",
             aliases
-        ))
+        )
+        if lm.isHorrificVision then
+            item.isHorrificVision = true
+            item.visionType = lm.visionType
+            item.sourceMapID = lm.sourceMapID
+        end
+
+        table.insert(searchIndex, item)
     end
 
     -- 1. 建立副本目的地索引 (地下城、团队副本、地下堡)
@@ -309,6 +372,19 @@ function SearchEngine:Initialize()
                                 instanceName = name
                             end
                         end
+                        if not instanceName or instanceName == "" then
+                            local fallback = RAID_FALLBACK_NAMES[dest.id]
+                            if fallback then
+                                local loc = (GetLocale and GetLocale()) or "enUS"
+                                if loc == "zhCN" then
+                                    instanceName = fallback.zhCN
+                                elseif loc == "zhTW" then
+                                    instanceName = fallback.zhTW
+                                else
+                                    instanceName = fallback.en
+                                end
+                            end
+                        end
                     end
                 end
 
@@ -331,7 +407,15 @@ function SearchEngine:Initialize()
 
                     -- 获取所属地图名称（当前客户端语言）
                     local zoneName = L["UNKNOWN_ZONE"]
-                    if dest.mapID and C_Map and C_Map.GetMapInfo then
+                    if dest.id == 1324 then
+                        -- 基西克斯破封位于阿塔乌特克地窟 (2509) 深处的地下墓窖 (2613)
+                        local parentMap = (C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(2509))
+                        if parentMap and parentMap.name and parentMap.name ~= "" then
+                            zoneName = parentMap.name
+                        else
+                            zoneName = L["ZONE_ATAL_UTEK"]
+                        end
+                    elseif dest.mapID and C_Map and C_Map.GetMapInfo then
                         local mapInfo = C_Map.GetMapInfo(dest.mapID)
                         if mapInfo and mapInfo.name then
                             zoneName = mapInfo.name
@@ -339,6 +423,13 @@ function SearchEngine:Initialize()
                     end
 
                     local typeMeta = TYPE_INFO[destType] or TYPE_INFO.dungeon
+
+                    local customAliases = nil
+                    if dest.id == 1324 then
+                        customAliases = { "基西克斯", "基西克斯破封", "破封", "阿塔乌特克", "阿塔乌特克地窟", "Kith'ix", "The Unbinding of Kith'ix", "Unbinding of Kith'ix", "Atal'Utek" }
+                    elseif dest.id == 2647 then
+                        customAliases = { "金多赞", "金多赞迷宫", "金多赞地下堡", "Kindo'jan", "The Labyrinth of Kindo'jan" }
+                    end
 
                     table.insert(searchIndex, CreateSearchItem(
                         dest.id,
@@ -350,7 +441,8 @@ function SearchEngine:Initialize()
                         destType,
                         typeMeta.tag,
                         typeMeta.color,
-                        dest.comment or ""
+                        dest.comment or "",
+                        customAliases
                     ))
                 end
             end
@@ -444,24 +536,34 @@ function SearchEngine:Initialize()
                     local childName = child.name and TrimText(child.name) or ""
                     if childMapID and childName ~= "" and not DEPRECATED_PHASE_MAPS[childMapID] and not seenMapIDs[childMapID] then
                         local childNameLower = string.lower(childName)
-                        local contZoneKey = tostring(contID) .. ":" .. childNameLower
-                        -- 同一大洲内同名多楼层/多相位区域仅保留一条，且不与同名副本冲突
-                        if not seenContinentZoneNames[contZoneKey] and not seenInstanceNames[childNameLower] then
-                            seenMapIDs[childMapID] = true
-                            seenContinentZoneNames[contZoneKey] = true
-                            seenGlobalZoneNames[childNameLower] = true
-                            table.insert(searchIndex, CreateSearchItem(
-                                0,
-                                childName,
-                                contName,
-                                childMapID,
-                                0.5,
-                                0.5,
-                                "zone",
-                                TYPE_INFO.zone.tag,
-                                TYPE_INFO.zone.color,
-                                ""
-                            ))
+                        -- 明确过滤旧大陆残留或重访幻象地图条目（统一由第0步多恩诺嘉尔入口呈现）
+                        local isVisionMap = (childMapID == 1469 or childMapID == 1470 or childMapID == 2403 or childMapID == 2404 or string.find(childNameLower, "幻象") or string.find(childNameLower, "vision"))
+                        local isIgnoredPhaseOrTest = (
+                            string.find(childNameLower, "disabled") or
+                            string.find(childNameLower, "test") or
+                            string.find(childNameLower, "debug") or
+                            string.find(childNameLower, "deprecated")
+                        )
+                        if not isVisionMap and not isIgnoredPhaseOrTest then
+                            local contZoneKey = tostring(contID) .. ":" .. childNameLower
+                            -- 同一大洲内同名多楼层/多相位区域仅保留一条，且不与同名副本或全局已收录地标冲突
+                            if not seenContinentZoneNames[contZoneKey] and not seenGlobalZoneNames[childNameLower] and not seenInstanceNames[childNameLower] then
+                                seenMapIDs[childMapID] = true
+                                seenContinentZoneNames[contZoneKey] = true
+                                seenGlobalZoneNames[childNameLower] = true
+                                table.insert(searchIndex, CreateSearchItem(
+                                    0,
+                                    childName,
+                                    contName,
+                                    childMapID,
+                                    0.5,
+                                    0.5,
+                                    "zone",
+                                    TYPE_INFO.zone.tag,
+                                    TYPE_INFO.zone.color,
+                                    ""
+                                ))
+                            end
                         end
                     end
                 end
@@ -481,7 +583,13 @@ function SearchEngine:Initialize()
                         local isIgnoredMapType = (mType == dungeonMapType or mType == microMapType or mType == orphanMapType)
                         local mapName = TrimText(mapInfo.name)
                         local mapNameLower = string.lower(mapName)
-                        if not isIgnoredMapType and not seenGlobalZoneNames[mapNameLower] and not seenInstanceNames[mapNameLower] then
+                        local isIgnoredPhaseOrTest = (
+                            string.find(mapNameLower, "disabled") or
+                            string.find(mapNameLower, "test") or
+                            string.find(mapNameLower, "debug") or
+                            string.find(mapNameLower, "deprecated")
+                        )
+                        if not isIgnoredMapType and not isIgnoredPhaseOrTest and not seenGlobalZoneNames[mapNameLower] and not seenInstanceNames[mapNameLower] then
                             seenMapIDs[targetMapID] = true
                             seenGlobalZoneNames[mapNameLower] = true
                             table.insert(searchIndex, CreateSearchItem(

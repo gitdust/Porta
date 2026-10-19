@@ -852,6 +852,14 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         table.insert(warnBlocks, phaseWarnStr)
     end
 
+    local vInfo = route.visionRotationInfo or (currentStep and currentStep.visionRotationInfo)
+    if vInfo then
+        local vTag = vInfo.tag or (vInfo.isActive and L["VISION_ACTIVE_TAG"] or string.format(L["VISION_INACTIVE_TAG_FMT"], vInfo.nextResetDate or ""))
+        local vDesc = vInfo.tip or (vInfo.isActive and L["VISION_ACTIVE_DESC"] or string.format(L["VISION_INACTIVE_DESC_FMT"], vInfo.nextResetDate or ""))
+        local trimmedTag = (strtrim and strtrim(vTag)) or vTag
+        table.insert(warnBlocks, string.format("%s %s", trimmedTag, vDesc))
+    end
+
     local questWarnHeight = 0
     if #warnBlocks > 0 then
         local warnStr = table.concat(warnBlocks, "\n\n")

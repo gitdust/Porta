@@ -1,15 +1,15 @@
 -- =========================================================================
 -- Porta Data - Auto-generated from HandyNotes_MapNotes (Retail)
--- Build Date: 2026-10-16
--- Destinations: 231
--- Transport Edges: 658
+-- Build Date: 2026-10-19
+-- Destinations: 233
+-- Transport Edges: 660
 -- =========================================================================
 
 local _, ns = ...
 
 ns.PortaData = {
     version = "1.0.0",
-    buildDate = "2026-10-16",
+    buildDate = "2026-10-19",
 
     -- 目的地表：地下城、团队副本、地下堡入口
     -- id 为 journalInstanceID（游戏内直接调用 EJ_GetInstanceInfo(id) 获取多语言名称）
@@ -215,6 +215,7 @@ ns.PortaData = {
         { id = 1316, mapID = 2405, x = 0.6500, y = 0.6200, type = "dungeon", comment = "Nexuspunkt Xenas" },
         { id = 1320, mapID = 2509, x = 0.4700, y = 0.2300, type = "raid", comment = "Der giftige Abgrund" },
         { id = 1322, mapID = 2509, x = 0.4700, y = 0.6800, type = "dungeon", comment = "Altar der Fänge" },
+        { id = 1324, mapID = 2613, x = 0.7400, y = 0.0600, type = "raid", comment = "Die Entfesslung von Kith'ix" },
         { id = 2249, mapID = 2248, x = 0.5252, y = 0.6626, type = "delve", comment = "Fungal Folly" },
         { id = 2250, mapID = 2248, x = 0.6164, y = 0.4271, type = "delve", comment = "Kriegval's Rest" },
         { id = 2251, mapID = 2214, x = 0.4611, y = 0.4791, type = "delve", comment = "The Waterworks" },
@@ -245,6 +246,7 @@ ns.PortaData = {
         { id = 2547, mapID = 2393, x = 0.7047, y = 0.4532, type = "delve", comment = "Collegiate Calamity" },
         { id = 2633, mapID = 2512, x = 0.8010, y = 0.5369, type = "delve", comment = "The Ring of Glory" },
         { id = 2635, mapID = 2512, x = 0.7666, y = 0.4689, type = "delve", comment = "Gnarldor Isle" },
+        { id = 2647, mapID = 2395, x = 0.4432, y = 0.9767, type = "delve", comment = "The Labyrinth of Kindo'jan" },
     },
 
     -- 交通拓扑图：传送门、飞艇、船只、传送镜等连接边
@@ -700,7 +702,7 @@ ns.PortaData = {
         { from = 862, to = 1165, x = 0.5900, y = 0.5900, type = "PORTAL", faction = "HORDE", note = "ns.Zandalar .. \" \" .. L[\"Portals\"] .. \"\\n\" ..  \"\\n\" .. \" ==> \" .. L[\"This Darkshore portal is only active if your faction is currently occupying Bashal'Aran\"] .. \"\\n\" .. \" ==> \" .. L[\"This Arathi Highlands portal is only active if your faction is currently occupying Ar'gorok\"]" },
         { from = 862, to = 1165, x = 0.6000, y = 0.3900, type = "PORTAL", faction = "NEUTRAL", note = "Portal Manapuff" },
         { from = 862, to = 1462, x = 0.5500, y = 0.5800, type = "TRANSPORT", faction = "NEUTRAL", note = "Transport from Dazar'alor to Mechagon" },
-        { from = 862, to = 2346, x = 0.2300, y = 0.5400, type = "TRANSPORT", faction = "NEUTRAL", questID = 83933, note = "Rocket Drill from Zandalar to Undermine" },
+        { from = 862, to = 2346, x = 0.2300, y = 0.5400, type = "TRANSPORT", faction = "NEUTRAL", note = "Rocket Drill from Zandalar to Undermine" },
         { from = 863, to = 1161, x = 0.6200, y = 0.4000, type = "TRANSPORT", faction = "NEUTRAL", note = "Transport from Nazmir to Boralus" },
         { from = 864, to = 1161, x = 0.3700, y = 0.3400, type = "TRANSPORT", faction = "NEUTRAL", note = "Transport from Vol'dun to Boralus" },
         { from = 875, to = 862, x = 0.4600, y = 0.8000, type = "MOLE_MACHINE", faction = "NEUTRAL", questID = 80100 },
@@ -838,7 +840,7 @@ ns.PortaData = {
         { from = 2200, to = 2023, x = 0.7300, y = 0.5200, type = "WAYGATE", faction = "NEUTRAL", note = "Portal The Emerald Dream to Ohn'ahran Plains" },
         { from = 2214, to = 2248, x = 0.4900, y = 0.4500, type = "TRANSPORT", faction = "NEUTRAL", questID = 82195 },
         { from = 2214, to = 2248, x = 0.6200, y = 0.7700, type = "TRANSPORT", faction = "NEUTRAL", questID = 84220 },
-        { from = 2214, to = 2346, x = 0.7300, y = 0.7300, type = "TRANSPORT", faction = "NEUTRAL", questID = 83151, note = "Rocket Drill Deeps to Undermine" },
+        { from = 2214, to = 2346, x = 0.7300, y = 0.7300, type = "TRANSPORT", faction = "NEUTRAL", note = "Rocket Drill Deeps to Undermine" },
         { from = 2214, to = 2369, x = 0.4200, y = 0.3000, type = "MOLE_MACHINE", faction = "NEUTRAL", note = "Mole Machine from Deeps to Sirene Isle" },
         { from = 2239, to = 84, x = 0.5500, y = 0.6400, type = "PORTAL", faction = "ALLIANCE", note = "Valdrakken to Stormwind City Portal" },
         { from = 2239, to = 217, x = 0.5000, y = 0.0400, type = "SHIP", faction = "NEUTRAL", note = "Ship from Amirdrassil to Gilneas" },
@@ -871,8 +873,8 @@ ns.PortaData = {
         { from = 2339, to = 2367, x = 0.3000, y = 0.6000, type = "PORTAL", faction = "NEUTRAL", achievementID = 40725, note = "Kammer der Erinnerung" },
         { from = 2339, to = 2369, x = 0.7400, y = 0.0500, type = "ZEPPELIN", faction = "NEUTRAL", note = "Zeppelin from OG to Borean Tundra - Northrend" },
         { from = 2339, to = 2472, x = 0.4000, y = 0.2300, type = "PORTAL", faction = "NEUTRAL", questID = 84957, note = "Portal from Dornogal to Tazavesh" },
-        { from = 2346, to = 862, x = 0.1900, y = 0.5200, type = "TRANSPORT", faction = "NEUTRAL", questID = 83933, note = "Rocket Drill from Undermine to Zandalar" },
-        { from = 2346, to = 2214, x = 0.1700, y = 0.5100, type = "TRANSPORT", faction = "NEUTRAL", questID = 83151, note = "Rocket Drill from Undermine to Deeps" },
+        { from = 2346, to = 862, x = 0.1900, y = 0.5200, type = "TRANSPORT", faction = "NEUTRAL", note = "Rocket Drill from Undermine to Zandalar" },
+        { from = 2346, to = 2214, x = 0.1700, y = 0.5100, type = "TRANSPORT", faction = "NEUTRAL", note = "Rocket Drill from Undermine to Deeps" },
         { from = 2346, to = 2339, x = 0.2800, y = 0.5400, type = "PORTAL", faction = "NEUTRAL", questID = 86535, note = "Portal from Undermine to Dornogal" },
         { from = 2351, to = 85, x = 0.5400, y = 0.4900, type = "PORTAL", faction = "HORDE", note = "Portal Razorwind Shores to Orgrimmar (Housing map)" },
         { from = 2352, to = 84, x = 0.5700, y = 0.2700, type = "PORTAL", faction = "ALLIANCE", note = "Portal Founder's Point to Stormwind (Housing map)" },
@@ -891,6 +893,7 @@ ns.PortaData = {
         { from = 2393, to = 2405, x = 0.3500, y = 0.6600, type = "PORTAL", faction = "NEUTRAL", questID = 86549, note = "Portal zum Leerensturm" },
         { from = 2393, to = 2413, x = 0.3700, y = 0.6800, type = "PORTAL", faction = "NEUTRAL", questID = 86898, note = "Wurzelpfad nach Harandar" },
         { from = 2393, to = 2424, x = 0.4600, y = 0.0600, type = "TRANSPORT", faction = "NEUTRAL", note = "Passage/Exit" },
+        { from = 2393, to = 2512, x = 0.5700, y = 0.6700, type = "PORTAL", faction = "NEUTRAL", note = "通往盘卷蛇岛的传送门" },
         { from = 2393, to = 2599, x = 0.4800, y = 0.4800, type = "PORTAL", faction = "NEUTRAL", note = "L[\"Portal\"] .. \" - \" .. ns.Val .. \" / \" .. ns.Naigtal" },
         { from = 2393, to = 2600, x = 0.4800, y = 0.4800, type = "PORTAL", faction = "NEUTRAL", note = "L[\"Portal\"] .. \" - \" .. ns.Val .. \" / \" .. ns.Naigtal" },
         { from = 2395, to = 2266, x = 0.4900, y = 0.2500, type = "WAYGATE", faction = "NEUTRAL", note = "L[\"The Timeways\"] .. \" \" .. L[\"Portals\"] .. \"\\n\" .. \"\\n\" .. ZONE .. \": \" .. ns.Voldun .. \"\\n\" .. CALENDAR_TYPE_DUNGEON .. \": \" .. ns.TempleOfSethraliss .. \"\\n\\n\" .. ZONE .. \": \" .. ns.Zuldazar .. \"\\n\" .. CALENDAR_TYPE_DUNGEON .. \": \" .. ns.Kingsrush .. \"\\n\\n\" .. ZONE .. \": \" .. ns.TheWakingShores .. \"\\n\" .. CALENDAR_TYPE_DUNGEON .. \": \" .. ns.RubyLifePools" },
@@ -900,6 +903,7 @@ ns.PortaData = {
         { from = 2413, to = 2576, x = 0.5400, y = 0.5600, type = "PORTAL", faction = "NEUTRAL", questID = 86883, note = "L[\"inside the cave\"] .. \":\\n\" .. ns.TextIconPortalOld:GetIconString() .. \" \" .. L[\"Portal\"] .. \" \" .. ns.VoidTempest .. \"\\n\" .. ns.TextIconPortalOld:GetIconString() .. \" \" .. L[\"Portal\"] .. \" \" .. ns.SilvermoonMN" },
         { from = 2472, to = 2339, x = 0.4900, y = 0.2000, type = "PORTAL", faction = "NEUTRAL", questID = 84967, note = "Portal Tazavesh to Dornogal" },
         { from = 2472, to = 2339, x = 0.6300, y = 0.9400, type = "PORTAL", faction = "NEUTRAL", questID = 84957, note = "Portal from Tazavesh to Dornogal" },
+        { from = 2512, to = 2393, x = 0.5800, y = 0.4900, type = "PORTAL", faction = "NEUTRAL", note = "通往阿斯塔洛的圣殿的传送门" },
         { from = 2512, to = 2509, x = 0.3000, y = 0.6500, type = "TRANSPORT", faction = "NEUTRAL", note = "Altar der Fänge, Der Giftige Abgrund" },
         { from = 2512, to = 2509, x = 0.4400, y = 0.4400, type = "TRANSPORT", faction = "NEUTRAL", note = "Altar der Fänge, Der Giftige Abgrund" },
         { from = 2512, to = 2509, x = 0.4700, y = 0.6500, type = "TRANSPORT", faction = "NEUTRAL", note = "Altar der Fänge, Der Giftige Abgrund" },

@@ -158,10 +158,65 @@ local TELEPORT_ITEMS = {
     { id = 48933, kind = "TOY", name = L["ITEM_NAME_48933"], toMap = 113, continentID = 113, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
 
     -- 工程学经典定点传送器 (空间撕裂器 / 安全传送器 - 落点固定，纳入常规路线评估，不满足专业或未拥有时提示)
-    { id = 18984, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18984"], toMap = 71, x = 0.52, y = 0.28, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_GADGETZAN_TRANSPORTER" },
-    { id = 18986, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18986"], toMap = 83, x = 0.61, y = 0.38, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_EVERLOOK_RIPPER" },
-    { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], toMap = 109, x = 0.33, y = 0.64, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
-    { id = 30544, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30544"], toMap = 105, x = 0.60, y = 0.69, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_TOSHLEY_TRANSPORTER" },
+    { id = 18984, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18984"], toMap = 83, continentID = 12, x = 0.61, y = 0.38, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_EVERLOOK_RIPPER" },
+    { id = 18986, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18986"], toMap = 71, continentID = 12, x = 0.52, y = 0.28, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_GADGETZAN_TRANSPORTER" },
+    { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], toMap = 109, continentID = 101, x = 0.33, y = 0.64, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    { id = 30544, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30544"], toMap = 105, continentID = 101, x = 0.60, y = 0.69, faction = "NEUTRAL", priority = 8, requiresEngineering = true, noteKey = "NOTE_TOSHLEY_TRANSPORTER" },
+
+    -- 常用传送药水与消耗品道具
+    {
+        id = 58487,
+        kind = "ITEM",
+        name = L["ITEM_NAME_58487"],
+        toMap = 207, -- 深岩之洲：大地神殿 (神殿内常驻暴风城与奥格瑞玛传送门)
+        x = 0.49, y = 0.52,
+        faction = "NEUTRAL",
+        priority = 8,
+        noteKey = "NOTE_POTION_OF_DEEPHOLM",
+    },
+    {
+        id = 200613,
+        kind = "ITEM",
+        name = L["ITEM_NAME_200613"],
+        toMap = 2023, -- 欧恩哈拉平原：艾拉格半人马营地
+        x = 0.60, y = 0.40,
+        faction = "NEUTRAL",
+        priority = 7,
+        noteKey = "NOTE_AYLAAG_WINDSTONE",
+    },
+    {
+        id = 167075,
+        kind = "ITEM",
+        name = L["ITEM_NAME_167075"],
+        toMap = 1462, -- 麦卡贡岛：锈栓镇
+        x = 0.73, y = 0.35,
+        faction = "NEUTRAL",
+        priority = 8,
+        requiresEngineering = true,
+        noteKey = "NOTE_MECHAGON_TRANSPORTER",
+    },
+    {
+        id = 139590,
+        kind = "ITEM",
+        name = L["ITEM_NAME_139590"],
+        toMap = 25, -- 希尔斯布莱德丘陵：拉文霍德庄园
+        x = 0.75, y = 0.24,
+        faction = "NEUTRAL",
+        class = "ROGUE",
+        priority = 7,
+        noteKey = "NOTE_RAVENHOLDT_SCROLL",
+    },
+    {
+        id = 202046,
+        kind = "TOY_OR_ITEM",
+        name = L["ITEM_NAME_202046"],
+        toMap = 942, -- 斯托颂谷地：探索者高地
+        continentID = 876,
+        x = 0.60, y = 0.69,
+        faction = "NEUTRAL",
+        priority = 8,
+        noteKey = "NOTE_TORTALLAN_CHARM",
+    },
 }
 
 -- =========================================================================
@@ -371,6 +426,46 @@ local DIRECT_DESTINATION_ITEMS = {
     [757] = {
         { id = 46874, kind = "ITEM", name = L["ITEM_NAME_46874"], faction = "NEUTRAL", noteKey = "NOTE_ARGENT_TABARD_TOC" },
     },
+    -- 巨石之核 (67 - 深岩之洲)
+    [67] = {
+        { id = 58487, kind = "ITEM", name = L["ITEM_NAME_58487"], faction = "NEUTRAL", noteKey = "NOTE_POTION_OF_DEEPHOLM" },
+    },
+    -- 麦卡贡行动 (1178)
+    [1178] = {
+        { id = 167075, kind = "ITEM", name = L["ITEM_NAME_167075"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_MECHAGON_TRANSPORTER" },
+    },
+    -- 诺库德阻击战 (1198 - 欧恩哈拉平原)
+    [1198] = {
+        { id = 200613, kind = "ITEM", name = L["ITEM_NAME_200613"], faction = "NEUTRAL", noteKey = "NOTE_AYLAAG_WINDSTONE" },
+    },
+    -- 祖尔法拉克 (241 - 塔纳利斯)
+    [241] = {
+        { id = 18986, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18986"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_GADGETZAN_TRANSPORTER" },
+    },
+    -- 格鲁尔的巢穴 (746 - 刀锋山)
+    [746] = {
+        { id = 30544, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30544"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_TOSHLEY_TRANSPORTER" },
+    },
+    -- 虚空风暴副本群 (254 禁魔监狱, 257 生态船, 258 能源舰, 749 风暴要塞)
+    [254] = {
+        { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    },
+    [257] = {
+        { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    },
+    [258] = {
+        { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    },
+    [749] = {
+        { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    },
+    -- 风暴神殿 (1036 - 斯托颂谷地) 与 风暴熔炉 (1177)
+    [1036] = {
+        { id = 202046, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_202046"], faction = "NEUTRAL", noteKey = "NOTE_TORTALLAN_CHARM" },
+    },
+    [1177] = {
+        { id = 202046, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_202046"], faction = "NEUTRAL", noteKey = "NOTE_TORTALLAN_CHARM" },
+    },
 }
 
 -- =========================================================================
@@ -387,6 +482,42 @@ local DIRECT_MAP_ITEMS = {
     },
     [245] = {
         { id = 63379, kind = "ITEM", name = L["ITEM_NAME_63379"], faction = "HORDE", noteKey = "NOTE_TOL_BARAD_TABARD" },
+    },
+    -- 深岩之洲 (mapID = 207)
+    [207] = {
+        { id = 58487, kind = "ITEM", name = L["ITEM_NAME_58487"], faction = "NEUTRAL", noteKey = "NOTE_POTION_OF_DEEPHOLM" },
+    },
+    -- 麦卡贡 (mapID = 1462)
+    [1462] = {
+        { id = 167075, kind = "ITEM", name = L["ITEM_NAME_167075"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_MECHAGON_TRANSPORTER" },
+    },
+    -- 欧恩哈拉平原 (mapID = 2023)
+    [2023] = {
+        { id = 200613, kind = "ITEM", name = L["ITEM_NAME_200613"], faction = "NEUTRAL", noteKey = "NOTE_AYLAAG_WINDSTONE" },
+    },
+    -- 希尔斯布莱德丘陵 (mapID = 25)
+    [25] = {
+        { id = 139590, kind = "ITEM", name = L["ITEM_NAME_139590"], faction = "NEUTRAL", class = "ROGUE", noteKey = "NOTE_RAVENHOLDT_SCROLL" },
+    },
+    -- 塔纳利斯 (mapID = 71)
+    [71] = {
+        { id = 18986, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18986"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_GADGETZAN_TRANSPORTER" },
+    },
+    -- 冬泉谷 (mapID = 83)
+    [83] = {
+        { id = 18984, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_18984"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_EVERLOOK_RIPPER" },
+    },
+    -- 刀锋山 (mapID = 105)
+    [105] = {
+        { id = 30544, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30544"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_TOSHLEY_TRANSPORTER" },
+    },
+    -- 虚空风暴 (mapID = 109)
+    [109] = {
+        { id = 30542, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_30542"], faction = "NEUTRAL", requiresEngineering = true, noteKey = "NOTE_AREA52_RIPPER" },
+    },
+    -- 斯托颂谷地 (mapID = 942)
+    [942] = {
+        { id = 202046, kind = "TOY_OR_ITEM", name = L["ITEM_NAME_202046"], faction = "NEUTRAL", noteKey = "NOTE_TORTALLAN_CHARM" },
     },
 }
 
@@ -604,66 +735,6 @@ local function HasToyCollected(toyID)
     return false
 end
 
-local function IsToyUsableByPlayer(toyID)
-    if not toyID then return false end
-    if C_ToyBox and C_ToyBox.IsToyUsable then
-        return C_ToyBox.IsToyUsable(toyID)
-    end
-    return true
-end
-
-local ENGINEERING_REQ_MAP = {}
-for _, item in ipairs(TELEPORT_ITEMS) do
-    if item.requiresEngineering then
-        if item.id then
-            ENGINEERING_REQ_MAP[item.id] = item
-        end
-        if item.ids then
-            for _, cid in ipairs(item.ids) do
-                ENGINEERING_REQ_MAP[cid] = item
-            end
-        end
-    end
-end
-
--- 检查当前角色是否学习了工程学专业 (Engineering skillLine == 202，跨语言通用)
-local hasEngineeringCache = nil
-local function HasEngineeringProfession()
-    if hasEngineeringCache ~= nil then
-        return hasEngineeringCache
-    end
-    if not GetProfessions or not GetProfessionInfo then
-        return true
-    end
-    local prof1, prof2 = GetProfessions()
-    if not prof1 and not prof2 then
-        -- 登录初期专业数据可能尚未下发，此时返回 false 但不长久缓存，避免误判
-        return false
-    end
-    local profIndices = { prof1, prof2 }
-    for _, idx in ipairs(profIndices) do
-        if idx then
-            local name, _, _, _, _, _, skillLine = GetProfessionInfo(idx)
-            if skillLine == 202 or (name and (name:find("工程") or name:find("Engineering"))) then
-                hasEngineeringCache = true
-                return true
-            end
-        end
-    end
-    hasEngineeringCache = false
-    return false
-end
-
-PlayerTeleports.HasEngineeringProfession = HasEngineeringProfession
-
--- 监听专业与技能变化事件，动态刷新工程学判定缓存
-local profEventFrame = CreateFrame("Frame")
-profEventFrame:RegisterEvent("SKILL_LINES_CHANGED")
-profEventFrame:RegisterEvent("TRAINER_UPDATE")
-profEventFrame:SetScript("OnEvent", function()
-    hasEngineeringCache = nil
-end)
-
 -- 检查法术是否习得 (优先采用 11.0 / 12.1 现代法术书 API，精准识别账号钥石直达门)
 local function IsSpellKnown(spellID)
     if not spellID then return false end
@@ -690,6 +761,81 @@ local function IsSpellKnown(spellID)
     return false
 end
 
+local ENGINEERING_REQ_MAP = {}
+for _, item in ipairs(TELEPORT_ITEMS) do
+    if item.requiresEngineering then
+        if item.id then
+            ENGINEERING_REQ_MAP[item.id] = item
+        end
+        if item.ids then
+            for _, cid in ipairs(item.ids) do
+                ENGINEERING_REQ_MAP[cid] = item
+            end
+        end
+    end
+end
+
+-- 检查当前角色是否学习了工程学专业 (多源权威动态检测，杜绝静态缓存失效)
+local function HasEngineeringProfession()
+    -- 1. 现代 C_TradeSkillUI 原生 API 检测 (11.0 / 11.1 / 12.0)
+    if C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines then
+        local lines = C_TradeSkillUI.GetAllProfessionTradeSkillLines()
+        if type(lines) == "table" then
+            for _, lineID in ipairs(lines) do
+                if lineID == 202 then
+                    return true
+                end
+            end
+        end
+    end
+
+    -- 2. 经典 GetProfessions + GetProfessionInfo (兼容全语言与各种客户端阶段)
+    if GetProfessions and GetProfessionInfo then
+        local prof1, prof2 = GetProfessions()
+        local indices = { prof1, prof2 }
+        for _, idx in ipairs(indices) do
+            if idx then
+                local name, _, _, _, _, _, skillLine = GetProfessionInfo(idx)
+                if skillLine == 202 or (name and (
+                    string.find(name, "工程") or
+                    string.find(name, "Engineer") or
+                    string.find(name, "Ingénier") or
+                    string.find(name, "Ingenier") or
+                    string.find(name, "기계공学") or
+                    string.find(name, "기계공학") or
+                    string.find(name, "Инженер")
+                )) then
+                    return true
+                end
+            end
+        end
+    end
+
+    -- 3. 基础法术习得检测 (工程学基础技能 2018 等)
+    if IsSpellKnown(2018) or (IsPlayerSpell and IsPlayerSpell(2018)) then
+        return true
+    end
+
+    return false
+end
+
+PlayerTeleports.HasEngineeringProfession = HasEngineeringProfession
+
+local function IsToyUsableByPlayer(toyID)
+    if not toyID then return false end
+    -- 若为工程学专属玩具且当前角色已学习工程学，直接视为可用（避免客户端刚登录或玩具箱未打开时 C_ToyBox.IsToyUsable 误返回 false/nil）
+    if ENGINEERING_REQ_MAP[toyID] and HasEngineeringProfession() then
+        return true
+    end
+    if C_ToyBox and C_ToyBox.IsToyUsable then
+        local isUsable = C_ToyBox.IsToyUsable(toyID)
+        if isUsable ~= nil then
+            return isUsable
+        end
+    end
+    return true
+end
+
 -- 供外部（如 HUD 点击/悬停时）实时检测某玩具、物品或技能当前是否拥有/可用
 function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
     if not id then return false, L["ERR_UNKNOWN_TELEPORT_ID"] end
@@ -706,6 +852,11 @@ function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
     local reqEng = (ENGINEERING_REQ_MAP[id] ~= nil)
     local hasEng = (not reqEng) or HasEngineeringProfession()
 
+    local _, playerClass = UnitClass("player")
+    if id == 139590 and playerClass ~= "ROGUE" then
+        return false, string.format(L["REASON_ROGUE_ONLY_FMT"], label)
+    end
+
     if uKind == "SPELL" then
         if IsSpellKnown(id) then
             return true, nil
@@ -713,7 +864,7 @@ function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
         return false, string.format(L["REASON_SPELL_NOT_KNOWN_FMT"], label)
     elseif uKind == "TOY" then
         if HasToyCollected(id) then
-            if not hasEng then
+            if reqEng and not hasEng then
                 return false, string.format(L["REASON_TOY_NO_ENG_FMT"], label)
             end
             if not IsToyUsableByPlayer(id) then
@@ -721,7 +872,7 @@ function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
             end
             return true, nil
         elseif HasItem(id) then
-            if not hasEng then
+            if reqEng and not hasEng then
                 return false, string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
             end
             return true, nil
@@ -734,7 +885,7 @@ function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
         local ownedInBag = HasItem(id)
         local ownedAsToy = HasToyCollected(id)
         if ownedInBag or ownedAsToy then
-            if not hasEng then
+            if reqEng and not hasEng then
                 return false, string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
             end
             if ownedAsToy and not ownedInBag and not IsToyUsableByPlayer(id) then
@@ -742,7 +893,7 @@ function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
             end
             return true, nil
         elseif IsItemInBank(id) then
-            if not hasEng then
+            if reqEng and not hasEng then
                 return false, string.format(L["REASON_BANK_NO_ENG_FMT"], label)
             end
             return false, string.format(L["REASON_BANK_FMT"], label)
@@ -815,12 +966,22 @@ local function InspectItemOrToyEntry(entry)
 
     local reqEng = entry.requiresEngineering and true or false
     local hasEng = (not reqEng) or HasEngineeringProfession()
-    local hasIt = isOwned and hasEng and (not isToyUnusable)
+
+    local _, playerClass = UnitClass("player")
+    local reqClass = entry.class
+    local isClassMatched = (not reqClass) or (reqClass == playerClass)
+    local hasIt = isOwned and hasEng and isClassMatched and (not isToyUnusable)
 
     local missingReason = nil
     local missingShortTag = nil
     if not hasIt then
-        if isOwned then
+        if not isClassMatched then
+            missingShortTag = L["TAG_ROGUE_ONLY"] or L["TAG_UNUSABLE"]
+            missingReason = string.format(L["REASON_ROGUE_ONLY_FMT"], label)
+        elseif reqEng and not hasEng then
+            missingShortTag = L["TAG_REQ_ENG"]
+            missingReason = string.format(actualKind == "TOY" and L["REASON_TOY_NO_ENG_FMT"] or L["REASON_ITEM_NO_ENG_FMT"], label)
+        elseif isToyUnusable then
             missingShortTag = L["TAG_UNUSABLE"]
             missingReason = string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
         elseif inBank then
@@ -828,7 +989,7 @@ local function InspectItemOrToyEntry(entry)
             missingReason = string.format(L["REASON_BANK_FMT"], label)
         else
             missingShortTag = L["TAG_MISSING"]
-            missingReason = string.format(L["REASON_ITEM_MISSING_FMT"], label)
+            missingReason = string.format(actualKind == "TOY" and L["REASON_TOY_MISSING_FMT"] or L["REASON_ITEM_MISSING_FMT"], label)
         end
     end
 
@@ -895,7 +1056,8 @@ function PlayerTeleports:GetAvailableTeleports()
 
     -- 1. 扫描传送物品与玩具（全部纳入候选，记录真实拥有与专业条件状态，并动态获取客户端本地化名称）
     for _, item in ipairs(TELEPORT_ITEMS) do
-        if item.faction == "NEUTRAL" or item.faction == playerFaction then
+        local classMatch = (not item.class) or (item.class == playerClass)
+        if classMatch and (item.faction == "NEUTRAL" or item.faction == playerFaction) then
             local state = InspectItemOrToyEntry(item)
             local toMap = item.toMap
             if item.toMapHorde and item.toMapAlliance then
@@ -965,6 +1127,7 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
     if not destination then return {} end
     local results = {}
     local playerFaction = ns.GetPlayerFaction()
+    local _, playerClass = UnitClass("player")
 
     -- 1. 检测【大秘境 / 挑战模式 / 团队副本英雄之路传送门】
     if destination.id and destination.id > 0 then
@@ -997,7 +1160,8 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
     -- 2. 检测【副本专属直达道具/玩具】（不因未拥有而过滤，记录未拥有提示）
     if destination.id and destination.id > 0 and DIRECT_DESTINATION_ITEMS[destination.id] then
         for _, itemEntry in ipairs(DIRECT_DESTINATION_ITEMS[destination.id]) do
-            if itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction then
+            local classMatch = (not itemEntry.class) or (itemEntry.class == playerClass)
+            if classMatch and (itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction) then
                 local state = InspectItemOrToyEntry(itemEntry)
                 local isReady, cdSeconds = true, 0
                 if state.hasItem then
@@ -1026,7 +1190,8 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
     -- 3. 检测【目标区域专属直达道具/玩具】（如永恒岛 554、托尔巴拉德 244/245 等）
     if destination.mapID and DIRECT_MAP_ITEMS[destination.mapID] then
         for _, itemEntry in ipairs(DIRECT_MAP_ITEMS[destination.mapID]) do
-            if itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction then
+            local classMatch = (not itemEntry.class) or (itemEntry.class == playerClass)
+            if classMatch and (itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction) then
                 local state = InspectItemOrToyEntry(itemEntry)
                 local isReady, cdSeconds = true, 0
                 if state.hasItem then

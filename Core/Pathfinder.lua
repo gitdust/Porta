@@ -247,6 +247,69 @@ local function GetDarkmoonFaireStatus()
 end
 Pathfinder.GetDarkmoonFaireStatus = GetDarkmoonFaireStatus
 
+-- 计算重访惊魂幻象当前周轮换状态 (每周服务器维护后轮换：暴风城 vs 奥格瑞玛)
+local function GetHorrificVisionRotationStatus(visionType)
+    local activeCity = nil
+    -- 1. 优先尝试从多恩诺嘉尔 (2339) 实时地图 AreaPOI 探测当前激活的幻象
+    if C_AreaPoiInfo and C_AreaPoiInfo.GetAreaPOIsForPlayerByMapID and C_AreaPoiInfo.GetAreaPOIInfo then
+        local pois = C_AreaPoiInfo.GetAreaPOIsForPlayerByMapID(2339)
+        if pois then
+            for _, poiID in ipairs(pois) do
+                local poiInfo = C_AreaPoiInfo.GetAreaPOIInfo(2339, poiID)
+                if poiInfo and poiInfo.position then
+                    local px, py = poiInfo.position:GetXY()
+                    if px and py and math.abs(px - 0.346) < 0.08 and math.abs(py - 0.684) < 0.08 then
+                        local text = string.lower((poiInfo.name or "") .. " " .. (poiInfo.description or ""))
+                        if string.find(text, "stormwind") or string.find(text, "暴风城") or string.find(text, "暴風城") or string.find(text, "roccavento") or string.find(text, "sturmwind") or string.find(text, "hurlevent") or string.find(text, "ventormenta") then
+                            activeCity = "STORMWIND"
+                            break
+                        elseif string.find(text, "orgrimmar") or string.find(text, "奥格瑞玛") or string.find(text, "奧格瑪") then
+                            activeCity = "ORGRIMMAR"
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- 2. 获取下次周重置日期 (用于显示下周轮换时间)
+    local getTimeStamp = time or (os and os.time) or function() return 0 end
+    local getDateTable = date or (os and os.date) or function() return {} end
+    local secsUntilReset = 0
+    if C_DateAndTime and C_DateAndTime.GetSecondsUntilWeeklyReset then
+        local ok, s = pcall(C_DateAndTime.GetSecondsUntilWeeklyReset)
+        if ok and s and s > 0 then
+            secsUntilReset = s
+        end
+    end
+    if secsUntilReset <= 0 then
+        -- 兜底：若 API 不可用，假设 3 天后重置
+        secsUntilReset = 86400 * 3
+    end
+
+    local resetTimestamp = getTimeStamp() + secsUntilReset
+    local resetDate = getDateTable("*t", resetTimestamp)
+    local nextResetDateStr = ""
+    if resetDate and resetDate.month and resetDate.day then
+        nextResetDateStr = string.format(L["DARKMOON_NEXT_DATE_FMT"] or "%d/%d", resetDate.month, resetDate.day)
+    end
+
+    -- 3. 若 POI 未能匹配，基于双周交替基准算法兜底
+    if not activeCity then
+        local weekIndex = math.floor(resetTimestamp / (7 * 86400))
+        if (weekIndex % 2) == 0 then
+            activeCity = "STORMWIND"
+        else
+            activeCity = "ORGRIMMAR"
+        end
+    end
+
+    local isActive = (visionType == activeCity)
+    return isActive, activeCity, nextResetDateStr
+end
+Pathfinder.GetHorrificVisionRotationStatus = GetHorrificVisionRotationStatus
+
 -- =========================================================================
 -- 2. 真实物理距离计算器 (支持计算玩家当前位置到起点的真实码数)
 -- =========================================================================
@@ -394,6 +457,9 @@ local CONTIGUOUS_CONTINENTS = {
     [2400] = {
         2401, 2402, 2403, 2404, 2405, 2406, 2407
     },
+    [2537] = {
+        2393, 2395, 2405, 2413, 2424, 2437, 2444, 2509, 2512, 2536, 2576, 2613
+    },
 }
 
 local ZONE_TO_CONTINENT = {}
@@ -430,6 +496,7 @@ local CONTINENT_CAPITAL_HUBS = {
     [1978] = { HORDE = { 2112 }, ALLIANCE = { 2112 } },
     [2274] = { HORDE = { 2339 }, ALLIANCE = { 2339 } },
     [2400] = { HORDE = { 2401 }, ALLIANCE = { 2401 } },
+    [2537] = { HORDE = { 2393 }, ALLIANCE = { 2393 } },
 }
 
 -- =========================================================================
@@ -515,9 +582,13 @@ local SUBZONE_CONNECTIONS = {
     { from = 2256, to = 2216, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回艾基-卡赫特", cost = 1.0 },
     { from = 2339, to = 2371, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "生态圆顶通道", cost = 1.0 },
     { from = 2339, to = 2437, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "纳洛拉克之穴通道", cost = 1.0 },
-    { from = 2339, to = 2444, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "虚痕竞技场通道", cost = 1.0 },
-    { from = 2339, to = 2509, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "毒渊通道", cost = 1.0 },
-    { from = 2339, to = 2512, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "尖牙祭坛通道", cost = 1.0 },
+    -- 【奎尔萨拉斯：银月城阿斯塔洛的圣殿 (2393) ⇋ 盘卷蛇岛 (2512) ⇋ 阿塔乌特克地窟 (2509) ⇋ 地下坟茔 (2613)】
+    { from = 2393, to = 2512, x = 0.568, y = 0.674, type = "PORTAL", faction = "NEUTRAL", note = "通往盘卷蛇岛的传送门", cost = 1.0 },
+    { from = 2512, to = 2393, x = 0.582, y = 0.485, type = "PORTAL", faction = "NEUTRAL", note = "通往阿斯塔洛的圣殿的传送门", cost = 1.0 },
+    { from = 2512, to = 2509, x = 0.468, y = 0.648, type = "TRANSPORT", faction = "NEUTRAL", note = "进入阿塔乌特克地窟", cost = 1.0 },
+    { from = 2509, to = 2512, x = 0.500, y = 0.500, type = "TRANSPORT", faction = "NEUTRAL", note = "走出阿塔乌特克地窟", cost = 1.0 },
+    { from = 2509, to = 2613, x = 0.472, y = 0.450, type = "TRANSPORT", faction = "NEUTRAL", note = "进入地下坟茔 (基西克斯破封)", cost = 1.0 },
+    { from = 2613, to = 2509, x = 0.500, y = 0.500, type = "TRANSPORT", faction = "NEUTRAL", note = "返回阿塔乌特克地窟", cost = 1.0 },
 
     -- 【暗月马戏团主城秘法师直达通道】
     { from = 85, to = 407, x = 0.48, y = 0.70, type = "TRANSPORT", faction = "HORDE", note = "暗月马戏团秘法师 (力量谷入口)", isDarkmoon = true, cost = 1.0 },
@@ -804,18 +875,31 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
             local incoming = revAdj[curr]
             if incoming then
                 for _, edge in ipairs(incoming) do
+                    local skipEdge = false
+                    local edgeCost = edge.cost or (EDGE_COSTS[edge.type] or 1.5)
+
                     -- 暗月马戏团周期守卫：未开放期间禁止经暗月岛中转；目的地非暗月岛时跳过；若是暗月岛则仅允许单向进入
                     local isDarkmoonEdge = edge.isDarkmoon or (edge.from == 407) or (edge.to == 407)
-                    local skipEdge = false
                     if isDarkmoonEdge and not isDarkmoonOpen then
                         if destMapID ~= 407 or edge.from == 407 then
                             skipEdge = true
                         end
                     end
 
+                    -- 前置任务守卫：未解锁的任务/成就门禁止作为中转枢纽通道
+                    if not skipEdge then
+                        local isUnlocked = self:CheckPortalQuestStatus(edge, playerFaction)
+                        if not isUnlocked then
+                            if edge.to ~= destMapID then
+                                skipEdge = true
+                            else
+                                edgeCost = edgeCost + 10.0
+                            end
+                        end
+                    end
+
                     if not skipEdge then
                         local u = edge.from
-                        local edgeCost = edge.cost or (EDGE_COSTS[edge.type] or 1.5)
                         local newCost = currCost + edgeCost
 
                         if not dist[u] or newCost < dist[u] then
@@ -870,25 +954,6 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                         HeapPush(contID, contFlyCost)
                     end
                 end
-
-                -- 2c. 当前所在区域同大陆直飞扩展
-                if currentMapID and (ZONE_TO_CONTINENT[currentMapID] == contID) and (currentMapID ~= curr) then
-                    local flyCost = currCost + (EDGE_COSTS.FLY or 2.0)
-                    if not dist[currentMapID] or flyCost < dist[currentMapID] then
-                        dist[currentMapID] = flyCost
-                        nextEdge[currentMapID] = {
-                            from = currentMapID,
-                            to = curr,
-                            x = 0.5,
-                            y = 0.5,
-                            type = "FLY",
-                            faction = "NEUTRAL",
-                            cost = EDGE_COSTS.FLY or 2.0,
-                            note = "飞行前往",
-                        }
-                        HeapPush(currentMapID, flyCost)
-                    end
-                end
             end
         end
     end
@@ -919,7 +984,11 @@ local function BuildFinalArriveStep(stepIndex, destination)
     local finalDesc
     local isMoltenCore = (destination.id == 741)
 
-    if destination.type == "zone" or destination.type == "continent" then
+    if destination.isHorrificVision then
+        local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
+        local dornName = GetMapDisplayName(destination.mapID)
+        finalDesc = string.format(L["STEP_ARRIVE_HORRIFIC_VISION"], dornName, entryCoord, destination.name)
+    elseif destination.type == "zone" or destination.type == "continent" then
         finalDesc = string.format(L["STEP_ARRIVE_ZONE"], destination.name)
     elseif destination.type == "delve" then
         local entryCoord = Pathfinder:FormatCoordLink(destination.mapID, destination.x, destination.y)
@@ -1222,7 +1291,10 @@ function Pathfinder:CalculateRoute(destination)
     -- =====================================================================
     if currentMapID == destMapID then
         local arriveDesc
-        if destination.type == "zone" or destination.type == "continent" then
+        if destination.isHorrificVision then
+            local coordLink = self:FormatCoordLink(destMapID, destination.x, destination.y)
+            arriveDesc = string.format(L["STEP_ALREADY_IN_MAP_VISION"], coordLink, destination.name)
+        elseif destination.type == "zone" or destination.type == "continent" then
             arriveDesc = string.format(L["STEP_ALREADY_IN_ZONE"], destination.name)
         elseif destination.type == "delve" then
             local coordLink = self:FormatCoordLink(destMapID, destination.x, destination.y)
@@ -1248,24 +1320,36 @@ function Pathfinder:CalculateRoute(destination)
                 phaseShiftInfo = phaseInfo,
             }
         }
+        local directAlt = {
+            name = L["ALT_DIRECT_RUN"],
+            viaDesc = string.format(L["ALT_DESC_ALREADY_IN_MAP"], destination.name),
+            distanceYards = self:GetDistanceInYards(destMapID, destination.x, destination.y),
+            distanceText = L["ALT_DIST_SAME_MAP"],
+            score = 0.5,
+            steps = directSteps,
+            totalSteps = 1,
+            phaseShiftInfo = phaseInfo,
+        }
+        local visionRotationInfo = nil
+        if destination.isHorrificVision and destination.visionType then
+            local isActive, activeCity, nextResetDate = GetHorrificVisionRotationStatus(destination.visionType)
+            visionRotationInfo = {
+                isActive = isActive,
+                activeCity = activeCity,
+                nextResetDate = nextResetDate,
+                tip = isActive and L["VISION_ACTIVE_DESC"] or string.format(L["VISION_INACTIVE_DESC_FMT"], nextResetDate),
+                tag = isActive and L["VISION_ACTIVE_TAG"] or string.format(L["VISION_INACTIVE_TAG_FMT"], nextResetDate),
+            }
+            directAlt.visionRotationInfo = visionRotationInfo
+        end
         return {
             destination = destination,
             steps = directSteps,
             totalSteps = 1,
-            alternatives = {
-                {
-                    name = L["ALT_DIRECT_RUN"],
-                    viaDesc = string.format(L["ALT_DESC_ALREADY_IN_MAP"], destination.name),
-                    distanceYards = self:GetDistanceInYards(destMapID, destination.x, destination.y),
-                    distanceText = L["ALT_DIST_SAME_MAP"],
-                    score = 0.5,
-                    steps = directSteps,
-                    totalSteps = 1,
-                    phaseShiftInfo = phaseInfo,
-                }
-            },
+            alternatives = { directAlt },
             selectedAltIndex = 1,
             phaseShiftInfo = phaseInfo,
+            visionRotationInfo = visionRotationInfo,
         }
     end
 
@@ -1348,11 +1432,105 @@ function Pathfinder:CalculateRoute(destination)
         ((playerFaction == "HORDE" and curContID == 875) or (playerFaction == "ALLIANCE" and curContID == 876))
 
     -- =====================================================================
-    -- 4. 同大陆直飞 或 跨大陆物理出发路线收集
+    -- 4. 物理出发路线收集 (含传送门/交通捷径及同大陆直飞)
     -- =====================================================================
     local validPhysical = {}
+    local physicalCandidates = {}
+    local outEdges = fwdAdj[currentMapID] or {}
+
+    -- 若当前地图无固定交通设施边，但有跨大陆/区域飞行后继，加入候选
+    if #outEdges == 0 and nextEdge[currentMapID] then
+        table.insert(outEdges, nextEdge[currentMapID])
+    end
+
+    for _, edge in ipairs(outEdges) do
+        if dist[edge.to] then
+            local branchSteps = BuildStepsFromStart(edge, destMapID, destination, nextEdge, playerFaction)
+            if branchSteps then
+                -- 大陆折返环路检测：离开当前大陆又绕回当前大陆，判定为无效绕路
+                local isContinentLoop = false
+                if curContID then
+                    local edgeToCont = ZONE_TO_CONTINENT[edge.to]
+                    if edgeToCont and edgeToCont ~= curContID then
+                        for _, s in ipairs(branchSteps) do
+                            if s.toMapID and ZONE_TO_CONTINENT[s.toMapID] == curContID then
+                                isContinentLoop = true
+                                break
+                            end
+                        end
+                    end
+                end
+
+                if not isContinentLoop then
+                    local distYards = self:GetDistanceInYards(currentMapID, edge.x, edge.y)
+                    local distText = FormatDistanceText(distYards)
+                    local distanceScore = distYards and (distYards / 500.0) or 1.5
+                    local totalScore = distanceScore + (edge.cost or 1.5) + dist[edge.to]
+
+                    local targetName = GetMapDisplayName(edge.to)
+                    local branchName
+                    if (edge.to == 407) and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
+                        branchName = string.format(L["ALT_VIA_DARKMOON_NPC_FMT"], GetMapDisplayName(edge.from))
+                    elseif edge.type == "PORTAL" then
+                        branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
+                    elseif edge.type == "SHIP" then
+                        branchName = string.format(L["ALT_VIA_SHIP_FMT"], targetName)
+                    elseif edge.type == "ZEPPELIN" then
+                        branchName = string.format(L["ALT_VIA_ZEPPELIN_FMT"], targetName)
+                    elseif edge.type == "FLY" then
+                        branchName = string.format(L["ALT_VIA_FLY_FMT"], targetName)
+                    else
+                        branchName = string.format(L["ALT_VIA_GENERIC_FMT"], targetName)
+                    end
+
+                    table.insert(physicalCandidates, {
+                        edge = edge,
+                        name = branchName,
+                        viaDesc = string.format(L["ALT_VIA_COORD_FMT"], edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or "")),
+                        distanceYards = distYards,
+                        distanceText = distText,
+                        score = totalScore,
+                        steps = branchSteps,
+                        totalSteps = #branchSteps,
+                    })
+                end
+            end
+        end
+    end
+
+    -- 物理候选方案按评分排序
+    table.sort(physicalCandidates, function(a, b)
+        return a.score < b.score
+    end)
+
+    if #physicalCandidates > 0 then
+        local best = physicalCandidates[1]
+        table.insert(validPhysical, best)
+
+        -- 寻找具有独立意义的第 2 物理备选方案
+        for i = 2, #physicalCandidates do
+            local cand = physicalCandidates[i]
+            local dx = math.abs(cand.edge.x - best.edge.x)
+            local dy = math.abs(cand.edge.y - best.edge.y)
+            local isDistinctLoc = (dx > 0.08 or dy > 0.08) and (cand.edge.to ~= best.edge.to)
+
+            local isSubzoneDetour = false
+            if cand.steps[2] and best.steps[1] and cand.steps[2].toMapID == best.steps[1].toMapID then
+                isSubzoneDetour = true
+            end
+
+            local isCompetitive = (cand.score <= best.score + 3.5) and (cand.score <= best.score * 1.6)
+
+            if isDistinctLoc and not isSubzoneDetour and isCompetitive then
+                table.insert(validPhysical, cand)
+                break
+            end
+        end
+    end
+
+    -- 同大陆时：无论是否有物理交通/传送门捷径，直接飞行均可作为有效方案（无捷径时为推荐方案；有捷径时捷径优先，直飞作为备选）
     if isSameContinent then
-        local destName = GetMapDisplayName(destMapID)
+        local destName = destination.name or GetMapDisplayName(destMapID)
         local flySteps = {
             {
                 stepIndex = 1,
@@ -1366,108 +1544,17 @@ function Pathfinder:CalculateRoute(destination)
             },
             BuildFinalArriveStep(2, destination),
         }
+        -- 若存在物理交通/传送门捷径，直接飞行评分略低于捷径（捷径优先推荐，直飞作为备选）；若无捷径，直接飞行作为首选推荐 (score 2.0)
+        local flyScore = (#validPhysical > 0) and (validPhysical[1].score + 1.2) or 2.0
         table.insert(validPhysical, {
             name = string.format(L["ALT_FLY_DIRECT_FMT"], destName),
             viaDesc = L["ALT_DESC_SAME_CONT_FLY"],
             distanceYards = nil,
             distanceText = L["ALT_DIST_SAME_CONT_FLY"],
-            score = 2.0,
+            score = flyScore,
             steps = flySteps,
             totalSteps = 2,
         })
-    else
-        local physicalCandidates = {}
-        local outEdges = fwdAdj[currentMapID] or {}
-
-        -- 若当前地图无固定交通设施边，但有跨大陆/区域飞行后继，加入候选
-        if #outEdges == 0 and nextEdge[currentMapID] then
-            table.insert(outEdges, nextEdge[currentMapID])
-        end
-
-        for _, edge in ipairs(outEdges) do
-            if dist[edge.to] then
-                local branchSteps = BuildStepsFromStart(edge, destMapID, destination, nextEdge, playerFaction)
-                if branchSteps then
-                    -- 大陆折返环路检测：离开当前大陆又绕回当前大陆，判定为无效绕路
-                    local isContinentLoop = false
-                    if curContID then
-                        local edgeToCont = ZONE_TO_CONTINENT[edge.to]
-                        if edgeToCont and edgeToCont ~= curContID then
-                            for _, s in ipairs(branchSteps) do
-                                if s.toMapID and ZONE_TO_CONTINENT[s.toMapID] == curContID then
-                                    isContinentLoop = true
-                                    break
-                                end
-                            end
-                        end
-                    end
-
-                    if not isContinentLoop then
-                        local distYards = self:GetDistanceInYards(currentMapID, edge.x, edge.y)
-                        local distText = FormatDistanceText(distYards)
-                        local distanceScore = distYards and (distYards / 500.0) or 1.5
-                        local totalScore = distanceScore + (edge.cost or 1.5) + dist[edge.to]
-
-                        local targetName = GetMapDisplayName(edge.to)
-                        local branchName
-                        if (edge.to == 407) and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
-                            branchName = string.format(L["ALT_VIA_DARKMOON_NPC_FMT"], GetMapDisplayName(edge.from))
-                        elseif edge.type == "PORTAL" then
-                            branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
-                        elseif edge.type == "SHIP" then
-                            branchName = string.format(L["ALT_VIA_SHIP_FMT"], targetName)
-                        elseif edge.type == "ZEPPELIN" then
-                            branchName = string.format(L["ALT_VIA_ZEPPELIN_FMT"], targetName)
-                        elseif edge.type == "FLY" then
-                            branchName = string.format(L["ALT_VIA_FLY_FMT"], targetName)
-                        else
-                            branchName = string.format(L["ALT_VIA_GENERIC_FMT"], targetName)
-                        end
-
-                        table.insert(physicalCandidates, {
-                            edge = edge,
-                            name = branchName,
-                            viaDesc = string.format(L["ALT_VIA_COORD_FMT"], edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or "")),
-                            distanceYards = distYards,
-                            distanceText = distText,
-                            score = totalScore,
-                            steps = branchSteps,
-                            totalSteps = #branchSteps,
-                        })
-                    end
-                end
-            end
-        end
-
-        -- 物理候选方案按评分排序
-        table.sort(physicalCandidates, function(a, b)
-            return a.score < b.score
-        end)
-
-        if #physicalCandidates > 0 then
-            local best = physicalCandidates[1]
-            table.insert(validPhysical, best)
-
-            -- 寻找具有独立意义的第 2 物理备选方案
-            for i = 2, #physicalCandidates do
-                local cand = physicalCandidates[i]
-                local dx = math.abs(cand.edge.x - best.edge.x)
-                local dy = math.abs(cand.edge.y - best.edge.y)
-                local isDistinctLoc = (dx > 0.08 or dy > 0.08) and (cand.edge.to ~= best.edge.to)
-
-                local isSubzoneDetour = false
-                if cand.steps[2] and best.steps[1] and cand.steps[2].toMapID == best.steps[1].toMapID then
-                    isSubzoneDetour = true
-                end
-
-                local isCompetitive = (cand.score <= best.score + 3.5) and (cand.score <= best.score * 1.6)
-
-                if isDistinctLoc and not isSubzoneDetour and isCompetitive then
-                    table.insert(validPhysical, cand)
-                    break
-                end
-            end
-        end
     end
 
     for _, p in ipairs(validPhysical) do
@@ -1664,6 +1751,25 @@ function Pathfinder:CalculateRoute(destination)
         end
     end
 
+    -- 重访惊魂幻象周轮换状态与提示
+    local visionRotationInfo = nil
+    if destination.isHorrificVision and destination.visionType then
+        local isActive, activeCity, nextResetDate = GetHorrificVisionRotationStatus(destination.visionType)
+        visionRotationInfo = {
+            isActive = isActive,
+            activeCity = activeCity,
+            nextResetDate = nextResetDate,
+            tip = isActive and L["VISION_ACTIVE_DESC"] or string.format(L["VISION_INACTIVE_DESC_FMT"], nextResetDate),
+            tag = isActive and L["VISION_ACTIVE_TAG"] or string.format(L["VISION_INACTIVE_TAG_FMT"], nextResetDate),
+        }
+        for _, alt in ipairs(alternatives) do
+            alt.visionRotationInfo = visionRotationInfo
+            if not isActive then
+                alt.score = (alt.score or 2.0) + 5.0
+            end
+        end
+    end
+
     -- 7. 对所有最终候选方案按总评分排序（玩具/物品方案默认视同已拥有参与排序，缺失时在界面与聊天中提示）
     table.sort(alternatives, function(a, b)
         if math.abs(a.score - b.score) > 0.01 then
@@ -1692,6 +1798,7 @@ function Pathfinder:CalculateRoute(destination)
         alternatives = alternatives,
         selectedAltIndex = 1,
         phaseShiftInfo = destPhaseInfo,
+        visionRotationInfo = visionRotationInfo,
     }
 end
 

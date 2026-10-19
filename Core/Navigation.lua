@@ -157,19 +157,13 @@ function Navigation:StartRoute(route)
     activeRoute = route
     currentStepIndex = 1
 
-    local dest = route.destination
-
-    -- 1. 自动为目的地打上世界地图点 (暴雪原生航标 + TomTom 兼容)
-    SetBlizzardWaypoint(dest.mapID, dest.x, dest.y)
-    SetTomTomWaypoint(dest.mapID, dest.x, dest.y, dest.name)
-
     -- 若当前默认方案使用了玩家尚未拥有的玩具/物品，主动提示
     NotifyMissingTeleportIfAny(activeRoute)
 
-    -- 2. 应用当前步骤状态与指引
+    -- 应用当前第一步骤航标状态与指引 (避免首步为地表洞口时提前将航标锚定在地下终点)
     self:ApplyCurrentStep()
 
-    -- 3. 唤起屏幕 HUD
+    -- 唤起屏幕 HUD
     if ns.NavigationHUD then
         ns.NavigationHUD:ShowRoute(activeRoute, currentStepIndex)
     end

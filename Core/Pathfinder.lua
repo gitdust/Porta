@@ -17,6 +17,8 @@ local TRANSPORT_TEXT = {
     TRAM          = L["TRANSPORT_TRAM"],
     CLASS_PORTAL  = L["TRANSPORT_CLASS_PORTAL"],
     TRANSPORT     = L["TRANSPORT_PASSAGE"],
+    CAVE_ENTER    = L["TRANSPORT_CAVE_ENTER"],
+    CAVE_EXIT     = L["TRANSPORT_CAVE_EXIT"],
     FLY           = L["TRANSPORT_FLY"],
 }
 
@@ -25,12 +27,20 @@ local EDGE_COSTS = {
     WAYGATE       = 1.0,
     MIRROR        = 1.0,
     CLASS_PORTAL  = 1.0,
+    CAVE_ENTER    = 1.0,
+    CAVE_EXIT     = 1.0,
     MOLE_MACHINE  = 1.5,
     TRANSPORT     = 1.2,
     FLY           = 2.0,
     TRAM          = 3.0,
     ZEPPELIN      = 8.0,
     SHIP          = 8.0,
+}
+
+-- 地下垂直层级地图定义 (与地表地图之间存在岩层遮挡，严禁无视入口的同大陆直线平原飞行)
+local UNDERGROUND_ZONES = {
+    [2133] = { surfaceContID = 1978, name = "查拉雷克洞窟" },
+    [2509] = { surfaceContID = 2537, name = "阿塔乌特克地窟" },
 }
 
 -- 核心位面传送门的前置任务解锁补充清单
@@ -589,8 +599,21 @@ local SUBZONE_CONNECTIONS = {
     { from = 110, to = 95, x = 0.50, y = 0.90, type = "TRANSPORT", faction = "HORDE", note = "离开银月城前往幽魂之地", cost = 1.0 },
     { from = 62, to = 97, x = 0.56, y = 0.92, type = "PORTAL", faction = "ALLIANCE", note = "黑海岸渡口传送门 (前往秘蓝岛)", cost = 1.0 },
     { from = 97, to = 103, x = 0.34, y = 0.21, type = "TRANSPORT", faction = "ALLIANCE", note = "埃索达正门", cost = 1.0 },
-    { from = 2112, to = 2133, x = 0.36, y = 0.51, type = "FLY", faction = "NEUTRAL", note = "查拉雷克洞窟穿孔入口", cost = 2.0 },
-    { from = 2133, to = 2112, x = 0.50, y = 0.50, type = "FLY", faction = "NEUTRAL", note = "飞出查拉雷克洞窟", cost = 2.0 },
+    -- 【巨龙群岛：查拉雷克洞窟 (2133) 三大地面入口与内部出口】
+    -- 1. 宏图通道 / 穿孔 (索德拉苏斯 2025 / 瓦德拉肯 2112 ⇋ 查拉雷克洞窟 2133 穿孔)
+    { from = 2025, to = 2133, x = 0.298, y = 0.630, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_THROUGHWAY_NAME"], cost = 1.0 },
+    { from = 2112, to = 2133, x = 0.360, y = 0.510, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_THROUGHWAY_NAME"], cost = 1.0 },
+    { from = 2133, to = 2025, x = 0.726, y = 0.494, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_THROUGHWAY_EXIT_NAME"], cost = 1.0 },
+    { from = 2133, to = 2112, x = 0.726, y = 0.494, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_THROUGHWAY_EXIT_NAME"], cost = 1.0 },
+
+    -- 2. 峈姆老路 (欧恩哈拉平原 2023 ⇋ 查拉雷克洞窟 2133 守卫之齿)
+    { from = 2023, to = 2133, x = 0.359, y = 0.594, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_LOAMM_NAME"], cost = 1.0 },
+    { from = 2133, to = 2023, x = 0.364, y = 0.588, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_LOAMM_EXIT_NAME"], cost = 1.0 },
+
+    -- 3. 哨兵裂口 (碧蓝林海 2024 ⇋ 查拉雷克洞窟 2133 守卫之齿)
+    { from = 2024, to = 2133, x = 0.180, y = 0.230, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_LOOKOUT_NAME"], cost = 1.0 },
+    { from = 2133, to = 2024, x = 0.391, y = 0.657, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_LOOKOUT_EXIT_NAME"], cost = 1.0 },
+
     { from = 2216, to = 2256, x = 0.56, y = 0.38, type = "TRANSPORT", faction = "NEUTRAL", note = "千丝之城 / 尼鲁巴尔王宫下层通道", cost = 1.0 },
     { from = 2256, to = 2216, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回艾基-卡赫特", cost = 1.0 },
     { from = 2339, to = 2371, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "生态圆顶通道", cost = 1.0 },
@@ -598,8 +621,20 @@ local SUBZONE_CONNECTIONS = {
     -- 【奎尔萨拉斯：银月城阿斯塔洛的圣殿 (2393) ⇋ 盘卷蛇岛 (2512) ⇋ 阿塔乌特克地窟 (2509) ⇋ 地下坟茔 (2613)】
     { from = 2393, to = 2512, x = 0.568, y = 0.674, type = "PORTAL", faction = "NEUTRAL", note = "通往盘卷蛇岛的传送门", cost = 1.0 },
     { from = 2512, to = 2393, x = 0.582, y = 0.485, type = "PORTAL", faction = "NEUTRAL", note = "通往阿斯塔洛的圣殿的传送门", cost = 1.0 },
-    { from = 2512, to = 2509, x = 0.468, y = 0.648, type = "TRANSPORT", faction = "NEUTRAL", note = "进入阿塔乌特克地窟", cost = 1.0 },
-    { from = 2509, to = 2512, x = 0.500, y = 0.500, type = "TRANSPORT", faction = "NEUTRAL", note = "走出阿塔乌特克地窟", cost = 1.0 },
+
+    -- 阿塔乌特克地窟三大地表大门与内部出口
+    -- 1. 蛇眼之门 (北门)
+    { from = 2512, to = 2509, x = 0.4372, y = 0.4419, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_ATAL_NORTH_NAME"], cost = 1.0 },
+    { from = 2509, to = 2512, x = 0.4383, y = 0.4424, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_ATAL_NORTH_EXIT_NAME"], cost = 1.0 },
+
+    -- 2. 西牙之门 (西门)
+    { from = 2512, to = 2509, x = 0.3129, y = 0.6418, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_ATAL_WEST_NAME"], cost = 1.0 },
+    { from = 2509, to = 2512, x = 0.3110, y = 0.6494, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_ATAL_WEST_EXIT_NAME"], cost = 1.0 },
+
+    -- 3. 东牙之门 (东门)
+    { from = 2512, to = 2509, x = 0.4567, y = 0.6490, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_ATAL_EAST_NAME"], cost = 1.0 },
+    { from = 2509, to = 2512, x = 0.4590, y = 0.6493, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_ATAL_EAST_EXIT_NAME"], cost = 1.0 },
+
     { from = 2509, to = 2613, x = 0.472, y = 0.450, type = "TRANSPORT", faction = "NEUTRAL", note = "进入地下坟茔 (基西克斯破封)", cost = 1.0 },
     { from = 2613, to = 2509, x = 0.500, y = 0.500, type = "TRANSPORT", faction = "NEUTRAL", note = "返回阿塔乌特克地窟", cost = 1.0 },
 
@@ -841,6 +876,17 @@ local function GetGraphData(playerFaction)
             isDarkmoon = isDarkmoon or (fromNode == 407 or toNode == 407),
         }
 
+        -- 避免上游 MapNotes 中粗糙提取的 2512->2509 边与手工校准的 CAVE_ENTER 边重复
+        if edgeType == "TRANSPORT" and fromNode == 2512 and toNode == 2509 then
+            if fwdAdj[2512] then
+                for _, existEdge in ipairs(fwdAdj[2512]) do
+                    if existEdge.to == 2509 and math.abs(existEdge.x - (x or 0.5)) < 0.05 and math.abs(existEdge.y - (y or 0.5)) < 0.05 then
+                        return
+                    end
+                end
+            end
+        end
+
         -- 同一地图上的同一交互点可能同时来自 MapNotes 与手工拓扑；保留第一条，并只补齐缺失的前置 ID
         local edgeKey = string.format(
             '%d|%d|%.6f|%.6f|%s|%s',
@@ -865,14 +911,15 @@ local function GetGraphData(playerFaction)
         table.insert(fwdAdj[fromNode], edge)
     end
 
+    -- 优先加载手工定义的高精通道 (SUBZONE_CONNECTIONS)
+    for _, s in ipairs(SUBZONE_CONNECTIONS) do
+        addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID, s.isDarkmoon)
+    end
+
     if ns.PortaData and ns.PortaData.transports then
         for _, t in ipairs(ns.PortaData.transports) do
             addEdge(t.from, t.to, t.x, t.y, t.type, t.faction, t.note, EDGE_COSTS[t.type], t.questID, t.achievementID)
         end
-    end
-
-    for _, s in ipairs(SUBZONE_CONNECTIONS) do
-        addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID, s.isDarkmoon)
     end
 
     cachedRevAdj = revAdj
@@ -942,13 +989,13 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                 end
             end
 
-            -- 2. 同大陆物理飞行连通扩展
+            -- 2. 同大陆物理飞行连通扩展 (仅限地表地图；地下区域必须通过洞窟出入口通道通行)
             local contID = ZONE_TO_CONTINENT[curr]
-            if contID then
+            if contID and not UNDERGROUND_ZONES[curr] then
                 -- 2a. 大陆主城枢纽直飞扩展
                 local hubs = CONTINENT_CAPITAL_HUBS[contID] and CONTINENT_CAPITAL_HUBS[contID][playerFaction] or {}
                 for _, h in ipairs(hubs) do
-                    if h ~= curr then
+                    if h ~= curr and not UNDERGROUND_ZONES[h] then
                         local flyCost = currCost + (EDGE_COSTS.FLY or 2.0)
                         if not dist[h] or flyCost < dist[h] then
                             dist[h] = flyCost
@@ -967,7 +1014,26 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                     end
                 end
 
-                -- 2b. 大洲根地图节点连通扩展（支持工程学虫洞发生器等按大洲 ID 落地的传送玩具）
+                -- 2b. 若当前玩家所在地图与当前探索节点同属该地表大洲，建立地表飞行连通
+                if currentMapID and currentMapID ~= curr and not UNDERGROUND_ZONES[currentMapID] and ZONE_TO_CONTINENT[currentMapID] == contID then
+                    local curFlyCost = currCost + (EDGE_COSTS.FLY or 2.0)
+                    if not dist[currentMapID] or curFlyCost < dist[currentMapID] then
+                        dist[currentMapID] = curFlyCost
+                        nextEdge[currentMapID] = {
+                            from = currentMapID,
+                            to = curr,
+                            x = 0.5,
+                            y = 0.5,
+                            type = "FLY",
+                            faction = "NEUTRAL",
+                            cost = EDGE_COSTS.FLY or 2.0,
+                            note = "飞行前往目标地表区域",
+                        }
+                        HeapPush(currentMapID, curFlyCost)
+                    end
+                end
+
+                -- 2c. 大洲根地图节点连通扩展（支持工程学虫洞发生器等按大洲 ID 落地的传送玩具）
                 if contID ~= curr then
                     local contFlyCost = currCost + (EDGE_COSTS.FLY or 2.0)
                     if not dist[contID] or contFlyCost < dist[contID] then
@@ -1085,6 +1151,10 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         firstDesc = string.format(L["STEP_START_SHIP"], fromName, startCoord, distTag, toName)
     elseif startEdge.type == "ZEPPELIN" then
         firstDesc = string.format(L["STEP_START_ZEPPELIN"], fromName, startCoord, distTag, toName)
+    elseif startEdge.type == "CAVE_ENTER" then
+        firstDesc = string.format(L["STEP_START_CAVE_ENTER"], fromName, startCoord, distTag, toName)
+    elseif startEdge.type == "CAVE_EXIT" then
+        firstDesc = string.format(L["STEP_START_CAVE_EXIT"], fromName, startCoord, distTag, toName)
     elseif startEdge.type == "TRANSPORT" then
         firstDesc = string.format(L["STEP_START_TRANSPORT"], fromName, startCoord, distTag, toName)
     else
@@ -1138,6 +1208,12 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
             desc = string.format(L["STEP_DARKMOON_NPC_HOP"], fName, edgeCoord, statusNotice)
         elseif edge.type == "FLY" then
             desc = string.format(L["STEP_HOP_FLY"], fName, tName, questTag)
+        elseif edge.type == "CAVE_ENTER" then
+            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
+            desc = string.format(L["STEP_HOP_CAVE_ENTER"], fName, edgeCoord, tName, questTag)
+        elseif edge.type == "CAVE_EXIT" then
+            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
+            desc = string.format(L["STEP_HOP_CAVE_EXIT"], fName, edgeCoord, tName, questTag)
         else
             local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
             desc = string.format(L["STEP_HOP_GENERIC"], fName, edgeCoord, v, tName, questTag)
@@ -1502,6 +1578,12 @@ function Pathfinder:CalculateRoute(destination)
                     local branchName
                     if (edge.to == 407) and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
                         branchName = string.format(L["ALT_VIA_DARKMOON_NPC_FMT"], GetMapDisplayName(edge.from))
+                    elseif edge.type == "CAVE_ENTER" then
+                        local edgeNote = (edge.note and edge.note ~= "") and edge.note or targetName
+                        branchName = string.format(L["ALT_VIA_CAVE_ENTER_FMT"], edgeNote, targetName)
+                    elseif edge.type == "CAVE_EXIT" then
+                        local edgeNote = (edge.note and edge.note ~= "") and edge.note or targetName
+                        branchName = string.format(L["ALT_VIA_CAVE_EXIT_FMT"], edgeNote, targetName)
                     elseif edge.type == "PORTAL" then
                         branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
                     elseif edge.type == "SHIP" then
@@ -1543,7 +1625,14 @@ function Pathfinder:CalculateRoute(destination)
             local cand = physicalCandidates[i]
             local dx = math.abs(cand.edge.x - best.edge.x)
             local dy = math.abs(cand.edge.y - best.edge.y)
-            local isDistinctLoc = (dx > 0.08 or dy > 0.08) and (cand.edge.to ~= best.edge.to)
+            local isCaveEdge = (cand.edge.type == "CAVE_ENTER" or cand.edge.type == "CAVE_EXIT" or best.edge.type == "CAVE_ENTER" or best.edge.type == "CAVE_EXIT")
+            local isDistinctLoc
+            if isCaveEdge then
+                -- 地下洞窟出入口：即使去往同一张地图，不同地理坐标的入口大门即代表独立路线
+                isDistinctLoc = (dx > 0.05 or dy > 0.05)
+            else
+                isDistinctLoc = (dx > 0.08 or dy > 0.08) and (cand.edge.to ~= best.edge.to)
+            end
 
             local isSubzoneDetour = false
             if cand.steps[2] and best.steps[1] and cand.steps[2].toMapID == best.steps[1].toMapID then
@@ -1560,7 +1649,12 @@ function Pathfinder:CalculateRoute(destination)
     end
 
     -- 同大陆时：无论是否有物理交通/传送门捷径，直接飞行均可作为有效方案（无捷径时为推荐方案；有捷径时捷径优先，直飞作为备选）
-    if isSameContinent then
+    -- 注意：若当前位置或目的地涉及地下垂直层级地图（UNDERGROUND_ZONES），地表与地下之间隔着实心岩层，禁止生成穿透岩层的同大陆平原直飞！
+    local isCurUnderground = (UNDERGROUND_ZONES[currentMapID] ~= nil)
+    local isDestUnderground = (UNDERGROUND_ZONES[destMapID] ~= nil)
+    local isCrossUnderground = (isCurUnderground ~= isDestUnderground)
+
+    if isSameContinent and not isCrossUnderground then
         local destName = destination.name or GetMapDisplayName(destMapID)
         local flySteps = {
             {

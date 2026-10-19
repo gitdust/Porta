@@ -126,7 +126,7 @@ function Navigation:FocusCoordinate(mapID, x, y, label)
     end
 
     SetBlizzardWaypoint(mapID, normX, normY)
-    SetTomTomWaypoint(mapID, normX, normY, label or string.format("%s (%.1f, %.1f)", mapName, normX * 100, normY * 100))
+    SetTomTomWaypoint(mapID, normX, normY, label or string.format("%s (%.2f, %.2f)", mapName, normX * 100, normY * 100))
 
     ns.Print(string.format(L["MSG_FOCUS_COORD_FMT"], mapName, normX * 100, normY * 100))
 end

@@ -18,6 +18,18 @@ local actionSlotBtn = nil
 local secureActionBtn = nil
 local dragHeader = nil
 
+-- 与暴雪动作条保持一致：UseKeyDown 开启时按下施放，关闭时抬起施放。
+-- 不能同时注册 Down/Up，否则 SecureActionButton 会在同一次点击里触发两次。
+local function UpdateSecureActionClickRegistration()
+    if not secureActionBtn then return end
+    if InCombatLockdown and InCombatLockdown() then return end
+
+    local useKeyDown = (GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")) or false
+    pcall(function()
+        secureActionBtn:RegisterForClicks(useKeyDown and "AnyDown" or "AnyUp")
+    end)
+end
+
 local ACTION_LABELS = {
     PORTAL       = L["HUD_ACTION_PORTAL"],
     ZEPPELIN     = L["HUD_ACTION_ZEPPELIN"],
@@ -409,7 +421,13 @@ local function InitHUD()
     -- 独立安全动作点击层 (仅脱战时激活，进战时由系统驱动隐藏并直接穿透至底层提示)
     secureActionBtn = CreateFrame("Button", "PortaStepActionSecureBtn", UIParent, "SecureActionButtonTemplate")
     secureActionBtn:SetFrameStrata("HIGH")
-    secureActionBtn:RegisterForClicks("AnyUp", "AnyDown")
+    UpdateSecureActionClickRegistration()
+    secureActionBtn:RegisterEvent("CVAR_UPDATE")
+    secureActionBtn:SetScript("OnEvent", function(_, event)
+        if event == "CVAR_UPDATE" then
+            UpdateSecureActionClickRegistration()
+        end
+    end)
     secureActionBtn:SetScript("OnEnter", function()
         if actionSlotBtn and actionSlotBtn.parsedLink then
             ShowPortaLinkTooltip(actionSlotBtn, actionSlotBtn.parsedLink)
@@ -418,12 +436,7 @@ local function InitHUD()
     secureActionBtn:SetScript("OnLeave", function()
         GameTooltip:Hide()
     end)
-    secureActionBtn:SetScript("PostClick", function(self, button, down)
-        local useKeyDown = (GetCVarBool and GetCVarBool("ActionButtonUseKeyDown")) or false
-        if (useKeyDown and not down) or (not useKeyDown and down) then
-            return
-        end
-
+    secureActionBtn:SetScript("PostClick", function(self, button)
         local parsed = actionSlotBtn.parsedLink
         if not parsed then return end
 
@@ -745,7 +758,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
             local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsedLink.kind == "SPELL" and "SPELL" or "ITEM", parsedLink.id)
             if not isReady and cdSec > 0 then
-                actionSlotBtn.cooldown:SetCooldown(GetTime() - 1, cdSec)
+                actionSlotBtn.cooldown:SetCooldown(GetTime(), cdSec)
             else
                 actionSlotBtn.cooldown:Clear()
             end
@@ -753,6 +766,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
 
         -- 在脱战状态下安全设置动作插槽属性
         if not isCombat and secureActionBtn then
+            UpdateSecureActionClickRegistration()
             secureActionBtn:ClearAllPoints()
             secureActionBtn:SetAllPoints(actionSlotBtn)
             RegisterStateDriver(secureActionBtn, "visibility", "[combat] hide; show")
@@ -841,7 +855,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
 
     local phaseInfo = currentStep.phaseShiftInfo or (currentStep.isFinal and route.phaseShiftInfo)
     if phaseInfo then
-        local zidormiCoord = (ns.Pathfinder and ns.Pathfinder.FormatCoordLink) and ns.Pathfinder:FormatCoordLink(phaseInfo.npcMapID, phaseInfo.x, phaseInfo.y) or string.format("(%.1f, %.1f)", phaseInfo.x * 100, phaseInfo.y * 100)
+        local zidormiCoord = (ns.Pathfinder and ns.Pathfinder.FormatCoordLink) and ns.Pathfinder:FormatCoordLink(phaseInfo.npcMapID, phaseInfo.x, phaseInfo.y) or string.format("(%.2f, %.2f)", phaseInfo.x * 100, phaseInfo.y * 100)
         local phaseWarnStr = string.format(
             L["HUD_WARN_PHASE_SHIFT_FMT"],
             phaseInfo.zoneName or "",

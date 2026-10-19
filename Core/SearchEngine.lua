@@ -340,6 +340,8 @@ function SearchEngine:Initialize()
                 -- 通过暴雪原生 API 获取当前客户端语言的名称
                 if dest.id and dest.id > 0 then
                     if dest.type == "delve" then
+                        -- PortaData 中静态 delve 的 id 是地下堡内部 mapID；
+                        -- 下方 1b 分支的 areaPoiID 是另一套 ID，只用于动态 AreaPOI 查询。
                         if C_Map and C_Map.GetMapInfo then
                             local mInfo = C_Map.GetMapInfo(dest.id)
                             if mInfo and mInfo.name and mInfo.name ~= "" then

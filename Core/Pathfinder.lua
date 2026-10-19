@@ -86,6 +86,14 @@ local PORTAL_QUEST_GATES = {
     },
 }
 
+-- 补充任务门只应用于实际“进入式”交通设施；船只/飞艇/通道不能因为目标地图的镜像门任务被误判为锁定
+local PORTAL_GATE_EDGE_TYPES = {
+    PORTAL = true,
+    WAYGATE = true,
+    MIRROR = true,
+    CLASS_PORTAL = true,
+}
+
 -- 检测特定目标传送门/交通节点是否已被当前角色解锁
 -- 数据获取三层机制：
 --   1. HandyNotes_MapNotes 节点原生携带的 questID / achievementID（由 _parser 自动提取至 MapNotesData.lua）
@@ -130,6 +138,11 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
     end
 
     -- 3. 检测跨资料片镜像位面传送门补充表 (PORTAL_QUEST_GATES)
+    -- 该补充表描述的是“通过传送设施进入目标地图”的前置；物理交通（船/艇/通道）不适用
+    if edge and not PORTAL_GATE_EDGE_TYPES[edge.type] then
+        return true, nil
+    end
+
     local gateConfig = PORTAL_QUEST_GATES[toMapID]
     if not gateConfig then return true, nil end
 
@@ -409,7 +422,7 @@ function Pathfinder:FormatCoordLink(mapID, x, y)
     if not x or not y then return "" end
     local pctX = (x <= 1.0) and (x * 100) or x
     local pctY = (y <= 1.0) and (y * 100) or y
-    return string.format("|Hporta:coord:%d:%.1f:%.1f|h|cffffd100(%.1f, %.1f)|r|h", mapID or 0, pctX, pctY, pctX, pctY)
+    return string.format("|Hporta:coord:%d:%.2f:%.2f|h|cffffd100(%.2f, %.2f)|r|h", mapID or 0, pctX, pctY, pctX, pctY)
 end
 
 -- =========================================================================
@@ -789,6 +802,7 @@ local function GetGraphData(playerFaction)
 
     local revAdj = {}
     local fwdAdj = {}
+    local edgeSet = {}
 
     local _, _, playerRaceID = UnitRace("player")
     local isDarkIron = (playerRaceID == 34)
@@ -826,6 +840,23 @@ local function GetGraphData(playerFaction)
             achievementID = achievementID,
             isDarkmoon = isDarkmoon or (fromNode == 407 or toNode == 407),
         }
+
+        -- 同一地图上的同一交互点可能同时来自 MapNotes 与手工拓扑；保留第一条，并只补齐缺失的前置 ID
+        local edgeKey = string.format(
+            '%d|%d|%.6f|%.6f|%s|%s',
+            edge.from, edge.to, edge.x, edge.y, edge.type, edge.faction
+        )
+        local existing = edgeSet[edgeKey]
+        if existing then
+            if not existing.questID and edge.questID then
+                existing.questID = edge.questID
+            end
+            if not existing.achievementID and edge.achievementID then
+                existing.achievementID = edge.achievementID
+            end
+            return
+        end
+        edgeSet[edgeKey] = edge
 
         if not revAdj[toNode] then revAdj[toNode] = {} end
         table.insert(revAdj[toNode], edge)

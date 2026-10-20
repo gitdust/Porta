@@ -23,6 +23,7 @@ ns.L = L
     L["CMD_MINIMAP_TOGGLE_OFF"] = "Minimap button hidden (type /porta minimap to show)."
     L["CMD_HELP_HEADER"] = "Available commands:"
     L["CMD_HELP_SEARCH"] = "  /porta [keyword] - Open search dialog (or leave empty to open)"
+    L["CMD_HELP_STOP"] = "  /porta stop - Stop navigation and clear all waypoints"
     L["CMD_HELP_MINIMAP"] = "  /porta minimap - Show or hide minimap icon"
 
     -- 通用括号与名称回退格式
@@ -55,6 +56,7 @@ ns.L = L
     L["SEARCH_TITLE"] = "|cff00ccffPorta|r |cffffffffNavigation Search|r"
     L["SEARCH_SUBTITLE"] = "Enter a dungeon, raid, delve, or zone name (fuzzy match supported)"
     L["SEARCH_FOOTER"] = "[Up / Down] Select    [Enter] Start Route    [Esc] Close"
+    L["SEARCH_NO_RESULTS"] = "Please enter a valid destination name"
 
     -- 交通动作词 (Pathfinder & NavigationHUD)
     L["TRANSPORT_PORTAL"] = "take the portal"

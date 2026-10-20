@@ -24,11 +24,35 @@ local function SetBlizzardWaypoint(mapID, x, y)
     end)
 end
 
--- 清除暴雪原生航标
+-- 清除暴雪原生航标与超追踪
 local function ClearBlizzardWaypoint()
-    if C_Map and C_Map.ClearUserWaypoint then
-        pcall(function()
+    pcall(function()
+        if C_SuperTrack then
+            if C_SuperTrack.SetSuperTrackedUserWaypoint then
+                C_SuperTrack.SetSuperTrackedUserWaypoint(false)
+            end
+            if C_SuperTrack.ClearAllSuperTracked then
+                C_SuperTrack.ClearAllSuperTracked()
+            end
+        end
+        if C_Map and C_Map.ClearUserWaypoint then
             C_Map.ClearUserWaypoint()
+        end
+    end)
+
+    -- 延后微帧兜底二次清除，规避跨地图或跨位面瞬间事件竞争导致的航标与光标残留
+    if C_Timer and C_Timer.After then
+        C_Timer.After(0.05, function()
+            pcall(function()
+                if not activeRoute then
+                    if C_SuperTrack and C_SuperTrack.ClearAllSuperTracked then
+                        C_SuperTrack.ClearAllSuperTracked()
+                    end
+                    if C_Map and C_Map.ClearUserWaypoint then
+                        C_Map.ClearUserWaypoint()
+                    end
+                end
+            end)
         end)
     end
 end
@@ -64,12 +88,14 @@ end
 
 -- 清除 TomTom 航标
 local function ClearTomTomWaypoint()
-    if _G.TomTom and TomTom.RemoveWaypoint and tomtomWaypoint then
+    if _G.TomTom and tomtomWaypoint then
         pcall(function()
-            TomTom:RemoveWaypoint(tomtomWaypoint)
-            tomtomWaypoint = nil
+            if TomTom.RemoveWaypoint then
+                TomTom:RemoveWaypoint(tomtomWaypoint)
+            end
         end)
     end
+    tomtomWaypoint = nil
 end
 
 -- 打开世界地图并定位到指定地图 (安全规避 Taint 与战斗阻断)
@@ -227,12 +253,16 @@ function Navigation:NextStep()
     end
 end
 
--- 路线结束
-function Navigation:FinishRoute()
-    if not activeRoute then return end
-    local destName = (activeRoute.destination and activeRoute.destination.name) or L["HUD_DEST_FALLBACK"]
+-- 公共方法：彻底清空所有暴雪航标、超追踪与 TomTom 标记点
+function Navigation:ClearWaypoints()
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
+end
+
+-- 路线结束 (已抵达终点)
+function Navigation:FinishRoute()
+    local destName = (activeRoute and activeRoute.destination and activeRoute.destination.name) or L["HUD_DEST_FALLBACK"]
+    self:ClearWaypoints()
     activeRoute = nil
     currentStepIndex = 1
 
@@ -243,16 +273,16 @@ function Navigation:FinishRoute()
     end
 end
 
--- 取消导航
+-- 取消/退出导航路线并清空标记点
 function Navigation:CancelRoute()
-    ClearBlizzardWaypoint()
-    ClearTomTomWaypoint()
+    self:ClearWaypoints()
     activeRoute = nil
     currentStepIndex = 1
 
     if ns.NavigationHUD then
         ns.NavigationHUD:Hide()
     end
+    ns.Print(L["MSG_ROUTE_CANCELLED"])
 end
 
 -- 获取当前活动路线
@@ -260,12 +290,21 @@ function Navigation:GetActiveRoute()
     return activeRoute, currentStepIndex
 end
 
--- 检查当前是否有活跃导航路线
+-- 检查当前是否有活跃导航路线 (含 HUD 显示中或存在地图航标)
 function Navigation:IsActive()
-    return activeRoute ~= nil
+    if activeRoute ~= nil then
+        return true
+    end
+    if ns.NavigationHUD and ns.NavigationHUD.IsShown and ns.NavigationHUD:IsShown() then
+        return true
+    end
+    if C_Map and C_Map.HasUserWaypoint and C_Map.HasUserWaypoint() then
+        return true
+    end
+    return false
 end
 
--- 停止/取消导航路线 (兼容 MinimapButton 等外部模块调用)
+-- 停止/退出导航路线 (兼容 MinimapButton、聊天命令等外部模块调用)
 function Navigation:StopRoute()
     self:CancelRoute()
 end

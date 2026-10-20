@@ -6,6 +6,7 @@ ns.SearchDialog = SearchDialog
 
 local frame = nil
 local editBox = nil
+local noResultsText = nil
 local resultButtons = {}
 local currentResults = {}
 local selectedIndex = 1
@@ -15,6 +16,11 @@ local debounceElapsed = 0
 local hasPendingSearch = false
 local MAX_VISIBLE_RESULTS = 7
 local ROW_HEIGHT = 42
+
+local function TrimText(s)
+    if not s then return "" end
+    return (string.gsub(s, "^%s*(.-)%s*$", "%1"))
+end
 
 -- 创建结果项按钮
 local function CreateResultButton(parent, index)
@@ -59,11 +65,16 @@ end
 
 -- 刷新结果列表渲染
 local function RenderResults()
+    local text = editBox and editBox:GetText() or ""
+    local queryTrimmed = TrimText(text)
+    local isSearching = (queryTrimmed ~= "")
+    local hasResults = (#currentResults > 0)
+
     for i = 1, MAX_VISIBLE_RESULTS do
         local btn = resultButtons[i]
         local item = currentResults[i]
 
-        if item then
+        if item and isSearching then
             btn:Show()
             btn.nameText:SetText(item.name)
             btn.metaText:SetText(string.format("%s[%s]|r  |cff888888%s|r", item.color or "|cffffffff", item.tag or L["TAG_PLACE"], item.zoneName or ""))
@@ -77,6 +88,14 @@ local function RenderResults()
             btn:Hide()
         end
     end
+
+    if noResultsText then
+        if isSearching and not hasResults then
+            noResultsText:Show()
+        else
+            noResultsText:Hide()
+        end
+    end
 end
 
 -- 同步输入框文本并刷新搜索结果（兼容中文输入法内联上屏）
@@ -87,6 +106,15 @@ local function UpdateSearchResults(force)
         return
     end
     lastQueryText = text
+
+    local queryTrimmed = TrimText(text)
+    if queryTrimmed == "" then
+        wipe(currentResults)
+        selectedIndex = 1
+        RenderResults()
+        return
+    end
+
     currentResults = ns.SearchEngine:Search(text, MAX_VISIBLE_RESULTS)
     selectedIndex = 1
     RenderResults()
@@ -208,6 +236,14 @@ local function InitFrame()
         end
     end)
 
+    -- 无结果提示文案
+    noResultsText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
+    noResultsText:SetPoint("CENTER", frame, "CENTER", 0, -25)
+    noResultsText:SetTextColor(0.65, 0.65, 0.65)
+    noResultsText:SetJustifyH("CENTER")
+    noResultsText:SetText(L["SEARCH_NO_RESULTS"])
+    noResultsText:Hide()
+
     -- 底部提示栏
     local footer = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     footer:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
@@ -236,6 +272,9 @@ local function InitFrame()
         pollElapsed = 0
         lastQueryText = nil
         wipe(currentResults)
+        if noResultsText then
+            noResultsText:Hide()
+        end
     end)
 end
 

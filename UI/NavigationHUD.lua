@@ -1059,6 +1059,11 @@ function NavigationHUD:ShowArrived(destName)
     hudFrame:SetHeight(math.max(130, totalH))
 end
 
+-- 查询 HUD 是否当前正在显示
+function NavigationHUD:IsShown()
+    return hudFrame and hudFrame:IsShown()
+end
+
 -- 隐藏 HUD (仅在玩家主动关闭或取消导航时调用)
 function NavigationHUD:Hide()
     if hudFrame then
@@ -1069,5 +1074,8 @@ function NavigationHUD:Hide()
             UnregisterStateDriver(secureActionBtn, "visibility")
             secureActionBtn:Hide()
         end)
+    end
+    if ns.Navigation and ns.Navigation.ClearWaypoints then
+        ns.Navigation:ClearWaypoints()
     end
 end

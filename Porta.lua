@@ -15,15 +15,24 @@ SlashCmdList["PORTA"] = function(msg)
         return
     end
 
-    -- 2. 帮助说明: /porta help
+    -- 2. 停止/退出导航: /porta stop / cancel / clear
+    if lower == "stop" or lower == "cancel" or lower == "clear" or lower == "quit" or lower == "exit" or lower == "off" then
+        if ns.Navigation then
+            ns.Navigation:StopRoute()
+        end
+        return
+    end
+
+    -- 3. 帮助说明: /porta help
     if lower == "help" or lower == "?" then
         ns.Print(L["CMD_HELP_HEADER"])
         print("|cffffcc00" .. L["CMD_HELP_SEARCH"] .. "|r")
+        print("|cffffcc00" .. L["CMD_HELP_STOP"] .. "|r")
         print("|cffffcc00" .. L["CMD_HELP_MINIMAP"] .. "|r")
         return
     end
 
-    -- 3. 正常搜索呼出 (若带有参数则直接输入关键词)
+    -- 4. 正常搜索呼出 (若带有参数则直接输入关键词)
     if raw ~= "" then
         ns.SearchDialog:Toggle(raw)
     else

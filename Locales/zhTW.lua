@@ -22,6 +22,7 @@ if not L then return end
     L["CMD_MINIMAP_TOGGLE_OFF"] = "小地圖圖示已隱藏 (輸入 /porta minimap 重新顯示)。"
     L["CMD_HELP_HEADER"] = "常用命令清單："
     L["CMD_HELP_SEARCH"] = "  /porta [關鍵詞] - 呼出導航搜尋框 (留空直接打開)"
+    L["CMD_HELP_STOP"] = "  /porta stop - 停止當前導航並清空所有標記點"
     L["CMD_HELP_MINIMAP"] = "  /porta minimap - 顯示/隱藏小地圖圖示"
 
     L["BRACKET_FMT"] = "【%s】"
@@ -51,6 +52,7 @@ if not L then return end
     L["SEARCH_TITLE"] = "|cff00ccffPorta|r |cffffffff導航檢索|r"
     L["SEARCH_SUBTITLE"] = "輸入副本或區域地名（支援模糊比對）"
     L["SEARCH_FOOTER"] = "[↑ / ↓] 切換項    [Enter] 開始導航    [Esc] 關閉"
+    L["SEARCH_NO_RESULTS"] = "請輸入正確的目的地名稱"
 
     L["TRANSPORT_PORTAL"] = "穿過傳送門"
     L["TRANSPORT_ZEPPELIN"] = "搭乘飛艇"

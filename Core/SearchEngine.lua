@@ -779,12 +779,7 @@ function SearchEngine:Search(query, limit)
 
     local queryTrimmed = TrimText(query)
     if queryTrimmed == "" then
-        -- 默认展示前 limit 个推荐目的地
-        local defaultList = {}
-        for i = 1, math.min(#searchIndex, limit) do
-            table.insert(defaultList, searchIndex[i])
-        end
-        return defaultList
+        return {}
     end
 
     local queryLower = string.lower(queryTrimmed)

@@ -19,6 +19,8 @@ local TRANSPORT_TEXT = {
     TRANSPORT     = L["TRANSPORT_PASSAGE"],
     CAVE_ENTER    = L["TRANSPORT_CAVE_ENTER"],
     CAVE_EXIT     = L["TRANSPORT_CAVE_EXIT"],
+    ELEVATOR_DOWN = L["TRANSPORT_ELEVATOR_DOWN"],
+    ELEVATOR_UP   = L["TRANSPORT_ELEVATOR_UP"],
     FLY           = L["TRANSPORT_FLY"],
 }
 
@@ -29,6 +31,8 @@ local EDGE_COSTS = {
     CLASS_PORTAL  = 1.0,
     CAVE_ENTER    = 1.0,
     CAVE_EXIT     = 1.0,
+    ELEVATOR_DOWN = 1.0,
+    ELEVATOR_UP   = 1.0,
     MOLE_MACHINE  = 1.5,
     TRANSPORT     = 1.2,
     FLY           = 2.0,
@@ -41,6 +45,13 @@ local EDGE_COSTS = {
 local UNDERGROUND_ZONES = {
     [2133] = { surfaceContID = 1978, name = "查拉雷克洞窟" },
     [2509] = { surfaceContID = 2537, name = "阿塔乌特克地窟" },
+    -- 卡兹阿加地底洞窟群 (与多恩岛地表被岩层隔开，需经奔涌要道/升降机出入)
+    [2214] = { surfaceContID = 2274, name = "喧鸣深渊" },
+    [2215] = { surfaceContID = 2274, name = "陨圣峪" },
+    [2255] = { surfaceContID = 2274, name = "艾基-卡赫特" },
+    [2256] = { surfaceContID = 2274, name = "艾基-卡赫特下层" },
+    [2213] = { surfaceContID = 2274, name = "千丝之城" },
+    [2216] = { surfaceContID = 2274, name = "千丝之城下层" },
 }
 
 -- 核心位面传送门的前置任务解锁补充清单
@@ -618,6 +629,30 @@ local SUBZONE_CONNECTIONS = {
     { from = 2256, to = 2216, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回艾基-卡赫特", cost = 1.0 },
     { from = 2339, to = 2371, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "生态圆顶通道", cost = 1.0 },
     { from = 2339, to = 2437, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "纳洛拉克之穴通道", cost = 1.0 },
+
+    -- 【卡兹阿加：多恩岛 (2248) / 多恩诺嘉尔 (2339) ⇋ 喧鸣深渊 (2214) 地表与地下出入升降梯】
+    -- 1. 奔涌要道 (多恩诺嘉尔 2339 / 多恩岛 2248 ⇋ 喧鸣深渊 2214 喧鸣大升降梯)
+    { from = 2339, to = 2214, x = 0.3587, y = 0.5875, type = "ELEVATOR_DOWN", faction = "NEUTRAL", note = L["ELEVATOR_COREWAY_NAME"], cost = 1.0 },
+    { from = 2248, to = 2214, x = 0.4615, y = 0.4704, type = "ELEVATOR_DOWN", faction = "NEUTRAL", note = L["ELEVATOR_COREWAY_NAME"], cost = 1.0 },
+    { from = 2214, to = 2339, x = 0.3953, y = 0.2837, type = "ELEVATOR_UP",   faction = "NEUTRAL", note = L["ELEVATOR_COREWAY_EXIT_DORNOGAL_NAME"], cost = 1.0 },
+    { from = 2214, to = 2248, x = 0.3953, y = 0.2837, type = "ELEVATOR_UP",   faction = "NEUTRAL", note = L["ELEVATOR_COREWAY_EXIT_DORN_NAME"], cost = 1.0 },
+
+    -- 2. 喧鸣深渊升降梯 (西南通路：多恩岛 2248 地匍矿洞旁 ⇋ 喧鸣深渊 2214 喧鸣盆地)
+    { from = 2248, to = 2214, x = 0.3742, y = 0.7287, type = "ELEVATOR_DOWN", faction = "NEUTRAL", note = L["ELEVATOR_DEEPS_PASSAGE_NAME"], questID = 84220, cost = 1.0 },
+    { from = 2214, to = 2248, x = 0.6154, y = 0.7692, type = "ELEVATOR_UP",   faction = "NEUTRAL", note = L["ELEVATOR_DEEPS_PASSAGE_EXIT_NAME"], questID = 84220, cost = 1.0 },
+
+    -- 3. 埃基尔升降机 (东部升降梯：多恩岛 2248 烬酿酒庄旁 ⇋ 喧鸣深渊 2214 铁锈与救赎)
+    { from = 2248, to = 2214, x = 0.6733, y = 0.3102, type = "ELEVATOR_DOWN", faction = "NEUTRAL", note = L["ELEVATOR_EIRICH_LIFT_NAME"], questID = 82195, cost = 1.0 },
+    { from = 2214, to = 2248, x = 0.4919, y = 0.4459, type = "ELEVATOR_UP",   faction = "NEUTRAL", note = L["ELEVATOR_EIRICH_LIFT_EXIT_NAME"], questID = 82195, cost = 1.0 },
+
+    -- 【卡兹阿加地下地窟互通物理通道】
+    -- 喧鸣深渊 (2214) ⇋ 陨圣峪 (2215)
+    { from = 2214, to = 2215, x = 0.3758, y = 0.2279, type = "TRANSPORT", faction = "NEUTRAL", note = L["CAVE_RINGING_TO_HALLOWFALL"], cost = 1.0 },
+    { from = 2215, to = 2214, x = 0.7674, y = 0.4140, type = "TRANSPORT", faction = "NEUTRAL", note = L["CAVE_HALLOWFALL_TO_RINGING"], cost = 1.0 },
+
+    -- 陨圣峪 (2215) ⇋ 艾基-卡赫特 (2255)
+    { from = 2215, to = 2255, x = 0.7361, y = 0.6016, type = "TRANSPORT", faction = "NEUTRAL", note = L["CAVE_HALLOWFALL_TO_AZJ"], cost = 1.0 },
+    { from = 2255, to = 2215, x = 0.6489, y = 0.1374, type = "TRANSPORT", faction = "NEUTRAL", note = L["CAVE_AZJ_TO_HALLOWFALL"], cost = 1.0 },
     -- 【奎尔萨拉斯：银月城阿斯塔洛的圣殿 (2393) ⇋ 盘卷蛇岛 (2512) ⇋ 阿塔乌特克地窟 (2509) ⇋ 地下坟茔 (2613)】
     { from = 2393, to = 2512, x = 0.568, y = 0.674, type = "PORTAL", faction = "NEUTRAL", note = "通往盘卷蛇岛的传送门", cost = 1.0 },
     { from = 2512, to = 2393, x = 0.582, y = 0.485, type = "PORTAL", faction = "NEUTRAL", note = "通往阿斯塔洛的圣殿的传送门", cost = 1.0 },
@@ -876,11 +911,17 @@ local function GetGraphData(playerFaction)
             isDarkmoon = isDarkmoon or (fromNode == 407 or toNode == 407),
         }
 
-        -- 避免上游 MapNotes 中粗糙提取的 2512->2509 边与手工校准的 CAVE_ENTER 边重复
-        if edgeType == "TRANSPORT" and fromNode == 2512 and toNode == 2509 then
-            if fwdAdj[2512] then
-                for _, existEdge in ipairs(fwdAdj[2512]) do
-                    if existEdge.to == 2509 and math.abs(existEdge.x - (x or 0.5)) < 0.05 and math.abs(existEdge.y - (y or 0.5)) < 0.05 then
+        -- 避免上游 MapNotes 中粗糙提取的泛型 TRANSPORT 边与手工校准的洞穴/升降机边重复
+        if edgeType == "TRANSPORT" and fwdAdj[fromNode] then
+            for _, existEdge in ipairs(fwdAdj[fromNode]) do
+                if existEdge.to == toNode and (existEdge.type == "CAVE_ENTER" or existEdge.type == "CAVE_EXIT" or existEdge.type == "ELEVATOR_DOWN" or existEdge.type == "ELEVATOR_UP") then
+                    if math.abs(existEdge.x - (x or 0.5)) < 0.05 and math.abs(existEdge.y - (y or 0.5)) < 0.05 then
+                        if not existEdge.questID and questID then
+                            existEdge.questID = questID
+                        end
+                        if not existEdge.achievementID and achievementID then
+                            existEdge.achievementID = achievementID
+                        end
                         return
                     end
                 end
@@ -1155,6 +1196,12 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         firstDesc = string.format(L["STEP_START_CAVE_ENTER"], fromName, startCoord, distTag, toName)
     elseif startEdge.type == "CAVE_EXIT" then
         firstDesc = string.format(L["STEP_START_CAVE_EXIT"], fromName, startCoord, distTag, toName)
+    elseif startEdge.type == "ELEVATOR_DOWN" then
+        local elevatorName = (startEdge.note and startEdge.note ~= "") and startEdge.note or L["HUD_ACTION_ELEVATOR_DOWN"]
+        firstDesc = string.format(L["STEP_START_ELEVATOR_DOWN"], fromName, startCoord, distTag, elevatorName, toName)
+    elseif startEdge.type == "ELEVATOR_UP" then
+        local elevatorName = (startEdge.note and startEdge.note ~= "") and startEdge.note or L["HUD_ACTION_ELEVATOR_UP"]
+        firstDesc = string.format(L["STEP_START_ELEVATOR_UP"], fromName, startCoord, distTag, elevatorName, toName)
     elseif startEdge.type == "TRANSPORT" then
         firstDesc = string.format(L["STEP_START_TRANSPORT"], fromName, startCoord, distTag, toName)
     else
@@ -1214,6 +1261,14 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         elseif edge.type == "CAVE_EXIT" then
             local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
             desc = string.format(L["STEP_HOP_CAVE_EXIT"], fName, edgeCoord, tName, questTag)
+        elseif edge.type == "ELEVATOR_DOWN" then
+            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
+            local elevatorName = (edge.note and edge.note ~= "") and edge.note or L["HUD_ACTION_ELEVATOR_DOWN"]
+            desc = string.format(L["STEP_HOP_ELEVATOR_DOWN"], fName, edgeCoord, elevatorName, tName, questTag)
+        elseif edge.type == "ELEVATOR_UP" then
+            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
+            local elevatorName = (edge.note and edge.note ~= "") and edge.note or L["HUD_ACTION_ELEVATOR_UP"]
+            desc = string.format(L["STEP_HOP_ELEVATOR_UP"], fName, edgeCoord, elevatorName, tName, questTag)
         else
             local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
             desc = string.format(L["STEP_HOP_GENERIC"], fName, edgeCoord, v, tName, questTag)
@@ -1584,6 +1639,12 @@ function Pathfinder:CalculateRoute(destination)
                     elseif edge.type == "CAVE_EXIT" then
                         local edgeNote = (edge.note and edge.note ~= "") and edge.note or targetName
                         branchName = string.format(L["ALT_VIA_CAVE_EXIT_FMT"], edgeNote, targetName)
+                    elseif edge.type == "ELEVATOR_DOWN" then
+                        local edgeNote = (edge.note and edge.note ~= "") and edge.note or targetName
+                        branchName = string.format(L["ALT_VIA_ELEVATOR_DOWN_FMT"], edgeNote, targetName)
+                    elseif edge.type == "ELEVATOR_UP" then
+                        local edgeNote = (edge.note and edge.note ~= "") and edge.note or targetName
+                        branchName = string.format(L["ALT_VIA_ELEVATOR_UP_FMT"], edgeNote, targetName)
                     elseif edge.type == "PORTAL" then
                         branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
                     elseif edge.type == "SHIP" then
@@ -1625,10 +1686,13 @@ function Pathfinder:CalculateRoute(destination)
             local cand = physicalCandidates[i]
             local dx = math.abs(cand.edge.x - best.edge.x)
             local dy = math.abs(cand.edge.y - best.edge.y)
-            local isCaveEdge = (cand.edge.type == "CAVE_ENTER" or cand.edge.type == "CAVE_EXIT" or best.edge.type == "CAVE_ENTER" or best.edge.type == "CAVE_EXIT")
+            local isCaveEdge = (cand.edge.type == "CAVE_ENTER" or cand.edge.type == "CAVE_EXIT" or
+                                cand.edge.type == "ELEVATOR_DOWN" or cand.edge.type == "ELEVATOR_UP" or
+                                best.edge.type == "CAVE_ENTER" or best.edge.type == "CAVE_EXIT" or
+                                best.edge.type == "ELEVATOR_DOWN" or best.edge.type == "ELEVATOR_UP")
             local isDistinctLoc
             if isCaveEdge then
-                -- 地下洞窟出入口：即使去往同一张地图，不同地理坐标的入口大门即代表独立路线
+                -- 地下洞窟出入口与升降梯：即使去往同一张地图，不同地理坐标的入口大门即代表独立路线
                 isDistinctLoc = (dx > 0.05 or dy > 0.05)
             else
                 isDistinctLoc = (dx > 0.08 or dy > 0.08) and (cand.edge.to ~= best.edge.to)

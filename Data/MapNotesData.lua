@@ -1,6 +1,6 @@
 -- =========================================================================
 -- Porta Data - Auto-generated from HandyNotes_MapNotes (Retail)
--- Build Date: 2026-10-19
+-- Build Date: 2026-10-20
 -- Destinations: 233
 -- Transport Edges: 660
 -- =========================================================================
@@ -9,7 +9,7 @@ local _, ns = ...
 
 ns.PortaData = {
     version = "1.0.0",
-    buildDate = "2026-10-19",
+    buildDate = "2026-10-20",
 
     -- 目的地表：地下城、团队副本、地下堡入口
     -- id 语义：dungeon/raid 为 journalInstanceID；delve 为地下堡内部 mapID
@@ -235,19 +235,19 @@ ns.PortaData = {
         { id = 2425, mapID = 2346, x = 0.5387, y = 0.0930, type = "delve", comment = "Demolition Dome" },
         { id = 2452, mapID = 2371, x = 0.3924, y = 0.8845, type = "delve", comment = "Archival Assault" },
         { id = 2484, mapID = 2472, x = 0.5380, y = 0.8881, type = "delve", comment = "Voidscar Cavern" },
-        { id = 2502, mapID = 2395, x = 0.1498, y = 0.5760, type = "delve", comment = "Shadow Enclave" },
-        { id = 2503, mapID = 2437, x = 0.4903, y = 0.1152, type = "delve", comment = "Twilight Crypts" },
-        { id = 2505, mapID = 2413, x = 0.5151, y = 0.0829, type = "delve", comment = "The Gulf of Memory" },
-        { id = 2506, mapID = 2405, x = 0.4720, y = 0.7941, type = "delve", comment = "Shadowguard Point" },
-        { id = 2510, mapID = 2413, x = 0.3090, y = 0.2770, type = "delve", comment = "The Grudge Pit" },
-        { id = 2525, mapID = 2393, x = 0.4792, y = 0.2145, type = "delve", comment = "The Darkway" },
-        { id = 2528, mapID = 2405, x = 0.6493, y = 0.3005, type = "delve", comment = "Sunkiller Sanctum" },
-        { id = 2535, mapID = 2437, x = 0.2482, y = 0.4941, type = "delve", comment = "Atal'Aman" },
-        { id = 2545, mapID = 2393, x = 0.5000, y = 0.5000, type = "delve", comment = "Parhelion Plaza" },
-        { id = 2547, mapID = 2393, x = 0.7047, y = 0.4532, type = "delve", comment = "Collegiate Calamity" },
-        { id = 2633, mapID = 2512, x = 0.8010, y = 0.5369, type = "delve", comment = "The Ring of Glory" },
-        { id = 2635, mapID = 2512, x = 0.7666, y = 0.4689, type = "delve", comment = "Gnarldor Isle" },
-        { id = 2647, mapID = 2395, x = 0.4432, y = 0.9767, type = "delve", comment = "The Labyrinth of Kindo'jan" },
+        { id = 2502, mapID = 2395, x = 0.4555, y = 0.8631, type = "delve", comment = "Shadow Enclave" },
+        { id = 2503, mapID = 2437, x = 0.2540, y = 0.8440, type = "delve", comment = "Twilight Crypts" },
+        { id = 2505, mapID = 2413, x = 0.3670, y = 0.4960, type = "delve", comment = "The Gulf of Memory" },
+        { id = 2506, mapID = 2405, x = 0.3710, y = 0.4910, type = "delve", comment = "Shadowguard Point" },
+        { id = 2510, mapID = 2413, x = 0.6733, y = 0.5710, type = "delve", comment = "The Grudge Pit" },
+        { id = 2525, mapID = 2393, x = 0.3931, y = 0.3207, type = "delve", comment = "The Darkway" },
+        { id = 2528, mapID = 2405, x = 0.5480, y = 0.4710, type = "delve", comment = "Sunkiller Sanctum" },
+        { id = 2535, mapID = 2437, x = 0.6370, y = 0.8010, type = "delve", comment = "Atal'Aman" },
+        { id = 2545, mapID = 2424, x = 0.4774, y = 0.4158, type = "delve", comment = "Parhelion Plaza" },
+        { id = 2547, mapID = 2393, x = 0.4076, y = 0.5406, type = "delve", comment = "Collegiate Calamity" },
+        { id = 2633, mapID = 2512, x = 0.7120, y = 0.5654, type = "delve", comment = "The Ring of Glory" },
+        { id = 2635, mapID = 2512, x = 0.6445, y = 0.7773, type = "delve", comment = "Gnarldor Isle" },
+        { id = 2647, mapID = 2395, x = 0.6305, y = 0.7230, type = "delve", comment = "The Labyrinth of Kindo'jan" },
     },
 
     -- 交通拓扑图：传送门、飞艇、船只、传送镜等连接边

@@ -270,6 +270,7 @@ function SearchEngine:Initialize()
     local seenInstanceNames = {}
     local seenContinentZoneNames = {}
     local seenGlobalZoneNames = {}
+    local delveItemsByName = {}
 
     -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室、暗月岛、重访惊魂幻象等)
     for _, lm in ipairs(SPECIAL_LANDMARKS) do
@@ -430,10 +431,10 @@ function SearchEngine:Initialize()
                     if dest.id == 1324 then
                         customAliases = { "基西克斯", "基西克斯破封", "破封", "阿塔乌特克", "阿塔乌特克地窟", "Kith'ix", "The Unbinding of Kith'ix", "Unbinding of Kith'ix", "Atal'Utek" }
                     elseif dest.id == 2647 then
-                        customAliases = { "金多赞", "金多赞迷宫", "金多赞地下堡", "Kindo'jan", "The Labyrinth of Kindo'jan" }
+                        customAliases = { "金多赞", "金多赞迷宫", "金多赞的迷宫", "金多赞地下堡", "Kindo'jan", "The Labyrinth of Kindo'jan" }
                     end
 
-                    table.insert(searchIndex, CreateSearchItem(
+                    local searchItem = CreateSearchItem(
                         dest.id,
                         instanceName,
                         zoneName,
@@ -445,7 +446,11 @@ function SearchEngine:Initialize()
                         typeMeta.color,
                         dest.comment or "",
                         customAliases
-                    ))
+                    )
+                    if destType == "delve" then
+                        delveItemsByName[typeNameKey] = searchItem
+                    end
+                    table.insert(searchIndex, searchItem)
                 end
             end
         end
@@ -464,7 +469,14 @@ function SearchEngine:Initialize()
                             local delveName = TrimText(poiInfo.name)
                             local delveNameLower = string.lower(delveName)
                             local delveTypeKey = "delve:" .. delveNameLower
-                            if not seenDestTypeNames[delveTypeKey] then
+
+                            -- 若已存在静态条目，以暴雪原生实时 AreaPOI 的精确坐标与地图为准进行动态校准
+                            if delveItemsByName[delveTypeKey] then
+                                local existing = delveItemsByName[delveTypeKey]
+                                existing.x = px
+                                existing.y = py
+                                existing.mapID = zoneMapID
+                            elseif not seenDestTypeNames[delveTypeKey] then
                                 seenDestTypeNames[delveTypeKey] = true
                                 seenInstanceNames[delveNameLower] = true
 
@@ -474,6 +486,11 @@ function SearchEngine:Initialize()
                                     if mInfo and mInfo.name then
                                         zName = mInfo.name
                                     end
+                                end
+
+                                local customAliases = nil
+                                if areaPoiID == 9035 or areaPoiID == 9036 or string.find(delveNameLower, "kindo") or string.find(delveName, "金多赞") then
+                                    customAliases = { "金多赞", "金多赞迷宫", "金多赞的迷宫", "金多赞地下堡", "Kindo'jan", "The Labyrinth of Kindo'jan" }
                                 end
 
                                 table.insert(searchIndex, CreateSearchItem(
@@ -486,7 +503,8 @@ function SearchEngine:Initialize()
                                     "delve",
                                     TYPE_INFO.delve.tag,
                                     TYPE_INFO.delve.color,
-                                    poiInfo.description or ""
+                                    poiInfo.description or "",
+                                    customAliases
                                 ))
                             end
                         end

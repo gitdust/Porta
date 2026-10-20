@@ -131,20 +131,6 @@ function Navigation:FocusCoordinate(mapID, x, y, label)
     ns.Print(string.format(L["MSG_FOCUS_COORD_FMT"], mapName, normX * 100, normY * 100))
 end
 
--- 检查并提示当前方案中缺失的传送玩具或物品
-local function NotifyMissingTeleportIfAny(route)
-    if not route or not route.steps then return end
-    for _, step in ipairs(route.steps) do
-        if step.isMissingTeleport and step.teleportInfo then
-            local tp = step.teleportInfo
-            local kindName = (tp.type == "TOY" and L["KIND_TOY"]) or (tp.type == "SPELL" and L["KIND_SPELL"]) or L["KIND_ITEM"]
-            local reason = tp.missingReason or string.format(L["MSG_MISSING_TELEPORT_REASON_FALLBACK_FMT"], kindName)
-            ns.Print(string.format(L["MSG_MISSING_TELEPORT_NOTIFY_FMT"], kindName, tp.name or "", reason))
-            break
-        end
-    end
-end
-
 -- =========================================================================
 -- 启动路线导航，并自动设置目的地地图航标点
 -- =========================================================================
@@ -156,9 +142,6 @@ function Navigation:StartRoute(route)
 
     activeRoute = route
     currentStepIndex = 1
-
-    -- 若当前默认方案使用了玩家尚未拥有的玩具/物品，主动提示
-    NotifyMissingTeleportIfAny(activeRoute)
 
     -- 应用当前第一步骤航标状态与指引 (避免首步为地表洞口时提前将航标锚定在地下终点)
     self:ApplyCurrentStep()
@@ -220,11 +203,6 @@ function Navigation:SelectAlternativeRoute(altIndex)
     if ns.NavigationHUD then
         ns.NavigationHUD:ShowRoute(activeRoute, currentStepIndex)
     end
-
-    local altName = alt.name or string.format(L["ALT_OPTION_FALLBACK_FMT"], altIndex)
-    local distInfo = (alt.distanceText and alt.distanceText ~= "") and (" (" .. alt.distanceText .. ")") or ""
-    ns.Print(string.format(L["MSG_SWITCHED_ALT_FMT"], altName, distInfo))
-    NotifyMissingTeleportIfAny(activeRoute)
 end
 
 -- 回退到上一步
@@ -233,7 +211,6 @@ function Navigation:PrevStep()
 
     if currentStepIndex > 1 then
         currentStepIndex = currentStepIndex - 1
-        ns.Print(string.format(L["MSG_STEP_PREV_FMT"], currentStepIndex, activeRoute.totalSteps))
         self:ApplyCurrentStep()
     end
 end
@@ -244,7 +221,6 @@ function Navigation:NextStep()
 
     if currentStepIndex < activeRoute.totalSteps then
         currentStepIndex = currentStepIndex + 1
-        ns.Print(string.format(L["MSG_STEP_NEXT_FMT"], currentStepIndex, activeRoute.totalSteps))
         self:ApplyCurrentStep()
     else
         self:FinishRoute()
@@ -255,7 +231,6 @@ end
 function Navigation:FinishRoute()
     if not activeRoute then return end
     local destName = (activeRoute.destination and activeRoute.destination.name) or L["HUD_DEST_FALLBACK"]
-    ns.Print(string.format(L["MSG_ROUTE_FINISHED_FMT"], destName))
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
     activeRoute = nil
@@ -270,9 +245,6 @@ end
 
 -- 取消导航
 function Navigation:CancelRoute()
-    if activeRoute then
-        ns.Print(L["MSG_ROUTE_CANCELLED"])
-    end
     ClearBlizzardWaypoint()
     ClearTomTomWaypoint()
     activeRoute = nil

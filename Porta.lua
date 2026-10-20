@@ -69,3 +69,26 @@ function ns.EventFrame:PLAYER_LOGIN()
 
     ns.Print(L["ADDON_LOADED_MSG"])
 end
+
+-- 监听德拉诺要塞建筑变更，动态失效建筑缓存
+ns.EventFrame:RegisterEvent("GARRISON_BUILDINGS_SWAPPED")
+ns.EventFrame:RegisterEvent("GARRISON_BUILDING_ACTIVATED")
+ns.EventFrame:RegisterEvent("GARRISON_BUILDING_UPDATE")
+
+function ns.EventFrame:GARRISON_BUILDINGS_SWAPPED()
+    if ns.PlayerTeleports and ns.PlayerTeleports.InvalidateGarrisonCache then
+        ns.PlayerTeleports:InvalidateGarrisonCache()
+    end
+end
+
+function ns.EventFrame:GARRISON_BUILDING_ACTIVATED()
+    if ns.PlayerTeleports and ns.PlayerTeleports.InvalidateGarrisonCache then
+        ns.PlayerTeleports:InvalidateGarrisonCache()
+    end
+end
+
+function ns.EventFrame:GARRISON_BUILDING_UPDATE()
+    if ns.PlayerTeleports and ns.PlayerTeleports.InvalidateGarrisonCache then
+        ns.PlayerTeleports:InvalidateGarrisonCache()
+    end
+end

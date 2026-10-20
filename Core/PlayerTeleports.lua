@@ -1236,6 +1236,78 @@ function PlayerTeleports:GetDirectDestinationTeleport(destination)
     return list[1]
 end
 
+function PlayerTeleports:GetItemCooldown(itemID)
+    return GetCooldownStatus("ITEM", itemID)
+end
+
+-- =========================================================================
+-- 6. 德拉诺之王要塞建筑状态感知（法师之塔 / 灵魂之塔）
+-- =========================================================================
+local cachedMageTowerInfo = nil
+
+function PlayerTeleports:InvalidateGarrisonCache()
+    cachedMageTowerInfo = nil
+end
+
+function PlayerTeleports:GetGarrisonMageTowerInfo()
+    if cachedMageTowerInfo ~= nil then
+        return cachedMageTowerInfo.hasBuilding, cachedMageTowerInfo.rank, cachedMageTowerInfo.buildingName, cachedMageTowerInfo.buildingID
+    end
+
+    cachedMageTowerInfo = {
+        hasBuilding = false,
+        rank = 0,
+        buildingName = nil,
+        buildingID = nil,
+    }
+
+    if not C_Garrison or not C_Garrison.GetBuildings then
+        return false, 0, nil, nil
+    end
+
+    local garrisonType = (Enum and Enum.GarrisonType and Enum.GarrisonType.Type_6_0_Garrison) or 2
+    local ok, buildings = pcall(C_Garrison.GetBuildings, garrisonType)
+    if not ok or not buildings or type(buildings) ~= "table" then
+        return false, 0, nil, nil
+    end
+
+    for _, b in ipairs(buildings) do
+        local bID = b.buildingID
+        if bID then
+            local infoOk, name, texture = pcall(C_Garrison.GetBuildingInfo, bID)
+            local bName = infoOk and tostring(name or "") or ""
+            local bNameLower = string.lower(bName)
+            local texLower = infoOk and string.lower(tostring(texture or "")) or ""
+            local rank = b.rank or 1
+
+            -- 联盟法师之塔 (Mage Tower)：ID 37, 38, 39
+            -- 部落灵魂之塔 (Spirit Lodge)：ID 103, 104, 105
+            -- 增加多维度安全检测 (ID + 贴图路径 + 建筑名称)
+            local isMageTower = (bID == 37 or bID == 38 or bID == 39)
+                or (bID == 103 or bID == 104 or bID == 105)
+                or string.find(texLower, "magetower")
+                or string.find(texLower, "spiritlodge")
+                or string.find(bNameLower, "mage tower")
+                or string.find(bNameLower, "spirit lodge")
+                or string.find(bNameLower, "法师之塔")
+                or string.find(bNameLower, "灵魂之塔")
+                or string.find(bNameLower, "靈魂之塔")
+                or string.find(bNameLower, "灵魂之阁")
+                or string.find(bNameLower, "靈魂之閣")
+
+            if isMageTower then
+                cachedMageTowerInfo.hasBuilding = true
+                cachedMageTowerInfo.rank = rank
+                cachedMageTowerInfo.buildingName = (bName ~= "") and bName or L["BUILDING_MAGE_TOWER"]
+                cachedMageTowerInfo.buildingID = bID
+                break
+            end
+        end
+    end
+
+    return cachedMageTowerInfo.hasBuilding, cachedMageTowerInfo.rank, cachedMageTowerInfo.buildingName, cachedMageTowerInfo.buildingID
+end
+
 -- 兼容老接口
 function PlayerTeleports:GetDirectDungeonPortal(journalInstanceID)
     if not journalInstanceID then return nil end

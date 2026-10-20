@@ -17,7 +17,11 @@ Data\MapNotesData.lua
 
 # 核心系统
 Core\Init.lua
-Core\Locales.lua
+
+# 多语言国际化 (参考 MapNotes 规范)
+Locales\Locales.xml
+
+# 核心业务逻辑
 Core\PlayerTeleports.lua
 Core\SearchEngine.lua
 Core\Pathfinder.lua

@@ -533,6 +533,17 @@ local CONTINENT_CAPITAL_HUBS = {
     [2537] = { HORDE = { 2393 }, ALLIANCE = { 2393 } },
 }
 
+-- 德拉诺之王版本要塞食人魔道标 (Ogre Waygates) 坐标表 (对应法师之塔 / 灵魂之塔)
+local DRAENOR_WAYGATES = {
+    [543] = { x = 0.5803, y = 0.3444, nameKey = "DEST_WAYGATE_GORGROND" },       -- 戈尔隆德
+    [550] = { x = 0.3216, y = 0.4623, nameKey = "DEST_WAYGATE_NAGRAND" },        -- 纳格兰
+    [535] = { x = 0.5508, y = 0.4813, nameKey = "DEST_WAYGATE_TALADOR" },        -- 塔拉多
+    [542] = { x = 0.5462, y = 0.5163, nameKey = "DEST_WAYGATE_SPIRES_OF_ARAK" }, -- 阿兰卡峰林
+    [525] = { x = 0.5954, y = 0.4752, nameKey = "DEST_WAYGATE_FROSTFIRE" },       -- 霜火岭
+    [539] = { x = 0.5046, y = 0.3566, nameKey = "DEST_WAYGATE_SHADOWMOON" },     -- 影月谷
+    [534] = { x = 0.5350, y = 0.5830, nameKey = "DEST_WAYGATE_TANAAN" },        -- 塔纳安丛林
+}
+
 -- =========================================================================
 -- 4. 核心子区域、主城传送大厅互通与孤立地下城通道拓扑
 -- =========================================================================
@@ -1427,6 +1438,95 @@ local function BuildWormholeRouteSteps(tp, destMapID, destination)
     }
 end
 
+-- 辅助：构建德拉诺之王要塞食人魔道标路线步骤（要塞法师之塔 / 灵魂之塔）
+local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garrisonMapID, playerFaction, towerName)
+    local waygateInfo = DRAENOR_WAYGATES[waygateMapID]
+    if not waygateInfo then return nil end
+
+    local currentMapID = C_Map.GetBestMapForUnit("player")
+    local steps = {}
+    local waygateZoneName = GetMapDisplayName(waygateMapID)
+    local bName = (towerName and towerName ~= "") and towerName or L["BUILDING_MAGE_TOWER"]
+
+    -- 情况 1：玩家当前已经在德拉诺要塞内
+    if currentMapID == garrisonMapID then
+        local stepDesc = string.format(L["STEP_ENTER_WAYGATE_FMT"], bName, waygateZoneName) .. "\n" .. ns.FormatBracket(L["STEP_WAYGATE_HINT"])
+        table.insert(steps, {
+            stepIndex = 1,
+            mapID = garrisonMapID,
+            x = 0.50,
+            y = 0.50,
+            toMapID = waygateMapID,
+            action = "WAYGATE",
+            description = stepDesc,
+            isFinal = false,
+        })
+        table.insert(steps, BuildFinalArriveStep(2, destination))
+        return steps
+    end
+
+    -- 情况 2：玩家当前不在德拉诺要塞内，先使用【要塞炉石】（ID 110560）前往要塞
+    local hsID = 110560
+    local hsName = (ns.PlayerTeleports and ns.PlayerTeleports.GetItemDisplayName and ns.PlayerTeleports:GetItemDisplayName(hsID, L["ITEM_NAME_110560"])) or L["ITEM_NAME_110560"]
+    local hasHs, hsMissingReason = true, nil
+    if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
+        hasHs, hsMissingReason = ns.PlayerTeleports:CheckTeleportOwnership("ITEM", hsID, hsName)
+    end
+    local isReady, cdSeconds = true, 0
+    if ns.PlayerTeleports and ns.PlayerTeleports.GetItemCooldown then
+        isReady, cdSeconds = ns.PlayerTeleports:GetItemCooldown(hsID)
+    end
+
+    local linkStr = Pathfinder:FormatTeleportLink("ITEM", hsID, hsName)
+    local statusTag = ""
+    if not hasHs then
+        statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], L["TAG_MISSING"])
+    elseif not isReady and cdSeconds > 0 then
+        statusTag = string.format(L["STATUS_CD_TAG_FMT"], cdSeconds)
+    else
+        statusTag = L["STATUS_READY_TAG"]
+    end
+
+    local garrisonName = GetMapDisplayName(garrisonMapID)
+    local garrisonCoordStr = Pathfinder:FormatCoordLink(garrisonMapID, 0.50, 0.50)
+
+    table.insert(steps, {
+        stepIndex = 1,
+        mapID = currentMapID,
+        x = 0.50,
+        y = 0.50,
+        toMapID = garrisonMapID,
+        action = "ITEM",
+        description = string.format(L["STEP_TELEPORT_USE"], L["ACTION_USE_ITEM"], linkStr, statusTag, garrisonName, garrisonCoordStr, ""),
+        isFinal = false,
+        isMissingTeleport = (not hasHs),
+        teleportInfo = {
+            id = hsID,
+            name = hsName,
+            type = "ITEM",
+            hasItem = hasHs,
+            isReady = isReady,
+            cdSeconds = cdSeconds,
+            missingReason = hsMissingReason,
+        },
+    })
+
+    local waygateDesc = string.format(L["STEP_ENTER_WAYGATE_FMT"], bName, waygateZoneName) .. "\n" .. ns.FormatBracket(L["STEP_WAYGATE_HINT"])
+    table.insert(steps, {
+        stepIndex = 2,
+        mapID = garrisonMapID,
+        x = 0.50,
+        y = 0.50,
+        toMapID = waygateMapID,
+        action = "WAYGATE",
+        description = waygateDesc,
+        isFinal = false,
+    })
+
+    table.insert(steps, BuildFinalArriveStep(3, destination))
+    return steps
+end
+
 -- =========================================================================
 -- 9. 智能路线计算主引擎 (支持多起始点感知、距离择优与多备选方案列表)
 -- =========================================================================
@@ -1875,6 +1975,50 @@ function Pathfinder:CalculateRoute(destination)
                     steps = wSteps,
                     totalSteps = #wSteps,
                 })
+            end
+        end
+    end
+
+    -- =====================================================================
+    -- 5.5 德拉诺之王要塞食人魔道标专属极速备选方案 (法师之塔 / 灵魂之塔)
+    -- 仅当目标大洲位于德拉诺 (572) 且玩家建造了法师塔/灵魂之塔时生成该备选方案
+    -- =====================================================================
+    if destContID == 572 and not isAtDestinationStaging then
+        local targetWaygateMapID = nil
+        if DRAENOR_WAYGATES[destMapID] then
+            targetWaygateMapID = destMapID
+        end
+
+        if targetWaygateMapID and ns.PlayerTeleports and ns.PlayerTeleports.GetGarrisonMageTowerInfo then
+            local hasTower, towerRank, towerName = ns.PlayerTeleports:GetGarrisonMageTowerInfo()
+            if hasTower then
+                local garrisonMapID = (playerFaction == "HORDE") and 590 or 582
+                local waygateSteps = BuildGarrisonWaygateRouteSteps(destination, targetWaygateMapID, garrisonMapID, playerFaction, towerName)
+                if waygateSteps then
+                    local waygateZoneName = GetMapDisplayName(targetWaygateMapID)
+                    local hsStep = waygateSteps[1]
+                    local hsMissing = hsStep and hsStep.isMissingTeleport
+                    local bName = (towerName and towerName ~= "") and towerName or L["BUILDING_MAGE_TOWER"]
+
+                    -- 评分设计：略高于常规默认推荐路线 (bestPhysicalScore + 0.15)，确保排在备选列表前列，既方便一键切换又不影响默认主路线
+                    local waygateScore = math.max(2.15, (bestPhysicalScore or 2.0) + 0.15)
+                    if hsMissing then
+                        waygateScore = waygateScore + 5.0
+                    end
+
+                    table.insert(alternatives, {
+                        name = string.format(L["ALT_WAYGATE_FMT"], waygateZoneName),
+                        viaDesc = string.format(L["ALT_DESC_WAYGATE"], bName),
+                        distanceYards = 0,
+                        distanceText = L["ALT_DIST_WAYGATE"],
+                        isMissingTeleport = hsMissing,
+                        missingReason = hsStep and hsStep.teleportInfo and hsStep.teleportInfo.missingReason,
+                        score = waygateScore,
+                        steps = waygateSteps,
+                        totalSteps = #waygateSteps,
+                        isWaygateAlt = true,
+                    })
+                end
             end
         end
     end

@@ -58,24 +58,7 @@ local ACTION_LABELS = {
     DIRECT       = L["HUD_ACTION_DIRECT"],
 }
 
-local ACTION_DEFAULT_TEXTURES = {
-    PORTAL       = "Interface\\Icons\\Spell_Arcane_PortalDalaran",
-    WAYGATE      = "Interface\\Icons\\Achievement_Zone_Gorgrond",
-    ZEPPELIN     = "Interface\\Icons\\Ability_Vehicle_SiegeEngineCannon",
-    SHIP         = "Interface\\Icons\\Ability_Mount_SeaHorse",
-    TRAM         = "Interface\\Icons\\Ability_Mount_Gyrocopter",
-    MOLE_MACHINE = "Interface\\Icons\\INV_Misc_Gear_01",
-    MIRROR       = "Interface\\Icons\\Spell_Arcane_PortalUnderCity",
-    CLASS_PORTAL = "Interface\\Icons\\Spell_Arcane_TeleportMoonglade",
-    TRANSPORT    = "Interface\\Icons\\INV_Misc_Map_01",
-    CAVE_ENTER   = "Interface\\Icons\\INV_Misc_Rune_01",
-    CAVE_EXIT    = "Interface\\Icons\\INV_Misc_Rune_06",
-    ELEVATOR_DOWN= "Interface\\Icons\\Spell_Magic_FeatherFall",
-    ELEVATOR_UP  = "Interface\\Icons\\Spell_Magic_FeatherFall",
-    FLY          = "Interface\\Icons\\Ability_Mount_Drake_Proto",
-    ARRIVE       = "Interface\\Icons\\Raid_UI_Icon_Flag",
-    DIRECT       = "Interface\\Icons\\INV_Misc_Map_01",
-}
+local ACTION_DEFAULT_TEXTURES = {}
 
 -- 缓存解析后的超链接结构
 local linkCache = {}
@@ -635,7 +618,7 @@ local function InitHUD()
     hudFrame:Hide()
 end
 
--- 刷新多路线单选胶囊按钮栏 (水平流动排列，超出自动换行)
+-- 刷新多路线单选按钮栏（每个方案独占一行整齐排列）
 local function UpdateAlternativeButtons(route, stepIndex)
     if not altContainer then return 0 end
 
@@ -648,12 +631,9 @@ local function UpdateAlternativeButtons(route, stepIndex)
     local selectedIdx = route.selectedAltIndex or 1
     local btnCount = #route.alternatives
 
-    local maxWidth = 388
-    local startX = 0
-    local startY = 0
     local pillHeight = 22
-    local gapX = 6
     local gapY = 4
+    local startY = 0
 
     for i, alt in ipairs(route.alternatives) do
         local btn = altButtons[i]
@@ -666,10 +646,22 @@ local function UpdateAlternativeButtons(route, stepIndex)
                 insets = { left = 2, right = 2, top = 2, bottom = 2 },
             })
             btn.text = btn:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-            btn.text:SetPoint("CENTER", btn, "CENTER", 0, 0)
-            btn.text:SetJustifyH("CENTER")
+            btn.text:SetPoint("LEFT", btn, "LEFT", 10, 0)
+            btn.text:SetPoint("RIGHT", btn, "RIGHT", -10, 0)
+            btn.text:SetJustifyH("LEFT")
             btn.text:SetWordWrap(false)
+
+            local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+            highlight:SetAllPoints(btn)
+            highlight:SetColorTexture(1.0, 1.0, 1.0, 0.08)
+
             altButtons[i] = btn
+        else
+            btn.text:ClearAllPoints()
+            btn.text:SetPoint("LEFT", btn, "LEFT", 10, 0)
+            btn.text:SetPoint("RIGHT", btn, "RIGHT", -10, 0)
+            btn.text:SetJustifyH("LEFT")
+            btn.text:SetWordWrap(false)
         end
 
         btn:Show()
@@ -682,19 +674,13 @@ local function UpdateAlternativeButtons(route, stepIndex)
 
         btn.text:SetText(label)
 
-        local textW = (btn.text:GetStringWidth() or 80) + 16
-        local pillWidth = math.min(maxWidth, math.max(80, math.ceil(textW)))
-
-        if startX > 0 and (startX + pillWidth > maxWidth) then
-            startX = 0
-            startY = startY + pillHeight + gapY
-        end
-
+        -- 每个方案独占一行横向铺满整行
         btn:ClearAllPoints()
-        btn:SetPoint("TOPLEFT", altContainer, "TOPLEFT", startX, -startY)
-        btn:SetSize(pillWidth, pillHeight)
+        btn:SetPoint("TOPLEFT", altContainer, "TOPLEFT", 0, -startY)
+        btn:SetPoint("RIGHT", altContainer, "RIGHT", 0, 0)
+        btn:SetHeight(pillHeight)
 
-        startX = startX + pillWidth + gapX
+        startY = startY + pillHeight + gapY
 
         if isSelected then
             btn:SetBackdropColor(0.0, 0.45, 0.75, 0.65)
@@ -730,7 +716,7 @@ local function UpdateAlternativeButtons(route, stepIndex)
         altButtons[i]:Hide()
     end
 
-    local totalContainerHeight = startY + pillHeight
+    local totalContainerHeight = (btnCount > 0) and (startY - gapY) or 0
     altContainer:SetHeight(totalContainerHeight)
 
     return totalContainerHeight
@@ -781,7 +767,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     local descHeight = GetSafeFontStringHeight(currentStepText, descStr, 48, 17, 20)
     stepTextFrame:SetHeight(descHeight + 2)
 
-    local upperHeight = hasAltPills and (altHeight + 6 + descHeight + 2) or (descHeight + 2)
+    local upperHeight = hasAltPills and (altHeight + 8 + descHeight + 2) or (descHeight + 2)
     upperSection:SetHeight(upperHeight)
 
     -- 3. 下方区域：构建精简提示文案
@@ -811,6 +797,15 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         table.insert(tipBlocks, "|cffffaa00" .. L["WAYGATE_SHORT_TIP"] .. "|r")
     end
 
+    -- 百变之镜使用与前置提示
+    if currentStep.action == "MIRROR" or (currentStep.teleportInfo and currentStep.teleportInfo.id == 129929) then
+        if currentStep.isMissingTeleport then
+            table.insert(tipBlocks, "|cffff4444" .. L["MIRROR_SHORT_TIP"] .. "|r")
+        else
+            table.insert(tipBlocks, "|cff00ff00" .. L["HUD_TIP_USE_MIRROR"] .. "|r")
+        end
+    end
+
     -- 历史时间线位面切换提醒
     local phaseInfo = currentStep.phaseShiftInfo or (currentStep.isFinal and route.phaseShiftInfo)
     if phaseInfo then
@@ -826,21 +821,14 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     local finalTipStr = (#tipBlocks > 0) and table.concat(tipBlocks, "\n") or ""
     tipText:SetText(finalTipStr)
 
-    local tipTextHeight = (finalTipStr == "") and 0 or GetSafeFontStringHeight(tipText, finalTipStr, 42, 15, 16)
-    local lowerHeight = math.max(40, tipTextHeight)
-    lowerSection:ClearAllPoints()
-    lowerSection:SetPoint("TOPLEFT", upperSection, "BOTTOMLEFT", 0, -8)
-    lowerSection:SetPoint("RIGHT", hudFrame, "RIGHT", -16, 0)
-    lowerSection:SetHeight(lowerHeight)
-
-    -- 4. 下方区域：右侧操作图标设置与交互绑定
+    -- 4. 下方区域：操作图标识别与解析（仅当存在真实技能/物品/装备/玩具时才展示图标）
     local tp = currentStep.teleportInfo
     local hasTeleportAction = false
     local parsedLink = nil
 
-    if tp and tp.id and (currentStep.action == "SPELL" or currentStep.action == "TOY" or currentStep.action == "ITEM" or tp.type) then
+    if tp and tp.id and (currentStep.action == "SPELL" or currentStep.action == "TOY" or currentStep.action == "ITEM" or currentStep.action == "MIRROR" or tp.type) then
         hasTeleportAction = true
-        local k = tp.type or currentStep.action
+        local k = tp.type or ((currentStep.action == "MIRROR") and "TOY" or currentStep.action)
         parsedLink = ParsePortaHyperlink(string.format("porta:%s:%d", string.lower(k), tp.id))
     end
 
@@ -856,7 +844,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     actionSlotBtn.hasIt = hasIt
     actionSlotBtn.missingReason = missingReason
 
-    -- 动态获取材质图标：支持法术/道具/玩具，以及通用交通方式 fallback
+    -- 动态获取材质图标：严禁使用随机或假图标！仅当为真实法术/道具/玩具时获取
     local texture = nil
     if parsedLink then
         if parsedLink.kind == "SPELL" then
@@ -868,28 +856,64 @@ function NavigationHUD:UpdateStep(route, stepIndex)
                 texture = C_Item.GetItemIconByID(parsedLink.id)
             end
         end
-    end
-    if not texture then
-        texture = ACTION_DEFAULT_TEXTURES[currentStep.action] or "Interface\\Icons\\INV_Misc_Map_01"
+        -- 若为百变之镜且客户端缓存未就绪，兜底原生玩具图标
+        if not texture and parsedLink.id == 129929 then
+            texture = "Interface\\Icons\\INV_Misc_Toy_08"
+        end
     end
 
-    actionSlotBtn.icon:SetTexture(texture)
-    -- 用户规范：图标保持原色原貌，绝对不置灰！
-    actionSlotBtn.icon:SetDesaturated(false)
+    local hasValidActionIcon = (parsedLink ~= nil and texture ~= nil)
 
-    -- 冷却计时圈驱动 (仅在有具体技能/道具时挂载，不显示冗余文字)
-    if parsedLink and ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
-        local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsedLink.kind == "SPELL" and "SPELL" or "ITEM", parsedLink.id)
-        if not isReady and cdSec > 0 then
-            actionSlotBtn.cooldown:SetCooldown(GetTime(), cdSec)
+    -- 根据是否有具体操作图标，自适应调整提示文字宽度与区域布局
+    tipTextFrame:ClearAllPoints()
+    tipTextFrame:SetPoint("TOPLEFT", lowerSection, "TOPLEFT", 0, 0)
+    tipTextFrame:SetPoint("BOTTOMLEFT", lowerSection, "BOTTOMLEFT", 0, 0)
+    if hasValidActionIcon then
+        tipTextFrame:SetPoint("RIGHT", lowerSection, "RIGHT", -48, 0)
+    else
+        tipTextFrame:SetPoint("RIGHT", lowerSection, "RIGHT", 0, 0)
+    end
+
+    local tipMaxChars = hasValidActionIcon and 42 or 54
+    local tipTextHeight = (finalTipStr == "") and 0 or GetSafeFontStringHeight(tipText, finalTipStr, tipMaxChars, 15, 16)
+    local lowerHeight = 0
+    if hasValidActionIcon then
+        lowerHeight = math.max(40, tipTextHeight)
+        lowerSection:Show()
+    elseif finalTipStr ~= "" then
+        lowerHeight = math.max(18, tipTextHeight)
+        lowerSection:Show()
+    else
+        lowerSection:Hide()
+    end
+
+    lowerSection:ClearAllPoints()
+    local sectionGap = (lowerHeight > 0) and 8 or 0
+    lowerSection:SetPoint("TOPLEFT", upperSection, "BOTTOMLEFT", 0, -sectionGap)
+    lowerSection:SetPoint("RIGHT", hudFrame, "RIGHT", -16, 0)
+    lowerSection:SetHeight(lowerHeight)
+
+    if hasValidActionIcon then
+        actionSlotBtn.icon:SetTexture(texture)
+        actionSlotBtn.icon:SetDesaturated(false)
+
+        if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
+            local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsedLink.kind == "SPELL" and "SPELL" or "ITEM", parsedLink.id)
+            if not isReady and cdSec > 0 then
+                actionSlotBtn.cooldown:SetCooldown(GetTime(), cdSec)
+            else
+                actionSlotBtn.cooldown:Clear()
+            end
         else
             actionSlotBtn.cooldown:Clear()
         end
-    else
-        actionSlotBtn.cooldown:Clear()
-    end
 
-    actionSlotBtn:Show()
+        actionSlotBtn:Show()
+    else
+        actionSlotBtn.icon:SetTexture(nil)
+        actionSlotBtn.cooldown:Clear()
+        actionSlotBtn:Hide()
+    end
 
     -- 在脱战状态下安全配置 SecureActionButton
     local isCombat = (InCombatLockdown and InCombatLockdown()) or false
@@ -909,7 +933,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         secureActionBtn:SetAttribute("item", nil)
         secureActionBtn:SetAttribute("item1", nil)
 
-        if hasTeleportAction and parsedLink and hasIt then
+        if hasValidActionIcon and hasTeleportAction and parsedLink and hasIt then
             if parsedLink.kind == "SPELL" then
                 secureActionBtn:SetAttribute("type1", "spell")
                 secureActionBtn:SetAttribute("spell1", parsedLink.id)
@@ -941,8 +965,8 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     end
 
     -- 6. 计算并设置总卡片高度
-    local totalFrameHeight = 34 + upperHeight + 8 + lowerHeight + 10 + 22 + 12
-    hudFrame:SetHeight(math.max(130, totalFrameHeight))
+    local totalFrameHeight = 34 + upperHeight + sectionGap + lowerHeight + 10 + 22 + 12
+    hudFrame:SetHeight(math.max(110, totalFrameHeight))
 
     -- 7. 渲染帧精准校准
     if C_Timer and C_Timer.After then
@@ -953,14 +977,24 @@ function NavigationHUD:UpdateStep(route, stepIndex)
             local realDescH = math.max(18, rawDescH)
             stepTextFrame:SetHeight(realDescH + 2)
 
-            local realUpperH = hasAltPills and (altHeight + 6 + realDescH + 2) or (realDescH + 2)
+            local realUpperH = hasAltPills and (altHeight + 8 + realDescH + 2) or (realDescH + 2)
             upperSection:SetHeight(realUpperH)
 
             local rawTipH = (finalTipStr ~= "" and tipText and tipText.GetStringHeight and tipText:GetStringHeight()) or 0
-            local realLowerH = math.max(40, rawTipH)
-            lowerSection:SetHeight(realLowerH)
+            local realLowerH = 0
+            if hasValidActionIcon then
+                realLowerH = math.max(40, rawTipH)
+                lowerSection:Show()
+            elseif finalTipStr ~= "" then
+                realLowerH = math.max(18, rawTipH)
+                lowerSection:Show()
+            else
+                lowerSection:Hide()
+            end
 
-            hudFrame:SetHeight(math.max(130, 34 + realUpperH + 8 + realLowerH + 10 + 22 + 12))
+            lowerSection:SetHeight(realLowerH)
+            local realGap = (realLowerH > 0) and 8 or 0
+            hudFrame:SetHeight(math.max(110, 34 + realUpperH + realGap + realLowerH + 10 + 22 + 12))
         end)
     end
 end
@@ -1002,10 +1036,14 @@ function NavigationHUD:ShowArrived(destName)
 
     actionSlotBtn.parsedLink = nil
     actionSlotBtn.currentStep = nil
-    actionSlotBtn.icon:SetTexture("Interface\\Icons\\Raid_UI_Icon_Flag")
-    actionSlotBtn.icon:SetDesaturated(false)
+    actionSlotBtn.icon:SetTexture(nil)
     actionSlotBtn.cooldown:Clear()
-    actionSlotBtn:Show()
+    actionSlotBtn:Hide()
+
+    tipTextFrame:ClearAllPoints()
+    tipTextFrame:SetPoint("TOPLEFT", lowerSection, "TOPLEFT", 0, 0)
+    tipTextFrame:SetPoint("BOTTOMLEFT", lowerSection, "BOTTOMLEFT", 0, 0)
+    tipTextFrame:SetPoint("RIGHT", lowerSection, "RIGHT", 0, 0)
 
     hudFrame.prevBtn:Hide()
     hudFrame.viewMapBtn:Hide()

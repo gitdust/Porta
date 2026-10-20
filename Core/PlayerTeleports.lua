@@ -50,9 +50,9 @@ local TELEPORT_ITEMS = {
 
     -- 黑暗神殿专属传送
     {
-        id = 151271,
+        id = 151016,
         kind = "TOY",
-        name = L["ITEM_NAME_151271"],
+        name = L["ITEM_NAME_151016"],
         toMap = 104, -- 外域影月谷
         x = 0.71, y = 0.46, -- 黑暗神殿大门前
         faction = "NEUTRAL",
@@ -398,7 +398,7 @@ local DIRECT_DESTINATION_ITEMS = {
     -- 黑暗神殿 (journalInstanceID = 751)
     [751] = {
         { id = 32757, kind = "ITEM", name = L["ITEM_NAME_32757"], faction = "NEUTRAL", noteKey = "NOTE_KARABOR_MEDALLION" },
-        { id = 151271, kind = "TOY", name = L["ITEM_NAME_151271"], faction = "NEUTRAL", noteKey = "NOTE_NECROLYTE_SKULL" },
+        { id = 151016, kind = "TOY", name = L["ITEM_NAME_151016"], faction = "NEUTRAL", noteKey = "NOTE_NECROLYTE_SKULL" },
     },
     -- 重返卡拉赞 (860) 与 老卡拉赞 (745)
     [860] = {
@@ -664,6 +664,7 @@ function PlayerTeleports:PreloadCache()
     end
 
     requestItem(6948) -- 炉石
+    requestItem(129929) -- 百变之镜 (玩具)
     for _, item in ipairs(TELEPORT_ITEMS) do
         if item.id then requestItem(item.id) end
         if item.ids then
@@ -1064,7 +1065,7 @@ function PlayerTeleports:GetAvailableTeleports()
                 toMap = (playerFaction == "HORDE") and item.toMapHorde or item.toMapAlliance
             end
 
-            local isReady, cdSeconds = true, 0
+            local isReady, cdSeconds = false, 0
             if state.hasItem then
                 isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
             end
@@ -1163,7 +1164,7 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
             local classMatch = (not itemEntry.class) or (itemEntry.class == playerClass)
             if classMatch and (itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction) then
                 local state = InspectItemOrToyEntry(itemEntry)
-                local isReady, cdSeconds = true, 0
+                local isReady, cdSeconds = false, 0
                 if state.hasItem then
                     isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
                 end
@@ -1193,7 +1194,7 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
             local classMatch = (not itemEntry.class) or (itemEntry.class == playerClass)
             if classMatch and (itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction) then
                 local state = InspectItemOrToyEntry(itemEntry)
-                local isReady, cdSeconds = true, 0
+                local isReady, cdSeconds = false, 0
                 if state.hasItem then
                     isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
                 end
@@ -1312,4 +1313,43 @@ end
 function PlayerTeleports:GetDirectDungeonPortal(journalInstanceID)
     if not journalInstanceID then return nil end
     return self:GetDirectDestinationTeleport({ id = journalInstanceID })
+end
+
+-- =========================================================================
+-- 7. 时空漫游玩具：百变之镜 (Ever-Shifting Mirror, ID: 129929) 状态感知
+-- =========================================================================
+function PlayerTeleports:GetMirrorToyInfo()
+    local toyID = 129929
+    local toyName = self:GetItemDisplayName(toyID, L["TOY_NAME_129929"])
+    local hasToy, missingReason = false, nil
+
+    if PlayerHasToy and PlayerHasToy(toyID) then
+        local usable = true
+        if C_ToyBox and C_ToyBox.IsToyUsable then
+            usable = C_ToyBox.IsToyUsable(toyID)
+        end
+        if usable then
+            hasToy = true
+        else
+            hasToy = false
+            missingReason = L["STATUS_UNAVAILABLE"]
+        end
+    else
+        hasToy = false
+        missingReason = L["MIRROR_MISSING_GUIDE"] or L["STATUS_NOT_OWNED"]
+    end
+
+    local isReady, cdSeconds = GetCooldownStatus("ITEM", toyID)
+
+    return {
+        id = toyID,
+        type = "TOY",
+        kind = "TOY",
+        name = toyName,
+        hasItem = hasToy,
+        isReady = isReady,
+        cdSeconds = cdSeconds,
+        missingReason = missingReason,
+        missingShortTag = L["TAG_MISSING"],
+    }
 end

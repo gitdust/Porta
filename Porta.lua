@@ -71,24 +71,23 @@ function ns.EventFrame:PLAYER_LOGIN()
 end
 
 -- 监听德拉诺要塞建筑变更，动态失效建筑缓存
-ns.EventFrame:RegisterEvent("GARRISON_BUILDINGS_SWAPPED")
-ns.EventFrame:RegisterEvent("GARRISON_BUILDING_ACTIVATED")
-ns.EventFrame:RegisterEvent("GARRISON_BUILDING_UPDATE")
+local garrisonEvents = {
+    "GARRISON_BUILDING_ACTIVATED",
+    "GARRISON_BUILDING_UPDATE",
+    "GARRISON_BUILDING_PLACED",
+    "GARRISON_BUILDING_REMOVED",
+    "GARRISON_BUILDING_LIST_UPDATE",
+}
 
-function ns.EventFrame:GARRISON_BUILDINGS_SWAPPED()
+local function OnGarrisonBuildingChanged()
     if ns.PlayerTeleports and ns.PlayerTeleports.InvalidateGarrisonCache then
         ns.PlayerTeleports:InvalidateGarrisonCache()
     end
 end
 
-function ns.EventFrame:GARRISON_BUILDING_ACTIVATED()
-    if ns.PlayerTeleports and ns.PlayerTeleports.InvalidateGarrisonCache then
-        ns.PlayerTeleports:InvalidateGarrisonCache()
-    end
-end
-
-function ns.EventFrame:GARRISON_BUILDING_UPDATE()
-    if ns.PlayerTeleports and ns.PlayerTeleports.InvalidateGarrisonCache then
-        ns.PlayerTeleports:InvalidateGarrisonCache()
-    end
+for _, event in ipairs(garrisonEvents) do
+    pcall(function()
+        ns.EventFrame:RegisterEvent(event)
+    end)
+    ns.EventFrame[event] = OnGarrisonBuildingChanged
 end

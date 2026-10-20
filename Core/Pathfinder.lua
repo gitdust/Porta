@@ -82,16 +82,6 @@ local PORTAL_QUEST_GATES = {
         HORDE = { questIDs = { 55651, 55609 }, questName = L["GATE_MECHAGON_H_QUEST"], startNPC = L["GATE_MECHAGON_H_NPC"], unlockGuide = L["GATE_MECHAGON_H_GUIDE"] },
         ALLIANCE = { questIDs = { 54992, 55609 }, questName = L["GATE_MECHAGON_A_QUEST"], startNPC = L["GATE_MECHAGON_A_NPC"], unlockGuide = L["GATE_MECHAGON_A_GUIDE"] },
     },
-    -- 深岩之洲 (207)
-    [207] = {
-        HORDE = { questIDs = { 27727 }, questName = L["GATE_DEEPHOLM_QUEST"], startNPC = L["GATE_DEEPHOLM_H_NPC"], unlockGuide = L["GATE_DEEPHOLM_H_GUIDE"] },
-        ALLIANCE = { questIDs = { 27722 }, questName = L["GATE_DEEPHOLM_QUEST"], startNPC = L["GATE_DEEPHOLM_A_NPC"], unlockGuide = L["GATE_DEEPHOLM_A_GUIDE"] },
-    },
-    -- 暮光高地 (241)
-    [241] = {
-        HORDE = { questIDs = { 28716, 26798 }, questName = L["GATE_TWILIGHT_QUEST"], startNPC = L["GATE_TWILIGHT_H_NPC"], unlockGuide = L["GATE_TWILIGHT_H_GUIDE"] },
-        ALLIANCE = { questIDs = { 28717, 26797 }, questName = L["GATE_TWILIGHT_QUEST"], startNPC = L["GATE_TWILIGHT_A_NPC"], unlockGuide = L["GATE_TWILIGHT_A_GUIDE"] },
-    },
     -- 刻希亚 (1961)
     [1961] = {
         NEUTRAL = { questIDs = { 63662, 63902 }, questName = L["GATE_KORTHIA_QUEST"], startNPC = L["GATE_KORTHIA_NPC"], unlockGuide = L["GATE_KORTHIA_GUIDE"] },
@@ -1662,7 +1652,10 @@ function Pathfinder:CalculateRoute(destination)
                 }
             }
 
-            local directScore = direct.isReady and 0.5 or (0.5 + math.min((direct.cdSeconds or 0) / 30, 8.0))
+            local directScore = (direct.hasItem and direct.isReady) and 0.5 or (0.5 + math.min((direct.cdSeconds or 0) / 30, 8.0))
+            if not direct.hasItem then
+                directScore = directScore + 10.0
+            end
             local altNameFmt = (direct.type == "SPELL") and L["ALT_CAST_FMT"] or L["ALT_USE_FMT"]
 
             table.insert(alternatives, {
@@ -1840,6 +1833,7 @@ function Pathfinder:CalculateRoute(destination)
             viaDesc = L["ALT_DESC_SAME_CONT_FLY"],
             distanceYards = nil,
             distanceText = L["ALT_DIST_SAME_CONT_FLY"],
+            isMissingTeleport = false,
             score = flyScore,
             steps = flySteps,
             totalSteps = 2,
@@ -1892,7 +1886,10 @@ function Pathfinder:CalculateRoute(destination)
                 if allowTp and dist[tp.toMap] < (dist[currentMapID] or 999) then
                     seenTpTarget[tp.toMap] = true
 
-                    local itemCost = tp.isReady and 1.0 or (1.0 + math.min((tp.cdSeconds or 0) / 30, 8.0))
+                    local itemCost = (tp.hasItem and tp.isReady) and 1.0 or (1.0 + math.min((tp.cdSeconds or 0) / 30, 8.0))
+                    if not tp.hasItem then
+                        itemCost = itemCost + 10.0
+                    end
                     if tp.priority and tp.priority > 8 then
                         itemCost = itemCost - 0.5
                     end
@@ -1907,11 +1904,13 @@ function Pathfinder:CalculateRoute(destination)
         end
 
         table.sort(tpCandidates, function(a, b)
+            local aHas = a.tp.hasItem and true or false
+            local bHas = b.tp.hasItem and true or false
+            if aHas ~= bHas then
+                return aHas
+            end
             if math.abs(a.score - b.score) > 0.01 then
                 return a.score < b.score
-            end
-            if (a.tp.hasItem and true or false) ~= (b.tp.hasItem and true or false) then
-                return a.tp.hasItem and true or false
             end
             return (a.tp.priority or 5) > (b.tp.priority or 5)
         end)
@@ -1971,7 +1970,7 @@ function Pathfinder:CalculateRoute(destination)
                     isMissingTeleport = (not wTp.hasItem),
                     missingShortTag = wTp.missingShortTag,
                     missingReason = wTp.missingReason,
-                    score = math.min(bestPhysicalScore, 10.0) + 0.5,
+                    score = math.min(bestPhysicalScore, 10.0) + 0.5 + (wTp.hasItem and 0 or 10.0),
                     steps = wSteps,
                     totalSteps = #wSteps,
                 })
@@ -2055,7 +2054,7 @@ function Pathfinder:CalculateRoute(destination)
                     distanceText = L["ALT_DIST_HEARTHSTONE"],
                     isMissingTeleport = (not hasHearthstone),
                     missingReason = hsMissingReason,
-                    score = dist[hubMapID] + 5.0,
+                    score = dist[hubMapID] + 5.0 + (hasHearthstone and 0 or 10.0),
                     steps = hubSteps,
                     totalSteps = #hubSteps,
                 })
@@ -2103,13 +2102,19 @@ function Pathfinder:CalculateRoute(destination)
         end
     end
 
-    -- 7. 对所有最终候选方案按总评分排序（玩具/物品方案默认视同已拥有参与排序，缺失时在界面与聊天中提示）
+    -- 7. 对所有最终候选方案按综合规则排序：
+    -- 核心原则：
+    -- 1) 玩家当前真实可用方案 (not isMissingTeleport) 必须绝对优先于缺失/未拥有方案
+    -- 2) 综合评分更低者优先（耗时短、路径快、无冷却）
+    -- 3) 步骤数更少者优先
     table.sort(alternatives, function(a, b)
+        local aMissing = a.isMissingTeleport and true or false
+        local bMissing = b.isMissingTeleport and true or false
+        if aMissing ~= bMissing then
+            return not aMissing
+        end
         if math.abs(a.score - b.score) > 0.01 then
             return a.score < b.score
-        end
-        if (not a.isMissingTeleport) ~= (not b.isMissingTeleport) then
-            return not a.isMissingTeleport
         end
         return (a.totalSteps or 99) < (b.totalSteps or 99)
     end)

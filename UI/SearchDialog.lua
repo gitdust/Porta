@@ -90,7 +90,11 @@ local function RenderResults()
     end
 
     if noResultsText then
-        if isSearching and not hasResults then
+        if not isSearching then
+            noResultsText:SetText(L["SEARCH_EMPTY_INPUT"])
+            noResultsText:Show()
+        elseif not hasResults then
+            noResultsText:SetText(L["SEARCH_NO_RESULTS"])
             noResultsText:Show()
         else
             noResultsText:Hide()
@@ -236,12 +240,12 @@ local function InitFrame()
         end
     end)
 
-    -- 无结果提示文案
+    -- 无结果/空输入提示文案
     noResultsText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
     noResultsText:SetPoint("CENTER", frame, "CENTER", 0, -25)
     noResultsText:SetTextColor(0.65, 0.65, 0.65)
     noResultsText:SetJustifyH("CENTER")
-    noResultsText:SetText(L["SEARCH_NO_RESULTS"])
+    noResultsText:SetText(L["SEARCH_EMPTY_INPUT"])
     noResultsText:Hide()
 
     -- 底部提示栏

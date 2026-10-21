@@ -259,18 +259,17 @@ function Navigation:ClearWaypoints()
     ClearTomTomWaypoint()
 end
 
--- 路线结束 (已抵达终点)
+-- 路线结束 (完成导航，清空航标并直接关闭 HUD)
 function Navigation:FinishRoute()
     local destName = (activeRoute and activeRoute.destination and activeRoute.destination.name) or L["HUD_DEST_FALLBACK"]
     self:ClearWaypoints()
     activeRoute = nil
     currentStepIndex = 1
 
-    if ns.NavigationHUD and ns.NavigationHUD.ShowArrived then
-        ns.NavigationHUD:ShowArrived(destName)
-    elseif ns.NavigationHUD then
+    if ns.NavigationHUD then
         ns.NavigationHUD:Hide()
     end
+    ns.Print(string.format(L["MSG_ROUTE_FINISHED_FMT"], destName))
 end
 
 -- 取消/退出导航路线并清空标记点

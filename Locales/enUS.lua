@@ -57,6 +57,7 @@ ns.L = L
     L["SEARCH_SUBTITLE"] = "Enter a dungeon, raid, delve, or zone name (fuzzy match supported)"
     L["SEARCH_FOOTER"] = "[Up / Down] Select    [Enter] Start Route    [Esc] Close"
     L["SEARCH_NO_RESULTS"] = "Please enter a valid destination name"
+    L["SEARCH_EMPTY_INPUT"] = "Please enter a destination"
 
     -- 交通动作词 (Pathfinder & NavigationHUD)
     L["TRANSPORT_PORTAL"] = "take the portal"
@@ -399,9 +400,6 @@ ns.L = L
     L["MSG_COMBAT_ACTION_RESTRICTED"] = "Cannot use teleport items or spells in combat. Please try again after leaving combat."
     L["MSG_COMBAT_MAP_RESTRICTED"] = "Cannot safely open the World Map in combat. In-game waypoint and HUD guidance remain active."
     L["HUD_TOOLTIP_COMBAT_RESTRICTED"] = "Restricted in combat: Click after leaving combat to use"
-    L["HUD_DEST_ARRIVED"] = "Arrived at Destination"
-    L["HUD_ARRIVED_CLOSE_HINT"] = "You have reached your destination! Navigation complete.\nClick the [x] button in the top right or [Close] to dismiss this panel."
-    L["HUD_BTN_CLOSE"] = "Close"
     L["MSG_CLICK_MISSING_NOTIFY_FMT"] = "|cffff6600[Missing Teleport]|r %s Opened details window."
     L["MSG_CLICK_MISSING_FALLBACK"] = "You do not currently own this teleport item/toy."
     L["MSG_CLICK_CD_NOTIFY_FMT"] = "|cffff4040[Cooldown]|r This teleport is on cooldown (%ds remaining)."

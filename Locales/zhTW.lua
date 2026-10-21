@@ -53,6 +53,7 @@ if not L then return end
     L["SEARCH_SUBTITLE"] = "輸入副本或區域地名（支援模糊比對）"
     L["SEARCH_FOOTER"] = "[↑ / ↓] 切換項    [Enter] 開始導航    [Esc] 關閉"
     L["SEARCH_NO_RESULTS"] = "請輸入正確的目的地名稱"
+    L["SEARCH_EMPTY_INPUT"] = "請輸入目的地"
 
     L["TRANSPORT_PORTAL"] = "穿過傳送門"
     L["TRANSPORT_ZEPPELIN"] = "搭乘飛艇"
@@ -373,9 +374,6 @@ if not L then return end
     L["MSG_COMBAT_ACTION_RESTRICTED"] = "戰鬥中暴雪禁止使用傳送物品或技能，請脫戰後再試。"
     L["MSG_COMBAT_MAP_RESTRICTED"] = "戰鬥中無法安全開啟全螢幕世界地圖，已為你保持螢幕導航指引與金色航標。"
     L["HUD_TOOLTIP_COMBAT_RESTRICTED"] = "戰鬥中受限：脫戰後左鍵點擊可直接使用"
-    L["HUD_DEST_ARRIVED"] = "已抵達目的地"
-    L["HUD_ARRIVED_CLOSE_HINT"] = "你已順利抵達目的地！導航指引已完成。\n點擊右上角 × 或下方【關閉】按鈕即可關閉此面板。"
-    L["HUD_BTN_CLOSE"] = "關閉"
     L["MSG_CLICK_MISSING_NOTIFY_FMT"] = "|cffff6600[未擁有提示]|r %s 已為你開啟詳情視窗查看。"
     L["MSG_CLICK_MISSING_FALLBACK"] = "目前尚未擁有該傳送道具/玩具。"
     L["MSG_CLICK_CD_NOTIFY_FMT"] = "|cffff4040[冷卻中]|r 該傳送方式正在冷卻中（剩餘 %d 秒）。"

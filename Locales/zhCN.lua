@@ -53,6 +53,7 @@ if not L then return end
     L["SEARCH_SUBTITLE"] = "输入准确的副本或区域地名（支持模糊匹配）"
     L["SEARCH_FOOTER"] = "[↑ / ↓] 切换项    [Enter] 开始导航    [Esc] 关闭"
     L["SEARCH_NO_RESULTS"] = "请输入正确的目的地名称"
+    L["SEARCH_EMPTY_INPUT"] = "请输入目的地"
 
     L["TRANSPORT_PORTAL"] = "穿过传送门"
     L["TRANSPORT_ZEPPELIN"] = "乘坐飞艇"
@@ -384,9 +385,6 @@ if not L then return end
     L["MSG_COMBAT_ACTION_RESTRICTED"] = "战斗中暴雪禁止使用传送物品或技能，请脱战后再试。"
     L["MSG_COMBAT_MAP_RESTRICTED"] = "战斗中无法安全打开全屏世界地图，已为你保持屏幕导航指引与金色航标。"
     L["HUD_TOOLTIP_COMBAT_RESTRICTED"] = "战斗中受限：脱战后左键点击可直接使用"
-    L["HUD_DEST_ARRIVED"] = "已抵达目的地"
-    L["HUD_ARRIVED_CLOSE_HINT"] = "你已顺利抵达目的地！导航指引已完成。\n点击右上角 × 或下方【关闭】按钮即可关闭此面板。"
-    L["HUD_BTN_CLOSE"] = "关闭"
     L["MSG_CLICK_MISSING_NOTIFY_FMT"] = "|cffff6600[未拥有提示]|r %s 已为你打开详情窗口查看。"
     L["MSG_CLICK_MISSING_FALLBACK"] = "当前尚未拥有该传送道具/玩具。"
     L["MSG_CLICK_CD_NOTIFY_FMT"] = "|cffff4040[冷却中]|r 该传送方式正在冷却中（剩余 %d 秒）。"

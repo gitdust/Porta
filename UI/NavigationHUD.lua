@@ -999,64 +999,9 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     end
 end
 
--- 显示已抵达目的地状态
+-- 显示已抵达目的地状态 (完成导航时直接关闭 HUD，不再展示冗余步骤)
 function NavigationHUD:ShowArrived(destName)
-    InitHUD()
-    if not hudFrame then return end
-    hudFrame:Show()
-
-    local name = destName or L["HUD_DEST_FALLBACK"]
-    titleText:SetText(string.format("|cff00ff00%s|r", L["HUD_DEST_ARRIVED"]))
-    stepCounterText:SetText("|cff00ff00[OK]|r")
-
-    if altContainer then altContainer:Hide() end
-    if secureActionBtn and not InCombatLockdown() then
-        pcall(function()
-            UnregisterStateDriver(secureActionBtn, "visibility")
-            secureActionBtn:Hide()
-        end)
-    end
-
-    local arrivedMsg = string.format(L["MSG_ROUTE_FINISHED_FMT"], name)
-    currentStepText:SetText(string.format("|cff00ff00%s|r", arrivedMsg))
-
-    stepTextFrame:ClearAllPoints()
-    stepTextFrame:SetPoint("TOPLEFT", upperSection, "TOPLEFT", 0, 0)
-    stepTextFrame:SetPoint("RIGHT", upperSection, "RIGHT", 0, 0)
-
-    local textH = GetSafeFontStringHeight(currentStepText, arrivedMsg, 48, 17, 24)
-    stepTextFrame:SetHeight(textH + 2)
-    upperSection:SetHeight(textH + 2)
-
-    tipText:SetText("|cff888888" .. L["HUD_ARRIVED_CLOSE_HINT"] .. "|r")
-    lowerSection:ClearAllPoints()
-    lowerSection:SetPoint("TOPLEFT", upperSection, "BOTTOMLEFT", 0, -8)
-    lowerSection:SetPoint("RIGHT", hudFrame, "RIGHT", -16, 0)
-    lowerSection:SetHeight(40)
-
-    actionSlotBtn.parsedLink = nil
-    actionSlotBtn.currentStep = nil
-    actionSlotBtn.icon:SetTexture(nil)
-    actionSlotBtn.cooldown:Clear()
-    actionSlotBtn:Hide()
-
-    tipTextFrame:ClearAllPoints()
-    tipTextFrame:SetPoint("TOPLEFT", lowerSection, "TOPLEFT", 0, 0)
-    tipTextFrame:SetPoint("BOTTOMLEFT", lowerSection, "BOTTOMLEFT", 0, 0)
-    tipTextFrame:SetPoint("RIGHT", lowerSection, "RIGHT", 0, 0)
-
-    hudFrame.prevBtn:Hide()
-    hudFrame.viewMapBtn:Hide()
-
-    hudFrame.nextBtn:SetText(L["HUD_BTN_CLOSE"])
-    hudFrame.nextBtn:Show()
-    hudFrame.nextBtn:Enable()
-    hudFrame.nextBtn:SetScript("OnClick", function()
-        ns.Navigation:CancelRoute()
-    end)
-
-    local totalH = 34 + textH + 2 + 8 + 40 + 10 + 22 + 12
-    hudFrame:SetHeight(math.max(130, totalH))
+    self:Hide()
 end
 
 -- 查询 HUD 是否当前正在显示

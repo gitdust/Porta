@@ -16,6 +16,8 @@ local TYPE_INFO = {
     continent = { tag = L["TAG_CONTINENT"], color = "|cff00ff7f" },
 }
 
+local AZEROTH_MAP_ID = 947
+
 -- 魔兽世界核心大洲 ID 列表
 local MAJOR_CONTINENTS = {
     12,   -- 卡利姆多 (Kalimdor)
@@ -30,8 +32,7 @@ local MAJOR_CONTINENTS = {
     1550, -- 暗影界 (Shadowlands)
     1978, -- 巨龙群岛 (Dragon Isles)
     2274, -- 卡兹阿加 (Khaz Algar)
-    2400, -- 至暗之夜 / 奎尔萨拉斯 (Midnight / Quel'Thalas)
-    947,  -- 艾泽拉斯全局 (Azeroth)
+    AZEROTH_MAP_ID, -- 艾泽拉斯全局：仅用于补充枚举未列出大洲下的区域 (如至暗之夜奎尔萨拉斯)，自身不作为目的地
 }
 
 -- 剔除多余首尾空白（兼容魔兽世界内置 strtrim 与标准 Lua）
@@ -363,13 +364,7 @@ function SearchEngine:Initialize()
                             end
                         end
                     else
-                        if C_EncounterJournal and C_EncounterJournal.GetInstanceInfo then
-                            local name = C_EncounterJournal.GetInstanceInfo(dest.id)
-                            if name and name ~= "" then
-                                instanceName = name
-                            end
-                        end
-                        if not instanceName and EJ_GetInstanceInfo then
+                        if EJ_GetInstanceInfo then
                             local name = EJ_GetInstanceInfo(dest.id)
                             if name and name ~= "" then
                                 instanceName = name
@@ -528,7 +523,7 @@ function SearchEngine:Initialize()
             if contInfo and contInfo.name and contInfo.name ~= "" then
                 contName = TrimText(contInfo.name)
                 local contNameLower = string.lower(contName)
-                if not seenMapIDs[contID] and not seenGlobalZoneNames[contNameLower] then
+                if contID ~= AZEROTH_MAP_ID and not seenMapIDs[contID] and not seenGlobalZoneNames[contNameLower] then
                     seenMapIDs[contID] = true
                     seenGlobalZoneNames[contNameLower] = true
                     table.insert(searchIndex, CreateSearchItem(
@@ -571,10 +566,17 @@ function SearchEngine:Initialize()
                                 seenMapIDs[childMapID] = true
                                 seenContinentZoneNames[contZoneKey] = true
                                 seenGlobalZoneNames[childNameLower] = true
+                                local zoneLabel = contName
+                                if contID == AZEROTH_MAP_ID and child.parentMapID then
+                                    local parentInfo = C_Map.GetMapInfo(child.parentMapID)
+                                    if parentInfo and parentInfo.name and parentInfo.name ~= "" then
+                                        zoneLabel = parentInfo.name
+                                    end
+                                end
                                 table.insert(searchIndex, CreateSearchItem(
                                     0,
                                     childName,
-                                    contName,
+                                    zoneLabel,
                                     childMapID,
                                     0.5,
                                     0.5,
@@ -796,7 +798,6 @@ function SearchEngine:Search(query, limit)
 
     matchPoolCount = 0
     local matched = {}
-    local hasExactMatch = false
 
     for i = 1, #searchIndex do
         local item = searchIndex[i]
@@ -822,25 +823,7 @@ function SearchEngine:Search(query, limit)
         end
 
         if isMatch then
-            if score == 100 then
-                hasExactMatch = true
-            end
             table.insert(matched, AcquireMatchEntry(item, score))
-        end
-    end
-
-    -- 如果存在名称完全一致的精确匹配（如输入“永恒王宫”或“Freehold”），原地过滤仅保留完全匹配项
-    if hasExactMatch then
-        local exactCount = 0
-        for i = 1, #matched do
-            local entry = matched[i]
-            if entry.score == 100 then
-                exactCount = exactCount + 1
-                matched[exactCount] = entry
-            end
-        end
-        for i = #matched, exactCount + 1, -1 do
-            matched[i] = nil
         end
     end
 

@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://www.curseforge.com/wow/addons/porta"><img src="https://img.shields.io/badge/CurseForge-Porta-f16436?style=flat-square&logo=curseforge&logoColor=white" alt="Download on CurseForge" /></a>
-  <img src="https://img.shields.io/badge/WoW-Retail_11.0%2B-blue?style=flat-square" alt="WoW Retail" />
+  <img src="https://img.shields.io/badge/WoW-Retail-blue?style=flat-square" alt="WoW Retail" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
 </p>
 

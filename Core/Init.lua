@@ -3,15 +3,8 @@ local ADDON_NAME, ns = ...
 _G.Porta = ns
 
 ns.name = ADDON_NAME
-ns.version = "1.1.0"
-
--- 默认配置
-ns.defaultConfig = {
-    hudLocked = false,
-    hudScale = 1.0,
-    autoTrack = true,
-    showMinimapButton = true,
-}
+-- 版本号以 TOC 为唯一来源，避免与打包版本不一致
+ns.version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version")) or "unknown"
 
 -- 核心事件总线
 ns.EventFrame = CreateFrame("Frame", "PortaEventFrame")

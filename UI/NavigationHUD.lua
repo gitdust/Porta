@@ -286,7 +286,12 @@ local function InitHUD()
 
     hudFrame = CreateFrame("Frame", "PortaNavigationHUD", UIParent, "BackdropTemplate")
     hudFrame:SetSize(420, 140)
-    hudFrame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -220, -180)
+    local savedPoint = PortaDB and PortaDB.hudPoint
+    if savedPoint and savedPoint.point then
+        hudFrame:SetPoint(savedPoint.point, UIParent, savedPoint.relativePoint or savedPoint.point, savedPoint.x or 0, savedPoint.y or 0)
+    else
+        hudFrame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -220, -180)
+    end
     hudFrame:SetMovable(true)
     hudFrame:SetClampedToScreen(true)
 
@@ -308,7 +313,12 @@ local function InitHUD()
     dragHeader:EnableMouse(true)
     dragHeader:RegisterForDrag("LeftButton")
     dragHeader:SetScript("OnDragStart", function() hudFrame:StartMoving() end)
-    dragHeader:SetScript("OnDragStop", function() hudFrame:StopMovingOrSizing() end)
+    dragHeader:SetScript("OnDragStop", function()
+        hudFrame:StopMovingOrSizing()
+        local point, _, relativePoint, x, y = hudFrame:GetPoint(1)
+        PortaDB = PortaDB or {}
+        PortaDB.hudPoint = { point = point, relativePoint = relativePoint, x = x, y = y }
+    end)
 
     -- 标题：目的地
     titleText = dragHeader:CreateFontString(nil, "ARTWORK", "GameFontNormalMed2")
@@ -329,7 +339,6 @@ local function InitHUD()
             if UIErrorsFrame and UIErrorsFrame.AddMessage then
                 UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
             end
-            ns.Print(combatMsg)
             return
         end
         local activeRoute = ns.Navigation:GetActiveRoute()
@@ -424,7 +433,7 @@ local function InitHUD()
     actionSlotBtn:SetSize(40, 40)
     actionSlotBtn:SetPoint("TOPRIGHT", lowerSection, "TOPRIGHT", 0, 0)
     actionSlotBtn:SetFrameLevel(hudFrame:GetFrameLevel() + 5)
-    actionSlotBtn:RegisterForClicks("AnyUp", "AnyDown")
+    actionSlotBtn:RegisterForClicks("AnyUp")
     actionSlotBtn:SetBackdrop({
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         edgeSize = 10,
@@ -441,11 +450,6 @@ local function InitHUD()
     local slotHighlight = actionSlotBtn:CreateTexture(nil, "HIGHLIGHT")
     slotHighlight:SetAllPoints(slotIcon)
     slotHighlight:SetColorTexture(1.0, 1.0, 1.0, 0.25)
-
-    local slotCooldown = CreateFrame("Cooldown", nil, actionSlotBtn, "CooldownFrameTemplate")
-    slotCooldown:SetAllPoints(slotIcon)
-    slotCooldown:SetDrawEdge(true)
-    actionSlotBtn.cooldown = slotCooldown
 
     actionSlotBtn:SetScript("OnEnter", function(self)
         if self.parsedLink then
@@ -465,7 +469,6 @@ local function InitHUD()
             if UIErrorsFrame and UIErrorsFrame.AddMessage then
                 UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.25, 0.25, 1.0, 3)
             end
-            ns.Print(combatMsg)
             if button == "RightButton" and self.parsedLink then
                 OpenTeleportDetailView(self.parsedLink)
             end
@@ -476,9 +479,6 @@ local function InitHUD()
         if parsed then
             if button == "RightButton" or not self.hasIt then
                 OpenTeleportDetailView(parsed)
-                if not self.hasIt and button == "LeftButton" then
-                    ns.Print(string.format(L["MSG_CLICK_MISSING_NOTIFY_FMT"], self.missingReason or L["MSG_CLICK_MISSING_FALLBACK"]))
-                end
             end
         elseif self.currentStep then
             local step = self.currentStep
@@ -514,22 +514,6 @@ local function InitHUD()
 
         if button == "RightButton" or not actionSlotBtn.hasIt then
             OpenTeleportDetailView(parsed)
-            if not actionSlotBtn.hasIt and button == "LeftButton" then
-                ns.Print(string.format(L["MSG_CLICK_MISSING_NOTIFY_FMT"], actionSlotBtn.missingReason or L["MSG_CLICK_MISSING_FALLBACK"]))
-            end
-        else
-            if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
-                local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsed.kind == "SPELL" and "SPELL" or "ITEM", parsed.id)
-                if not isReady and cdSec > 0 then
-                    ns.Print(string.format(L["MSG_CLICK_CD_NOTIFY_FMT"], cdSec))
-                    return
-                end
-            end
-            if parsed.kind == "ITEM" and C_Item and C_Item.IsEquippableItem and C_Item.IsEquippableItem(parsed.id) then
-                if not (C_Item.IsEquippedItem and C_Item.IsEquippedItem(parsed.id)) then
-                    ns.Print(L["MSG_EQUIPPED_WAIT_CD"])
-                end
-            end
         end
     end)
     secureActionBtn:Hide()
@@ -554,7 +538,6 @@ local function InitHUD()
             if UIErrorsFrame and UIErrorsFrame.AddMessage then
                 UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
             end
-            ns.Print(combatMsg)
             return
         end
         local activeRoute, stepIdx = ns.Navigation:GetActiveRoute()
@@ -793,7 +776,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     end
 
     -- 要塞食人魔道标激活提醒
-    if currentStep.isWaygateStep or (currentStep.action == "WAYGATE") then
+    if currentStep.isWaygateStep then
         table.insert(tipBlocks, "|cffffaa00" .. L["WAYGATE_SHORT_TIP"] .. "|r")
     end
 
@@ -896,22 +879,9 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     if hasValidActionIcon then
         actionSlotBtn.icon:SetTexture(texture)
         actionSlotBtn.icon:SetDesaturated(false)
-
-        if ns.PlayerTeleports and ns.PlayerTeleports.GetCooldownStatus then
-            local isReady, cdSec = ns.PlayerTeleports.GetCooldownStatus(parsedLink.kind == "SPELL" and "SPELL" or "ITEM", parsedLink.id)
-            if not isReady and cdSec > 0 then
-                actionSlotBtn.cooldown:SetCooldown(GetTime(), cdSec)
-            else
-                actionSlotBtn.cooldown:Clear()
-            end
-        else
-            actionSlotBtn.cooldown:Clear()
-        end
-
         actionSlotBtn:Show()
     else
         actionSlotBtn.icon:SetTexture(nil)
-        actionSlotBtn.cooldown:Clear()
         actionSlotBtn:Hide()
     end
 

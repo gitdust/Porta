@@ -19,12 +19,6 @@ ns.L = L
     L["MINIMAP_TOOLTIP_LCLICK"] = "Left Click: Toggle Search Dialog"
     L["MINIMAP_TOOLTIP_RCLICK"] = "Right Click: Stop Navigation / Close HUD"
     L["MINIMAP_TOOLTIP_DRAG"] = "Drag: Move Minimap Icon"
-    L["CMD_MINIMAP_TOGGLE_ON"] = "Minimap button enabled."
-    L["CMD_MINIMAP_TOGGLE_OFF"] = "Minimap button hidden (type /porta minimap to show)."
-    L["CMD_HELP_HEADER"] = "Available commands:"
-    L["CMD_HELP_SEARCH"] = "  /porta [keyword] - Open search dialog (or leave empty to open)"
-    L["CMD_HELP_STOP"] = "  /porta stop - Stop navigation and clear all waypoints"
-    L["CMD_HELP_MINIMAP"] = "  /porta minimap - Show or hide minimap icon"
 
     -- 通用括号与名称回退格式
     L["BRACKET_FMT"] = "[%s]"
@@ -104,8 +98,6 @@ ns.L = L
     L["DIST_YARDS_FMT"] = "%d yds"
     L["DIST_KYARDS_FMT"] = "%.1fk yds"
     L["STEP_DIST_TAG_FMT"] = " [Dist: %s]"
-    L["STATUS_READY_TAG"] = " |cff00ff00[Ready]|r"
-    L["STATUS_CD_TAG_FMT"] = " |cffff4040[CD: %ds]|r"
     L["STATUS_MISSING_TAG_FMT"] = " |cffff4444[%s]|r"
     L["QUEST_GATE_INLINE_TAG"] = " |cffff4444[Prerequisite Required]|r"
 
@@ -135,8 +127,8 @@ ns.L = L
     L["KIND_TELEPORT_ITEM"] = "teleport item"
 
     L["STEP_TELEPORT_USE"] = "%s %s%s to teleport to [%s] %s%s"
-    L["STEP_WORMHOLE"] = "Use toy %s%s, choose [%s] in dialogue"
     L["STEP_WORMHOLE_MENU"] = "Use toy %s%s, choose [%s] in dialogue"
+    L["STEP_WORMHOLE_RANDOM"] = "Use toy %s%s (random landing), then travel to [%s]"
     L["STEP_DIRECT_SPELL"] = "Cast teleport spell %s%s directly to [%s] entrance %s"
     L["STEP_DIRECT_ITEM_OR_TOY"] = "Use %s %s%s directly to [%s] %s%s"
     L["STEP_SAME_CONT_FLY"] = "In [%s], head to [%s]"
@@ -201,8 +193,6 @@ ns.L = L
     L["ALT_DESC_WORMHOLE_FMT"] = "Wormhole to [%s]"
     L["ALT_DESC_WORMHOLE"] = "Wormhole teleport"
     L["ALT_DIST_WORMHOLE"] = "Wormhole"
-    L["ALT_DESC_HEARTHSTONE"] = "Standard Hearthstone"
-    L["ALT_DIST_HEARTHSTONE"] = "Hearthstone"
     L["BUILDING_MAGE_TOWER"] = "Mage Tower / Spirit Lodge"
     L["ALT_WAYGATE_FMT"] = "[Garrison HS] Portal to %s"
     L["ALT_DESC_WAYGATE"] = "Use Garrison Hearthstone, then fast-travel via %s portal"
@@ -225,7 +215,6 @@ ns.L = L
     L["DARKMOON_FAIRE_OPEN_DESC"] = "The Darkmoon Faire is currently active! Teleport directly via capital Mystic Mage."
     L["DARKMOON_FAIRE_CLOSED_DESC_FMT"] = "The Darkmoon Faire is currently closed (Next opening: %s). Only open from 1st Sunday to following Saturday each month."
     L["DARKMOON_NEXT_DATE_FMT"] = "%d/%d"
-    L["ERR_TIMEWAYS_INACTIVE"] = "The Timeways portal was only active during The War Within (11.0); it is closed in the current 12.1 expansion."
 
     -- 重访惊魂幻象 (Horrific Visions Revisited)
     L["DEST_VISION_STORMWIND"] = "Vision of Stormwind"
@@ -238,6 +227,8 @@ ns.L = L
     L["VISION_INACTIVE_TAG_FMT"] = " |cffff8800[Rotates: %s]|r"
     L["VISION_ACTIVE_DESC"] = "Horrific Vision active this week! Enter via Soridormi's portal in Dornogal."
     L["VISION_INACTIVE_DESC_FMT"] = "The other city is active this week (this vision is expected to rotate open around %s). You can still travel to Dornogal to participate."
+    L["VISION_UNKNOWN_TAG"] = " |cffaaaaaa[Rotation Unknown]|r"
+    L["VISION_UNKNOWN_DESC"] = "This week's Horrific Vision rotation could not be detected. Check Soridormi's portal in Dornogal on arrival."
 
     -- 物品/玩具/技能缺失状态短标签与原因模板 (PlayerTeleports)
     L["TAG_UNUSABLE"] = "Unusable"
@@ -283,7 +274,6 @@ ns.L = L
     L["NOTE_TORTALLAN_CHARM"] = "1 hour cooldown; teleports to Seeker's Vista in Stormsong Valley"
 
     -- 常用物品与技能回退名称 (当客户端缓存尚未返回时的首帧回退)
-    L["ITEM_NAME_6948"] = "Hearthstone"
     L["ITEM_NAME_140192"] = "Dalaran Hearthstone"
     L["ITEM_NAME_110560"] = "Garrison Hearthstone"
     L["ITEM_NAME_128353"] = "Admiral's Compass"
@@ -307,7 +297,7 @@ ns.L = L
     L["ITEM_NAME_92510"] = "Vol'jin's Hearthstone"
     L["ITEM_NAME_63378"] = "Baradin's Wardens Tabard"
     L["ITEM_NAME_63379"] = "Hellscream's Reach Tabard"
-    L["ITEM_NAME_230000"] = "Wormhole Generator: Midnight"
+    L["ITEM_NAME_248485"] = "Wormhole Generator: Quel'Thalas"
     L["ITEM_NAME_221966"] = "Wormhole Generator: Khaz Algar"
     L["ITEM_NAME_198156"] = "Wyrmhole Generator"
     L["ITEM_NAME_172924"] = "Wormhole Generator: Shadowlands"
@@ -327,7 +317,7 @@ ns.L = L
     L["ITEM_NAME_139590"] = "Scroll of Teleport: Ravenholdt"
     L["ITEM_NAME_202046"] = "Lucky Tortollan Charm"
     L["SPELL_NAME_265225"] = "Mole Machine"
-    L["SPELL_NAME_1260001"] = "Teleport: Silvermoon"
+    L["SPELL_NAME_1259190"] = "Teleport: Silvermoon City"
     L["SPELL_NAME_1260100"] = "Path of the Void Rift"
     L["SPELL_NAME_1260105"] = "Path of the Sunwell"
     L["SPELL_NAME_1260110"] = "Path of Zul'Aman"
@@ -340,12 +330,12 @@ ns.L = L
     L["GATE_QUEST_START_NPC"] = "Zone Campaign Quest Giver"
     L["GATE_QUEST_UNLOCK_FMT"] = "This portal requires completing prerequisite quest %s (Quest ID: %d)."
 
-    L["GATE_NAZJATAR_H_QUEST"] = "\"Send the Fleet\" / \"A Way Home\""
+    L["GATE_NAZJATAR_H_QUEST"] = "\"A Way Home\""
     L["GATE_NAZJATAR_H_NPC"] = "Dazar'alor Great Seal [Nathanos Blightcaller]"
-    L["GATE_NAZJATAR_H_GUIDE"] = "Nazjatar is not unlocked on this character! Pick up \"Send the Fleet\" from [Nathanos Blightcaller] at the Great Seal in Dazar'alor to unlock the portal."
-    L["GATE_NAZJATAR_A_QUEST"] = "\"Send the Fleet\" / \"The Wolf's Offensive\""
+    L["GATE_NAZJATAR_H_GUIDE"] = "Nazjatar is not unlocked on this character! Pick up \"Send the Fleet\" from [Nathanos Blightcaller] at the Great Seal in Dazar'alor and finish the Nazjatar intro through \"A Way Home\" to open the portal."
+    L["GATE_NAZJATAR_A_QUEST"] = "\"A Way Home\""
     L["GATE_NAZJATAR_A_NPC"] = "Boralus Harbor [Genn Greymane]"
-    L["GATE_NAZJATAR_A_GUIDE"] = "Nazjatar is not unlocked on this character! Pick up \"Send the Fleet\" from [Genn Greymane] in Boralus Harbor to unlock the portal."
+    L["GATE_NAZJATAR_A_GUIDE"] = "Nazjatar is not unlocked on this character! Pick up \"Send the Fleet\" from [Genn Greymane] in Boralus Harbor and finish the Nazjatar intro through \"A Way Home\" to open the portal."
     L["GATE_ARGUS_QUEST"] = "\"The Hand of Fate\""
     L["GATE_ARGUS_NPC"] = "Dalaran Krasus' Landing [Khadgar]"
     L["GATE_ARGUS_GUIDE"] = "Complete the Argus intro quest \"The Hand of Fate\" from [Khadgar] at Krasus' Landing in Dalaran to unlock the Vindicaar beacon."
@@ -368,13 +358,7 @@ ns.L = L
     L["GATE_ISLE_THUNDER_A_GUIDE"] = "Pick up \"Thunder Calls\" at the Shado-Pan Garrison in Townlong Steppes to unlock the Isle of Thunder portal."
 
     -- 导航聊天消息 (Navigation & Pathfinder)
-    L["ERR_NO_PLAYER_MAP"] = "Unable to determine your current map."
-    L["ERR_NO_ROUTE_FOUND_FMT"] = "Could not find a valid route to [%s]."
-    L["ERR_EMPTY_ROUTE"] = "Cannot start navigation with an empty route."
     L["TOMTOM_DEFAULT_TITLE"] = "Porta Waypoint"
-    L["MSG_FOCUS_COORD_FMT"] = "Waypoint set at [%s] |cffffd100(%.2f, %.2f)|r!"
-    L["MSG_ROUTE_FINISHED_FMT"] = "Arrived at [%s]! Navigation complete."
-    L["MSG_ROUTE_CANCELLED"] = "Navigation cancelled."
 
     -- HUD 界面文本与悬停提示 (NavigationHUD)
     L["HUD_DEFAULT_TITLE"] = "|cff00ccffRoute Guide|r"
@@ -400,10 +384,6 @@ ns.L = L
     L["MSG_COMBAT_ACTION_RESTRICTED"] = "Cannot use teleport items or spells in combat. Please try again after leaving combat."
     L["MSG_COMBAT_MAP_RESTRICTED"] = "Cannot safely open the World Map in combat. In-game waypoint and HUD guidance remain active."
     L["HUD_TOOLTIP_COMBAT_RESTRICTED"] = "Restricted in combat: Click after leaving combat to use"
-    L["MSG_CLICK_MISSING_NOTIFY_FMT"] = "|cffff6600[Missing Teleport]|r %s Opened details window."
-    L["MSG_CLICK_MISSING_FALLBACK"] = "You do not currently own this teleport item/toy."
-    L["MSG_CLICK_CD_NOTIFY_FMT"] = "|cffff4040[Cooldown]|r This teleport is on cooldown (%ds remaining)."
-    L["MSG_EQUIPPED_WAIT_CD"] = "Equipped the teleport item! Wait 30s for the equip cooldown, then click again to teleport."
 
     L["HUD_WARN_PREREQ_FALLBACK"] = "Prerequisite Quest"
 

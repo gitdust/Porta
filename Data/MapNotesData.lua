@@ -1,6 +1,6 @@
 -- =========================================================================
 -- Porta Data - Auto-generated from HandyNotes_MapNotes (Retail)
--- Build Date: 2026-10-21
+-- Build Date: 2026-10-23
 -- Destinations: 233
 -- Transport Edges: 660
 -- =========================================================================
@@ -9,11 +9,11 @@ local _, ns = ...
 
 ns.PortaData = {
     version = "1.0.0",
-    buildDate = "2026-10-21",
+    buildDate = "2026-10-23",
 
-    -- 目的地表：地下城、团队副本、地下堡入口
-    -- id 语义：dungeon/raid 为 journalInstanceID；delve 为地下堡内部 mapID
-    -- dungeon/raid 名称可用 EJ_GetInstanceInfo(id)；delve 名称可用 C_Map.GetMapInfo(id)
+    -- Destinations: dungeon, raid and delve entrances
+    -- id: journalInstanceID for dungeon/raid; internal uiMapID for delve
+    -- Names: EJ_GetInstanceInfo(id) for dungeon/raid; C_Map.GetMapInfo(id) for delve
     destinations = {
         { id = 63, mapID = 52, x = 0.4252, y = 0.7168, type = "dungeon", comment = "Deadmines" },
         { id = 64, mapID = 21, x = 0.4492, y = 0.6788, type = "dungeon", comment = "Shadowfang Keep" },
@@ -200,23 +200,23 @@ ns.PortaData = {
         { id = 1292, mapID = 23, x = 0.4325, y = 0.1854, type = "dungeon", comment = "Stratholme Service Entrance" },
         { id = 1296, mapID = 2346, x = 0.4204, y = 0.5031, type = "raid", comment = "Liberation of Undermine" },
         { id = 1298, mapID = 2214, x = 0.4208, y = 0.3948, type = "dungeon", comment = "Operation: Floodgate" },
-        { id = 1299, mapID = 2395, x = 0.3545, y = 0.7882, type = "dungeon", comment = "Windläuferturm" },
-        { id = 1300, mapID = 2424, x = 0.6346, y = 0.1538, type = "dungeon", comment = "Terrasse der Magister" },
+        { id = 1299, mapID = 2395, x = 0.3545, y = 0.7882, type = "dungeon", comment = "Windrunner Spire" },
+        { id = 1300, mapID = 2424, x = 0.6346, y = 0.1538, type = "dungeon", comment = "Magisters' Terrace" },
         { id = 1302, mapID = 2371, x = 0.4166, y = 0.2152, type = "raid", comment = "Manaforge Omega" },
         { id = 1303, mapID = 2371, x = 0.6524, y = 0.6841, type = "dungeon", comment = "Eco-Dome Al'dani" },
-        { id = 1304, mapID = 2395, x = 0.5400, y = 0.2432, type = "dungeon", comment = "Mördergasse" },
-        { id = 1305, mapID = 2413, x = 0.7355, y = 0.6635, type = "raid", comment = "Sporfall" },
-        { id = 1307, mapID = 2405, x = 0.4524, y = 0.6483, type = "raid", comment = "Leerenspitze" },
-        { id = 1308, mapID = 2424, x = 0.5260, y = 0.8529, type = "raid", comment = "Marsch auf Quel'Danas" },
-        { id = 1309, mapID = 2413, x = 0.2646, y = 0.7804, type = "dungeon", comment = "Das blendende Tal" },
-        { id = 1311, mapID = 2437, x = 0.2983, y = 0.8450, type = "dungeon", comment = "Nalorakks Bau" },
-        { id = 1313, mapID = 2405, x = 0.5166, y = 0.1874, type = "dungeon", comment = "Arena der Leerennarbe" },
-        { id = 1314, mapID = 2413, x = 0.6138, y = 0.6289, type = "raid", comment = "Der Traumriss" },
-        { id = 1315, mapID = 2437, x = 0.4383, y = 0.3950, type = "dungeon", comment = "Maisarakavernen" },
-        { id = 1316, mapID = 2405, x = 0.6497, y = 0.6178, type = "dungeon", comment = "Nexuspunkt Xenas" },
-        { id = 1320, mapID = 2509, x = 0.4723, y = 0.2286, type = "raid", comment = "Der giftige Abgrund" },
-        { id = 1322, mapID = 2509, x = 0.4724, y = 0.6812, type = "dungeon", comment = "Altar der Fänge" },
-        { id = 1324, mapID = 2613, x = 0.7426, y = 0.0591, type = "raid", comment = "Die Entfesslung von Kith'ix" },
+        { id = 1304, mapID = 2395, x = 0.5400, y = 0.2432, type = "dungeon", comment = "Murder Row" },
+        { id = 1305, mapID = 2413, x = 0.7355, y = 0.6635, type = "raid", comment = "Sporefall" },
+        { id = 1307, mapID = 2405, x = 0.4524, y = 0.6483, type = "raid", comment = "The Voidspire" },
+        { id = 1308, mapID = 2424, x = 0.5260, y = 0.8529, type = "raid", comment = "March on Quel'Danas" },
+        { id = 1309, mapID = 2413, x = 0.2646, y = 0.7804, type = "dungeon", comment = "The Blinding Vale" },
+        { id = 1311, mapID = 2437, x = 0.2983, y = 0.8450, type = "dungeon", comment = "Den of Nalorakk" },
+        { id = 1313, mapID = 2405, x = 0.5166, y = 0.1874, type = "dungeon", comment = "Voidscar Arena" },
+        { id = 1314, mapID = 2413, x = 0.6138, y = 0.6289, type = "raid", comment = "The Dreamrift" },
+        { id = 1315, mapID = 2437, x = 0.4383, y = 0.3950, type = "dungeon", comment = "Maisara Caverns" },
+        { id = 1316, mapID = 2405, x = 0.6497, y = 0.6178, type = "dungeon", comment = "Nexus Point Xenas" },
+        { id = 1320, mapID = 2509, x = 0.4723, y = 0.2286, type = "raid", comment = "The Toxic Abyss" },
+        { id = 1322, mapID = 2509, x = 0.4724, y = 0.6812, type = "dungeon", comment = "Altar of Fangs" },
+        { id = 1324, mapID = 2613, x = 0.7426, y = 0.0591, type = "raid", comment = "The Unbinding of Kith'ix" },
         { id = 2249, mapID = 2248, x = 0.5252, y = 0.6626, type = "delve", comment = "Fungal Folly" },
         { id = 2250, mapID = 2248, x = 0.6164, y = 0.4271, type = "delve", comment = "Kriegval's Rest" },
         { id = 2251, mapID = 2214, x = 0.4611, y = 0.4791, type = "delve", comment = "The Waterworks" },
@@ -250,7 +250,7 @@ ns.PortaData = {
         { id = 2647, mapID = 2395, x = 0.6305, y = 0.7230, type = "delve", comment = "The Labyrinth of Kindo'jan" },
     },
 
-    -- 交通拓扑图：传送门、飞艇、船只、传送镜等连接边
+    -- Transport graph: portals, zeppelins, ships, mirrors and other connecting edges
     transports = {
         { from = 1, to = 85, x = 0.4578, y = 0.0744, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: ns.Orgrimmar .. " - " .. FACTION_HORDE .. "\n" .. "\n" .. L["Portalroom"] .. "\n" .. " ==> " .. ns.Silvermoon .. " (" .. EXPANSION_NAME1 ..")" .."\n" .. " ==> " .. ns.Valdrakken .. "\n" .. " ==> " .. ns.Oribos .. "\n" .. " ==> " .. ns.Azsuna .. "\n" .. " ==> " .. ns.Zuldazar .. "\n" .. " ==> " .. ns.Shattrath .. "\n" .. " ==> " .. ns.Dalaran .. "\n" .. " ==> " .. ns.CavernsOfTime .. "\n" .. " ==> " .. ns.DarkPortal .. "\n" .. " ==> " .. ns.Dornogal .. "\n" .. " ==> " .. ns.Silvermoon .. " (" .. EXPANSION_NAME11 ..")" .. "\n" .. " ==> " .. ns.RazorwindShores .. "\n" .. "\n" .. L["Portal"] .. "\n" .. " ==> " .. ns.Hyjal .. "\n" .. " ==> " .. ns.TwilightHighlands .. "\n" .. " ==> " .. ARTIFACT_SHAMAN_TITLECARD_DEEPHOLM .. "\n" .. " ==> " .. ns.Vashjir .. "\n" .. " ==> " .. ns.Uldum .. "\n" .. " ==> " .. ns.TolBarad .. "\n" .. "\n" .. L["Zeppelins"] .. "\n" .. " ==> " .. ns.ThunderBluff .. "\n" .. " ==> " .. ns.Gromgol .. "\n" .. " ==> " .. POSTMASTER_LETTER_WARSONGHOLD .. "\n" .. "\n" .. CALENDAR_TYPE_DUNGEON .. "\n" .. " ==> " .. DUNGEON_FLOOR_RAGEFIRE1
         { from = 1, to = 210, x = 0.3529, y = 0.7954, type = "SHIP", faction = "NEUTRAL" }, -- note: POSTMASTER_LETTER_STRANGLETHORNVALE .. " (" .. L["Ship"] ..")"
@@ -348,6 +348,7 @@ ns.PortaData = {
         { from = 78, to = 119, x = 0.5056, y = 0.0773, type = "PORTAL", faction = "NEUTRAL" }, -- note: Portal Unguro to Sholazar
         { from = 81, to = 862, x = 0.4161, y = 0.4520, type = "PORTAL", faction = "NEUTRAL" }, -- note: Portal from Silithus to Zandalar or Boralus
         { from = 81, to = 1161, x = 0.4161, y = 0.4520, type = "PORTAL", faction = "NEUTRAL" }, -- note: Portal from Silithus to Zandalar or Boralus
+        { from = 81, to = 1473, x = 0.4321, y = 0.4449, type = "PORTAL", faction = "NEUTRAL" }, -- note: "\n" ..L["If you don't see this icon, it's probably in a different phase. \nChange the phase on Zidormi"]
         { from = 84, to = 17, x = 0.4911, y = 0.8734, type = "PORTAL", faction = "ALLIANCE" }, -- note: ns.DarkPortal .. "\n" .. "( " .. L["talk to"] .. ": " .. ns.HonorHoldMage .. " )"
         { from = 84, to = 37, x = 0.7339, y = 0.9051, type = "TRANSPORT", faction = "ALLIANCE" }, -- note: Passage/Exit
         { from = 84, to = 74, x = 0.4374, y = 0.8538, type = "PORTAL", faction = "ALLIANCE" }, -- note: Portal to Caverns of Time
@@ -466,6 +467,7 @@ ns.PortaData = {
         { from = 110, to = 18, x = 0.4949, y = 0.1509, type = "PORTAL", faction = "HORDE" }, -- note: ns.RuinsofLordaeron .. " (" .. L["Portal"] ..")"
         { from = 110, to = 85, x = 0.5851, y = 0.1859, type = "PORTAL", faction = "HORDE" }, -- note: Portal to Orgrimmar from Silvermoon
         { from = 110, to = 94, x = 0.7260, y = 0.9199, type = "TRANSPORT", faction = "HORDE" }, -- note: Passage/Exit
+        { from = 111, to = 74, x = 0.7467, y = 0.3144, type = "PORTAL", faction = "NEUTRAL" }, -- note: ns.CavernsOfTime .. " " .. L["Portal"] .. " (" .. L["talk to"] .. " " .. ns.Zephir .. ")"
         { from = 111, to = 84, x = 0.5721, y = 0.4825, type = "PORTAL", faction = "ALLIANCE" }, -- note: Portal from Shattrath to Stormwind
         { from = 111, to = 85, x = 0.5678, y = 0.4884, type = "PORTAL", faction = "HORDE" }, -- note: Portal from Shattrath to Orgrimmar
         { from = 111, to = 107, x = 0.2234, y = 0.4989, type = "TRANSPORT", faction = "NEUTRAL" },
@@ -793,6 +795,7 @@ ns.PortaData = {
         { from = 1355, to = 1161, x = 0.3997, y = 0.5256, type = "PORTAL", faction = "ALLIANCE", questID = 55175 }, -- note: Portalroom to Boralus from Mezzamere
         { from = 1355, to = 1163, x = 0.4727, y = 0.6279, type = "PORTAL", faction = "HORDE" }, -- note: Portalroom to Dazar'alor from NewHome
         { from = 1462, to = 862, x = 0.7552, y = 0.2266, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Transport from Mechagon to Zuldazar
+        { from = 1473, to = 81, x = 0.5002, y = 0.3037, type = "PORTAL", faction = "NEUTRAL" }, -- note: Portal from Chamber of Heart to Silithus
         { from = 1530, to = 84, x = 0.9059, y = 0.6670, type = "PORTAL", faction = "ALLIANCE" }, -- note: Portal from Shrine of Seven Stars to Stormwind
         { from = 1530, to = 85, x = 0.6372, y = 0.0989, type = "PORTAL", faction = "HORDE" }, -- note: ns.Orgrimmar .. " (" .. L["Portal"] ..")\n" .. DUNGEON_FLOOR_GILNEAS3
         { from = 1530, to = 390, x = 0.8371, y = 0.2804, type = "TRANSPORT", faction = "NEUTRAL" },
@@ -849,7 +852,7 @@ ns.PortaData = {
         { from = 2239, to = 2200, x = 0.8964, y = 0.3770, type = "WAYGATE", faction = "NEUTRAL" }, -- note: Bel'ameth, Amirdrassil to Emerald Dream
         { from = 2248, to = 2214, x = 0.3742, y = 0.7287, type = "TRANSPORT", faction = "NEUTRAL", questID = 84220 },
         { from = 2248, to = 2214, x = 0.6733, y = 0.3102, type = "TRANSPORT", faction = "NEUTRAL", questID = 82195 },
-        { from = 2248, to = 2266, x = 0.5055, y = 0.4183, type = "WAYGATE", faction = "NEUTRAL" }, -- note: L["The Timeways"] .. " " .. L["Portals"] .. "\n" .. "\n" .. ZONE .. ": " .. ns.Voldun .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.TempleOfSethraliss .. "\n\n" .. ZONE .. ": " .. ns.Zuldazar .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.Kingsrush .. "\n\n" .. ZONE .. ": " .. ns.TheWakingShores .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.RubyLifePools
+        { from = 2248, to = 2266, x = 0.5055, y = 0.4183, type = "WAYGATE", faction = "NEUTRAL" }, -- note: L["The Timeways"] .. " " .. L["Portals"]
         { from = 2248, to = 2339, x = 0.4691, y = 0.3872, type = "PORTAL", faction = "HORDE" }, -- note: Dornogal to Orgrimmar
         { from = 2248, to = 2339, x = 0.4704, y = 0.3781, type = "PORTAL", faction = "ALLIANCE" }, -- note: Dornogal to Stormwind
         { from = 2248, to = 2339, x = 0.5302, y = 0.4511, type = "PORTAL", faction = "NEUTRAL", achievementID = 19559 }, -- note: Portal from Dornogal to Azj-Kahet if u finished the achievement=19559
@@ -869,7 +872,7 @@ ns.PortaData = {
         { from = 2339, to = 2248, x = 0.6858, y = 0.8953, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Passage/Exit
         { from = 2339, to = 2248, x = 0.8178, y = 0.2819, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Passage/Exit
         { from = 2339, to = 2255, x = 0.6361, y = 0.5205, type = "PORTAL", faction = "NEUTRAL", achievementID = 19559 }, -- note: Portal from Dornogal to Azj-Kahet if u finished the achievement=19559
-        { from = 2339, to = 2266, x = 0.5356, y = 0.3873, type = "WAYGATE", faction = "NEUTRAL" }, -- note: L["The Timeways"] .. " " .. L["Portals"] .. "\n" .. "\n" .. ZONE .. ": " .. ns.SpiresOfArak .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.Skyreach .. "\n\n" .. ZONE .. ": " .. ns.Icecrown .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.PitOfSaron .. "\n\n" .. ZONE .. ": " .. ns.Eredath .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.SeatOfTheTriumvirate .. "\n\n" .. ZONE .. ": " .. ns.Thaldraszus .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.AlgetharAcademy
+        { from = 2339, to = 2266, x = 0.5356, y = 0.3873, type = "WAYGATE", faction = "NEUTRAL" }, -- note: Portal from Dornogal to the Timeways
         { from = 2339, to = 2346, x = 0.5246, y = 0.5047, type = "PORTAL", faction = "NEUTRAL", questID = 86535 }, -- note: Portal from Dornogal to Undermine
         { from = 2339, to = 2367, x = 0.2977, y = 0.5967, type = "PORTAL", faction = "NEUTRAL", achievementID = 40725 }, -- note: Kammer der Erinnerung
         { from = 2339, to = 2369, x = 0.7354, y = 0.0516, type = "ZEPPELIN", faction = "NEUTRAL" }, -- note: Zeppelin from OG to Borean Tundra - Northrend
@@ -894,17 +897,14 @@ ns.PortaData = {
         { from = 2393, to = 2405, x = 0.3528, y = 0.6607, type = "PORTAL", faction = "NEUTRAL", questID = 86549 }, -- note: Portal zum Leerensturm
         { from = 2393, to = 2413, x = 0.3674, y = 0.6821, type = "PORTAL", faction = "NEUTRAL", questID = 86898 }, -- note: Wurzelpfad nach Harandar
         { from = 2393, to = 2424, x = 0.4573, y = 0.0648, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Passage/Exit
-        { from = 2393, to = 2512, x = 0.5680, y = 0.6740, type = "PORTAL", faction = "NEUTRAL" }, -- note: 通往盘卷蛇岛的传送门
         { from = 2393, to = 2599, x = 0.4795, y = 0.4809, type = "PORTAL", faction = "NEUTRAL" }, -- note: L["Portal"] .. " - " .. ns.Val .. " / " .. ns.Naigtal
         { from = 2393, to = 2600, x = 0.4795, y = 0.4809, type = "PORTAL", faction = "NEUTRAL" }, -- note: L["Portal"] .. " - " .. ns.Val .. " / " .. ns.Naigtal
-        { from = 2395, to = 2266, x = 0.4944, y = 0.2489, type = "WAYGATE", faction = "NEUTRAL" }, -- note: L["The Timeways"] .. " " .. L["Portals"] .. "\n" .. "\n" .. ZONE .. ": " .. ns.Voldun .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.TempleOfSethraliss .. "\n\n" .. ZONE .. ": " .. ns.Zuldazar .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.Kingsrush .. "\n\n" .. ZONE .. ": " .. ns.TheWakingShores .. "\n" .. CALENDAR_TYPE_DUNGEON .. ": " .. ns.RubyLifePools
-        { from = 2395, to = 2393, x = 0.5178, y = 0.2460, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: ns.Silvermoon .. " (" .. EXPANSION_NAME11 .. ")\n\n" .. L["Portals"] .. "\n" .. " ==> " .. ns.Orgrimmar .. "\n" .. " ==> " .. ns.Harandar .. "\n" .. " ==> " .. ns.VoidTempest .. "\n" .. " ==> " .. ns.Stormwind .. "\n\n" .. CALENDAR_TYPE_DUNGEON .. "\n ==> " .. ns.MurderRow .. "\n\n" .. DELVES_LABEL .. "\n ==> " .. ns.TheDarkway .. "\n ==> " .. ns.CollegiateCalamity
+        { from = 2395, to = 2393, x = 0.4684, y = 0.2862, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: ns.Silvermoon .. " (" .. EXPANSION_NAME11 .. ")\n\n" .. L["Portals"] .. "\n" .. " ==> " .. ns.Orgrimmar .. "\n" .. " ==> " .. ns.Harandar .. "\n" .. " ==> " .. ns.VoidTempest .. "\n" .. " ==> " .. ns.Stormwind .. "\n" .. " ==> " .. L["The Timeways"] .. "\n\n" .. CALENDAR_TYPE_DUNGEON .. "\n ==> " .. ns.MurderRow .. "\n\n" .. DELVES_LABEL .. "\n ==> " .. ns.TheDarkway .. "\n ==> " .. ns.CollegiateCalamity
         { from = 2405, to = 2393, x = 0.5163, y = 0.7026, type = "PORTAL", faction = "NEUTRAL", questID = 86510 }, -- note: L["Portals"] .. "\n " .. ns.SilvermoonMN .. "\n " .. ns.Harandar
         { from = 2405, to = 2413, x = 0.5163, y = 0.7026, type = "PORTAL", faction = "NEUTRAL", questID = 86510 }, -- note: L["Portals"] .. "\n " .. ns.SilvermoonMN .. "\n " .. ns.Harandar
         { from = 2413, to = 2576, x = 0.5354, y = 0.5571, type = "PORTAL", faction = "NEUTRAL", questID = 86883 }, -- note: L["inside the cave"] .. ":\n" .. ns.TextIconPortalOld:GetIconString() .. " " .. L["Portal"] .. " " .. ns.VoidTempest .. "\n" .. ns.TextIconPortalOld:GetIconString() .. " " .. L["Portal"] .. " " .. ns.SilvermoonMN
         { from = 2472, to = 2339, x = 0.4944, y = 0.1971, type = "PORTAL", faction = "NEUTRAL", questID = 84967 }, -- note: Portal Tazavesh to Dornogal
         { from = 2472, to = 2339, x = 0.6254, y = 0.9423, type = "PORTAL", faction = "NEUTRAL", questID = 84957 }, -- note: Portal from Tazavesh to Dornogal
-        { from = 2512, to = 2393, x = 0.5820, y = 0.4850, type = "PORTAL", faction = "NEUTRAL" }, -- note: 通往阿斯塔洛的圣殿的传送门
         { from = 2512, to = 2509, x = 0.3020, y = 0.6475, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Altar der Fänge, Der Giftige Abgrund
         { from = 2512, to = 2509, x = 0.4437, y = 0.4421, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Altar der Fänge, Der Giftige Abgrund
         { from = 2512, to = 2509, x = 0.4686, y = 0.6487, type = "TRANSPORT", faction = "NEUTRAL" }, -- note: Altar der Fänge, Der Giftige Abgrund
@@ -915,5 +915,5 @@ ns.PortaData = {
     },
 }
 
--- 也挂载到全局变量，方便控制台调试
+-- Also exposed as a global for console debugging
 PortaData = ns.PortaData

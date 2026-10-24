@@ -8,53 +8,75 @@ local activeRoute = nil
 local currentStepIndex = 1
 local tomtomWaypoint = nil
 
+-- Porta 自己设置的航标 (仅清除自己设置的，不动玩家手动放置的标记与任务追踪)
+local ownWaypoint = nil
+
+-- 若地图不允许放置用户航标 (副本内部 / 部分微型地图)，沿父地图换算坐标直至可放置
+local function ResolveWaypointLocation(mapID, x, y)
+    if not C_Map.CanSetUserWaypointOnMap then
+        return mapID, x, y
+    end
+    local currMap, currX, currY = mapID, x, y
+    for _ = 1, 6 do
+        if C_Map.CanSetUserWaypointOnMap(currMap) then
+            return currMap, currX, currY
+        end
+        local info = C_Map.GetMapInfo(currMap)
+        local parentID = info and info.parentMapID
+        if not parentID or parentID <= 0 or not C_Map.GetMapRectOnMap then
+            return nil
+        end
+        local minX, maxX, minY, maxY = C_Map.GetMapRectOnMap(currMap, parentID)
+        if not minX then
+            return nil
+        end
+        currX = minX + currX * (maxX - minX)
+        currY = minY + currY * (maxY - minY)
+        currMap = parentID
+    end
+    return nil
+end
+
+local function IsOwnWaypointActive()
+    if not ownWaypoint or not C_Map.GetUserWaypoint then return false end
+    local point = C_Map.GetUserWaypoint()
+    if not point or point.uiMapID ~= ownWaypoint.mapID or not point.position then return false end
+    -- GetUserWaypoint 返回的 position 是不带 Vector2DMixin 方法的普通表，只能直接读 x / y
+    local px, py = point.position.x, point.position.y
+    if not px or not py then return false end
+    return math.abs(px - ownWaypoint.x) < 0.0005 and math.abs(py - ownWaypoint.y) < 0.0005
+end
+
 -- 设置暴雪原生航标与超追踪
 local function SetBlizzardWaypoint(mapID, x, y)
     if not C_Map or not C_Map.SetUserWaypoint then return end
+    if not mapID or not x or not y or x <= 0 or y <= 0 then return end
 
-    pcall(function()
-        C_Map.ClearUserWaypoint()
-        if mapID and x and y and x > 0 and y > 0 then
-            local point = UiMapPoint.CreateFromCoordinates(mapID, x, y)
-            C_Map.SetUserWaypoint(point)
-            if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
-                C_SuperTrack.SetSuperTrackedUserWaypoint(true)
-            end
+    local wpMap, wpX, wpY = ResolveWaypointLocation(mapID, x, y)
+    if not wpMap then return end
+
+    local ok = pcall(function()
+        C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(wpMap, wpX, wpY))
+        if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+            C_SuperTrack.SetSuperTrackedUserWaypoint(true)
         end
     end)
+    if ok then
+        ownWaypoint = { mapID = wpMap, x = wpX, y = wpY }
+    end
 end
 
--- 清除暴雪原生航标与超追踪
+-- 清除 Porta 设置的暴雪原生航标与超追踪
 local function ClearBlizzardWaypoint()
-    pcall(function()
-        if C_SuperTrack then
-            if C_SuperTrack.SetSuperTrackedUserWaypoint then
+    if IsOwnWaypointActive() then
+        pcall(function()
+            if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
                 C_SuperTrack.SetSuperTrackedUserWaypoint(false)
             end
-            if C_SuperTrack.ClearAllSuperTracked then
-                C_SuperTrack.ClearAllSuperTracked()
-            end
-        end
-        if C_Map and C_Map.ClearUserWaypoint then
             C_Map.ClearUserWaypoint()
-        end
-    end)
-
-    -- 延后微帧兜底二次清除，规避跨地图或跨位面瞬间事件竞争导致的航标与光标残留
-    if C_Timer and C_Timer.After then
-        C_Timer.After(0.05, function()
-            pcall(function()
-                if not activeRoute then
-                    if C_SuperTrack and C_SuperTrack.ClearAllSuperTracked then
-                        C_SuperTrack.ClearAllSuperTracked()
-                    end
-                    if C_Map and C_Map.ClearUserWaypoint then
-                        C_Map.ClearUserWaypoint()
-                    end
-                end
-            end)
         end)
     end
+    ownWaypoint = nil
 end
 
 -- 剥离超链接与图标控制码，生成纯文本标题
@@ -106,7 +128,6 @@ function Navigation:OpenWorldMap(mapID)
         if UIErrorsFrame and UIErrorsFrame.AddMessage then
             UIErrorsFrame:AddMessage(combatMsg, 1.0, 0.82, 0.0, 1.0, 3)
         end
-        ns.Print(combatMsg)
         return
     end
     if not mapID or mapID <= 0 then return end
@@ -153,8 +174,6 @@ function Navigation:FocusCoordinate(mapID, x, y, label)
 
     SetBlizzardWaypoint(mapID, normX, normY)
     SetTomTomWaypoint(mapID, normX, normY, label or string.format("%s (%.2f, %.2f)", mapName, normX * 100, normY * 100))
-
-    ns.Print(string.format(L["MSG_FOCUS_COORD_FMT"], mapName, normX * 100, normY * 100))
 end
 
 -- =========================================================================
@@ -162,7 +181,6 @@ end
 -- =========================================================================
 function Navigation:StartRoute(route)
     if not route or not route.steps or #route.steps == 0 then
-        ns.Print(L["ERR_EMPTY_ROUTE"])
         return
     end
 
@@ -261,7 +279,6 @@ end
 
 -- 路线结束 (完成导航，清空航标并直接关闭 HUD)
 function Navigation:FinishRoute()
-    local destName = (activeRoute and activeRoute.destination and activeRoute.destination.name) or L["HUD_DEST_FALLBACK"]
     self:ClearWaypoints()
     activeRoute = nil
     currentStepIndex = 1
@@ -269,7 +286,6 @@ function Navigation:FinishRoute()
     if ns.NavigationHUD then
         ns.NavigationHUD:Hide()
     end
-    ns.Print(string.format(L["MSG_ROUTE_FINISHED_FMT"], destName))
 end
 
 -- 取消/退出导航路线并清空标记点
@@ -281,7 +297,6 @@ function Navigation:CancelRoute()
     if ns.NavigationHUD then
         ns.NavigationHUD:Hide()
     end
-    ns.Print(L["MSG_ROUTE_CANCELLED"])
 end
 
 -- 获取当前活动路线
@@ -297,10 +312,7 @@ function Navigation:IsActive()
     if ns.NavigationHUD and ns.NavigationHUD.IsShown and ns.NavigationHUD:IsShown() then
         return true
     end
-    if C_Map and C_Map.HasUserWaypoint and C_Map.HasUserWaypoint() then
-        return true
-    end
-    return false
+    return IsOwnWaypointActive()
 end
 
 -- 停止/退出导航路线 (兼容 MinimapButton、聊天命令等外部模块调用)
@@ -309,6 +321,14 @@ function Navigation:StopRoute()
 end
 
 -- 监听地图切换事件，自动推进步骤
+-- 当前地图可能是目标地图的子区域 (城内建筑等)，按父地图链匹配；玩家跳过中间步骤时直接推进到对应步骤
+local function IsInMap(currentMapID, targetMapID)
+    if ns.Pathfinder and ns.Pathfinder.IsMapWithin then
+        return ns.Pathfinder:IsMapWithin(currentMapID, targetMapID)
+    end
+    return currentMapID == targetMapID
+end
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 eventFrame:RegisterEvent("ZONE_CHANGED")
@@ -318,13 +338,17 @@ eventFrame:SetScript("OnEvent", function()
     local currentMapID = C_Map.GetBestMapForUnit("player")
     if not currentMapID then return end
 
-    local currentStep = activeRoute.steps[currentStepIndex]
-    if not currentStep then return end
+    for i = activeRoute.totalSteps, currentStepIndex, -1 do
+        local step = activeRoute.steps[i]
+        if step and step.toMapID and IsInMap(currentMapID, step.toMapID) then
+            currentStepIndex = i
+            Navigation:NextStep()
+            return
+        end
+    end
 
-    -- 如果当前步骤是跨地图交通，并且玩家已经进入了目标地图，自动推进
-    if currentStep.toMapID and currentMapID == currentStep.toMapID then
-        Navigation:NextStep()
-    elseif currentStep.isFinal and currentMapID == activeRoute.destination.mapID then
+    local currentStep = activeRoute.steps[currentStepIndex]
+    if currentStep and currentStep.isFinal and IsInMap(currentMapID, activeRoute.destination.mapID) then
         -- 已经在目标地图，航标自动刷新为终点
         local dest = activeRoute.destination
         SetBlizzardWaypoint(dest.mapID, dest.x, dest.y)

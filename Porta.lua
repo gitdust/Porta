@@ -23,12 +23,11 @@ SlashCmdList["PORTA"] = function(msg)
         return
     end
 
-    -- 3. 帮助说明: /porta help
-    if lower == "help" or lower == "?" then
-        ns.Print(L["CMD_HELP_HEADER"])
-        print("|cffffcc00" .. L["CMD_HELP_SEARCH"] .. "|r")
-        print("|cffffcc00" .. L["CMD_HELP_STOP"] .. "|r")
-        print("|cffffcc00" .. L["CMD_HELP_MINIMAP"] .. "|r")
+    -- 3. 游戏内诊断: /porta diag (结果写入 SavedVariables，对应 game.md 验证清单)
+    if lower == "diag" then
+        if ns.Diagnostics then
+            ns.Diagnostics:Run()
+        end
         return
     end
 
@@ -77,6 +76,13 @@ function ns.EventFrame:PLAYER_LOGIN()
     end
 
     ns.Print(L["ADDON_LOADED_MSG"])
+end
+
+-- 插件收纳菜单 (小地图插件按钮列表) 入口：点击呼出 / 关闭搜索框
+function Porta_OnAddonCompartmentClick()
+    if ns.SearchDialog then
+        ns.SearchDialog:Toggle()
+    end
 end
 
 -- 监听德拉诺要塞建筑变更，动态失效建筑缓存

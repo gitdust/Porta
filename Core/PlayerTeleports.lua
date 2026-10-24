@@ -146,7 +146,7 @@ local TELEPORT_ITEMS = {
     { id = 63379, kind = "ITEM", name = L["ITEM_NAME_63379"], toMap = 245, x = 0.50, y = 0.50, faction = "HORDE", priority = 7 },
 
     -- 工程学虫洞发生器全集 (玩具 - 落点随机或需菜单选择，仅在前往对应大洲时作为补充备选方案提供)
-    { id = 230000, kind = "TOY", name = L["ITEM_NAME_230000"], toMap = 2400, continentID = 2400, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
+    { id = 248485, kind = "TOY", name = L["ITEM_NAME_248485"], toMap = 2537, continentID = 2537, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "RANDOM", requiresEngineering = true },
     { id = 221966, kind = "TOY", name = L["ITEM_NAME_221966"], toMap = 2274, continentID = 2274, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
     { id = 198156, kind = "TOY", name = L["ITEM_NAME_198156"], toMap = 1978, continentID = 1978, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
     { id = 172924, kind = "TOY", name = L["ITEM_NAME_172924"], toMap = 1670, continentID = 1550, x = 0.50, y = 0.50, faction = "NEUTRAL", priority = 6, isWormhole = true, wormholeMode = "MENU", requiresEngineering = true },
@@ -233,9 +233,6 @@ local CLASS_TELEPORT_SPELLS = {
     -- 武僧：禅宗朝圣 (晴日峰 / 迷踪岛)
     { id = 126892, class = "MONK", name = "Zen Pilgrimage", toMap = 378, x = 0.50, y = 0.50, priority = 8 },
 
-    -- 萨满祭司：星界召回
-    { id = 556, class = "SHAMAN", name = "Astral Recall", toMap = 85, x = 0.50, y = 0.50, priority = 7 },
-
     -- 黑铁矮人种族特长：钻地机
     { id = 265225, class = "ALL", name = L["SPELL_NAME_265225"], toMap = 84, x = 0.50, y = 0.50, priority = 8 },
 
@@ -266,7 +263,7 @@ local CLASS_TELEPORT_SPELLS = {
     { id = 344587, class = "MAGE", name = "Teleport: Oribos", toMap = 1670, x = 0.50, y = 0.50, priority = 10 },
     { id = 395277, class = "MAGE", name = "Teleport: Valdrakken", toMap = 2112, x = 0.50, y = 0.50, priority = 10 },
     { id = 446540, class = "MAGE", name = "Teleport: Dornogal", toMap = 2339, x = 0.50, y = 0.50, priority = 10 },
-    { id = 1260001, class = "MAGE", name = "Teleport: Silvermoon", toMap = 2401, x = 0.50, y = 0.50, priority = 10 },
+    { id = 1259190, class = "MAGE", name = "Teleport: Silvermoon City", toMap = 2393, x = 0.50, y = 0.50, priority = 10 },
 }
 
 -- =========================================================================
@@ -277,10 +274,10 @@ local MYTHIC_PLUS_DUNGEON_SPELLS = {
     -- ---------------------------------------------------------------------
     -- 至暗之夜 (Midnight 12.0 / 12.1)
     -- ---------------------------------------------------------------------
-    [1320] = 1260100, -- 虚空裂隙 (Void Rift) - Path of the Void Rift
-    [1321] = 1260105, -- 太阳之井高地 (Sunwell Restoration) - Path of the Sunwell
-    [1322] = 1260110, -- 祖阿曼暗影 (Shadow of Zul'Aman) - Path of Zul'Aman
-    [1323] = 1260115, -- 奎尔萨拉斯黎明 (Dawn of Quel'Thalas) - Path of the Quel'Thalas Dawn
+    [1299] = 1254400, -- 风行者之塔 (Windrunner Spire)
+    [1300] = 1254572, -- 魔导师平台 (Magisters' Terrace)
+    [1315] = 1254559, -- 迈萨拉洞窟 (Maisara Caverns)
+    [1316] = 1254563, -- 虚空焦点塞纳斯 (Nexus-Point Xenas)
 
     -- ---------------------------------------------------------------------
     -- 地心之战 (The War Within 11.0 / 11.1 / 11.2)
@@ -291,17 +288,12 @@ local MYTHIC_PLUS_DUNGEON_SPELLS = {
     [1210] = 445441, -- 暗焰裂隙 (Darkflame Cleft) - Path of the Warding Candles
     [1267] = 445444, -- 圣焰修道院 (Priory of the Sacred Flame) - Path of the Light's Reverence
     [1268] = 445443, -- 驭雷栖巢 (The Rookery) - Path of the Fallen Stormriders
-    [1272] = { 445440, 467546 }, -- 燧酿酒庄 (Cinderbrew Meadery)
+    [1272] = 445440, -- 燧酿酒庄 (Cinderbrew Meadery) - Path of the Flaming Brewery
     [1274] = 445416, -- 千丝之城 (City of Threads) - Path of Nerubian Ascension
-    [1273] = 461159, -- 尼鲁巴尔王宫 (Nerub-ar Palace)
     [1296] = 1226482, -- 解放安德麦 (Liberation of Undermine) - Path of the Full House
     [1298] = 1216786, -- 水闸行动 (Operation: Floodgate) - Path of the Circuit Breaker
     [1302] = 1239155, -- 法力熔炉：欧米伽 (Manaforge Omega) - Path of the All-Devouring
     [1303] = 1237215, -- 生态圆顶阿尔达尼 (Eco-Dome Al'dani) - Path of the Eco-Dome
-    [1299] = 1254400, -- 风行者之塔 (Windrunner Spire)
-    [1300] = 1254572, -- 魔导师平台 (Magisters' Terrace)
-    [1315] = 1254559, -- 迈萨拉洞窟 (Maisara Caverns)
-    [1316] = 1254563, -- 虚空焦点塞纳斯 (Nexus-Point Xenas)
 
     -- ---------------------------------------------------------------------
     -- 巨龙时代 (Dragonflight)
@@ -537,12 +529,6 @@ end
 
 local function GetInstanceLocalizedName(instanceID)
     if not instanceID or instanceID <= 0 then return nil end
-    if C_EncounterJournal and C_EncounterJournal.GetInstanceInfo then
-        local name = C_EncounterJournal.GetInstanceInfo(instanceID)
-        if name and name ~= "" then
-            return name
-        end
-    end
     if EJ_GetInstanceInfo then
         local name = EJ_GetInstanceInfo(instanceID)
         if name and name ~= "" then
@@ -569,12 +555,6 @@ function PlayerTeleports:GetSpellDisplayName(spellID, fallbackName)
             return info.name
         end
     end
-    if GetSpellInfo then
-        local name = GetSpellInfo(spellID)
-        if name and name ~= "" then
-            return name
-        end
-    end
     local localeKey = "SPELL_NAME_" .. tostring(spellID)
     if rawget(L, localeKey) then
         return L[localeKey]
@@ -599,13 +579,6 @@ function PlayerTeleports:GetItemDisplayName(itemID, fallbackName, suffixMapID, s
 
     if not baseName and C_Item and C_Item.GetItemNameByID then
         local itemName = C_Item.GetItemNameByID(itemID)
-        if type(itemName) == "string" and itemName ~= "" then
-            baseName = itemName
-        end
-    end
-
-    if not baseName and GetItemInfo then
-        local itemName = GetItemInfo(itemID)
         if type(itemName) == "string" and itemName ~= "" then
             baseName = itemName
         end
@@ -663,7 +636,6 @@ function PlayerTeleports:PreloadCache()
         end
     end
 
-    requestItem(6948) -- 炉石
     requestItem(129929) -- 百变之镜 (玩具)
     for _, item in ipairs(TELEPORT_ITEMS) do
         if item.id then requestItem(item.id) end
@@ -702,8 +674,6 @@ local function GetBagItemCount(itemID)
     if not itemID then return 0 end
     if C_Item and C_Item.GetItemCount then
         return C_Item.GetItemCount(itemID, false) or 0
-    elseif GetItemCount then
-        return GetItemCount(itemID, false) or 0
     end
     return 0
 end
@@ -711,9 +681,8 @@ end
 local function GetTotalItemCountWithBank(itemID)
     if not itemID then return 0 end
     if C_Item and C_Item.GetItemCount then
-        return C_Item.GetItemCount(itemID, true) or 0
-    elseif GetItemCount then
-        return GetItemCount(itemID, true) or 0
+        -- includeBank, includeUses, includeReagentBank, includeAccountBank (战团银行)
+        return C_Item.GetItemCount(itemID, true, false, true, true) or 0
     end
     return 0
 end
@@ -744,18 +713,9 @@ local function IsSpellKnown(spellID)
             return true
         end
     end
-    if C_SpellBook and C_SpellBook.IsSpellKnownOrOverridesKnown then
-        if C_SpellBook.IsSpellKnownOrOverridesKnown(spellID) then
-            return true
-        end
-    end
-    if IsSpellKnownOrOverridesKnown then
-        if IsSpellKnownOrOverridesKnown(spellID) then
-            return true
-        end
-    end
-    if IsPlayerSpell then
-        if IsPlayerSpell(spellID) then
+    -- 含覆盖法术 (includeOverrides)，替代已弃用的 IsSpellKnownOrOverridesKnown / IsPlayerSpell
+    if C_SpellBook and C_SpellBook.IsSpellInSpellBook then
+        if C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, true) then
             return true
         end
     end
@@ -776,47 +736,22 @@ for _, item in ipairs(TELEPORT_ITEMS) do
     end
 end
 
--- 检查当前角色是否学习了工程学专业 (多源权威动态检测，杜绝静态缓存失效)
+-- 检查当前角色是否学习了工程学专业 (以专业技能线 ID 202 为唯一依据，与客户端语言无关)
+local ENGINEERING_SKILL_LINE = 202
+
 local function HasEngineeringProfession()
-    -- 1. 现代 C_TradeSkillUI 原生 API 检测 (11.0 / 11.1 / 12.0)
-    if C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines then
-        local lines = C_TradeSkillUI.GetAllProfessionTradeSkillLines()
-        if type(lines) == "table" then
-            for _, lineID in ipairs(lines) do
-                if lineID == 202 then
-                    return true
-                end
+    if not GetProfessions or not GetProfessionInfo then
+        return false
+    end
+    local prof1, prof2 = GetProfessions()
+    for _, idx in ipairs({ prof1, prof2 }) do
+        if idx then
+            local skillLine = select(7, GetProfessionInfo(idx))
+            if skillLine == ENGINEERING_SKILL_LINE then
+                return true
             end
         end
     end
-
-    -- 2. 经典 GetProfessions + GetProfessionInfo (兼容全语言与各种客户端阶段)
-    if GetProfessions and GetProfessionInfo then
-        local prof1, prof2 = GetProfessions()
-        local indices = { prof1, prof2 }
-        for _, idx in ipairs(indices) do
-            if idx then
-                local name, _, _, _, _, _, skillLine = GetProfessionInfo(idx)
-                if skillLine == 202 or (name and (
-                    string.find(name, "工程") or
-                    string.find(name, "Engineer") or
-                    string.find(name, "Ingénier") or
-                    string.find(name, "Ingenier") or
-                    string.find(name, "기계공学") or
-                    string.find(name, "기계공학") or
-                    string.find(name, "Инженер")
-                )) then
-                    return true
-                end
-            end
-        end
-    end
-
-    -- 3. 基础法术习得检测 (工程学基础技能 2018 等)
-    if IsSpellKnown(2018) or (IsPlayerSpell and IsPlayerSpell(2018)) then
-        return true
-    end
-
     return false
 end
 
@@ -1009,43 +944,6 @@ local function InspectItemOrToyEntry(entry)
     }
 end
 
--- 获取法术或物品冷却状态 (返回 isReady, remainingSec)
-local function GetCooldownStatus(kind, id)
-    if not id then return true, 0 end
-
-    if kind == "SPELL" then
-        local start, duration = 0, 0
-        if C_Spell and C_Spell.GetSpellCooldown then
-            local info = C_Spell.GetSpellCooldown(id)
-            if info then
-                start = info.startTime or 0
-                duration = info.duration or 0
-            end
-        elseif GetSpellCooldown then
-            start, duration = GetSpellCooldown(id)
-        end
-        if duration and duration > 1.5 then
-            local rem = (start + duration) - GetTime()
-            return false, math.max(0, math.floor(rem))
-        end
-        return true, 0
-    else
-        local start, duration = 0, 0
-        if C_Container and C_Container.GetItemCooldown then
-            start, duration = C_Container.GetItemCooldown(id)
-        elseif GetItemCooldown then
-            start, duration = GetItemCooldown(id)
-        end
-        if duration and duration > 1.5 then
-            local rem = (start + duration) - GetTime()
-            return false, math.max(0, math.floor(rem))
-        end
-        return true, 0
-    end
-end
-
-PlayerTeleports.GetCooldownStatus = GetCooldownStatus
-
 -- =========================================================================
 -- 核心检测接口 1：获取所有通用传送手段（供 Dijkstra/BFS 寻路）
 -- 规则：玩具与物品不因玩家未拥有或未学专业而过滤，默认纳入算路；若实际未拥有或不满足条件则在方案中提示
@@ -1058,17 +956,12 @@ function PlayerTeleports:GetAvailableTeleports()
     -- 1. 扫描传送物品与玩具（全部纳入候选，记录真实拥有与专业条件状态，并动态获取客户端本地化名称）
     for _, item in ipairs(TELEPORT_ITEMS) do
         local classMatch = (not item.class) or (item.class == playerClass)
-        if classMatch and (item.faction == "NEUTRAL" or item.faction == playerFaction) then
+        local toMap = item.toMap
+        if item.toMapHorde and item.toMapAlliance then
+            toMap = (playerFaction == "HORDE") and item.toMapHorde or item.toMapAlliance
+        end
+        if toMap and classMatch and (item.faction == "NEUTRAL" or item.faction == playerFaction) then
             local state = InspectItemOrToyEntry(item)
-            local toMap = item.toMap
-            if item.toMapHorde and item.toMapAlliance then
-                toMap = (playerFaction == "HORDE") and item.toMapHorde or item.toMapAlliance
-            end
-
-            local isReady, cdSeconds = false, 0
-            if state.hasItem then
-                isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
-            end
 
             table.insert(available, {
                 type = state.kind, -- "TOY" 或 "ITEM"
@@ -1085,8 +978,6 @@ function PlayerTeleports:GetAvailableTeleports()
                 missingEngineering = state.missingEngineering,
                 missingShortTag = state.missingShortTag,
                 missingReason = state.missingReason,
-                isReady = isReady,
-                cdSeconds = cdSeconds,
                 note = state.note,
                 isWormhole = item.isWormhole or false,
                 continentID = item.continentID,
@@ -1100,7 +991,6 @@ function PlayerTeleports:GetAvailableTeleports()
     for _, spell in ipairs(CLASS_TELEPORT_SPELLS) do
         local classMatch = (spell.class == "ALL") or (spell.class == playerClass)
         if classMatch and IsSpellKnown(spell.id) then
-            local isReady, cdSeconds = GetCooldownStatus("SPELL", spell.id)
             local spellName = self:GetSpellDisplayName(spell.id, spell.name)
             table.insert(available, {
                 type = "SPELL",
@@ -1111,8 +1001,6 @@ function PlayerTeleports:GetAvailableTeleports()
                 y = spell.y or 0.50,
                 priority = spell.priority or 5,
                 hasItem = true,
-                isReady = isReady,
-                cdSeconds = cdSeconds,
             })
         end
     end
@@ -1142,15 +1030,12 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                         destination.name or string.format(L["INSTANCE_FALLBACK_FMT"], tostring(destination.id))
                     )
                     local spellName = self:GetSpellDisplayName(spellID, fallbackSpellName)
-                    local isReady, cdSeconds = GetCooldownStatus("SPELL", spellID)
 
                     table.insert(results, {
                         type = "SPELL",
                         id = spellID,
                         name = spellName,
                         hasItem = true,
-                        isReady = isReady,
-                        cdSeconds = cdSeconds,
                     })
                     break
                 end
@@ -1164,10 +1049,6 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
             local classMatch = (not itemEntry.class) or (itemEntry.class == playerClass)
             if classMatch and (itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction) then
                 local state = InspectItemOrToyEntry(itemEntry)
-                local isReady, cdSeconds = false, 0
-                if state.hasItem then
-                    isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
-                end
                 table.insert(results, {
                     type = state.kind, -- "TOY" 或 "ITEM"
                     id = state.id,
@@ -1181,8 +1062,6 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                     missingShortTag = state.missingShortTag,
                     missingReason = state.missingReason,
                     requiresEngineering = itemEntry.requiresEngineering or false,
-                    isReady = isReady,
-                    cdSeconds = cdSeconds,
                 })
             end
         end
@@ -1194,10 +1073,6 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
             local classMatch = (not itemEntry.class) or (itemEntry.class == playerClass)
             if classMatch and (itemEntry.faction == "NEUTRAL" or itemEntry.faction == playerFaction) then
                 local state = InspectItemOrToyEntry(itemEntry)
-                local isReady, cdSeconds = false, 0
-                if state.hasItem then
-                    isReady, cdSeconds = GetCooldownStatus("ITEM", state.id)
-                end
                 table.insert(results, {
                     type = state.kind, -- "TOY" 或 "ITEM"
                     id = state.id,
@@ -1211,20 +1086,15 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                     missingShortTag = state.missingShortTag,
                     missingReason = state.missingReason,
                     requiresEngineering = itemEntry.requiresEngineering or false,
-                    isReady = isReady,
-                    cdSeconds = cdSeconds,
                 })
             end
         end
     end
 
-    -- 已拥有的排前面，就绪的排前面
+    -- 已拥有的排前面
     table.sort(results, function(a, b)
         if (a.hasItem and true or false) ~= (b.hasItem and true or false) then
             return a.hasItem and true or false
-        end
-        if (a.isReady and true or false) ~= (b.isReady and true or false) then
-            return a.isReady and true or false
         end
         return (a.id or 0) < (b.id or 0)
     end)
@@ -1235,10 +1105,6 @@ end
 function PlayerTeleports:GetDirectDestinationTeleport(destination)
     local list = self:GetDirectDestinationTeleports(destination)
     return list[1]
-end
-
-function PlayerTeleports:GetItemCooldown(itemID)
-    return GetCooldownStatus("ITEM", itemID)
 end
 
 -- =========================================================================
@@ -1275,10 +1141,10 @@ function PlayerTeleports:GetGarrisonMageTowerInfo()
     for _, b in ipairs(buildings) do
         local bID = b.buildingID
         if bID then
-            local infoOk, name, texture = pcall(C_Garrison.GetBuildingInfo, bID)
+            local infoOk, _, name, textureKit = pcall(C_Garrison.GetBuildingInfo, bID)
             local bName = infoOk and tostring(name or "") or ""
             local bNameLower = string.lower(bName)
-            local texLower = infoOk and string.lower(tostring(texture or "")) or ""
+            local texLower = infoOk and string.lower(tostring(textureKit or "")) or ""
             local rank = b.rank or 1
 
             -- 联盟法师之塔 (Mage Tower)：ID 37, 38, 39
@@ -1339,17 +1205,22 @@ function PlayerTeleports:GetMirrorToyInfo()
         missingReason = L["MIRROR_MISSING_GUIDE"] or L["STATUS_NOT_OWNED"]
     end
 
-    local isReady, cdSeconds = GetCooldownStatus("ITEM", toyID)
-
     return {
         id = toyID,
         type = "TOY",
         kind = "TOY",
         name = toyName,
         hasItem = hasToy,
-        isReady = isReady,
-        cdSeconds = cdSeconds,
         missingReason = missingReason,
         missingShortTag = L["TAG_MISSING"],
     }
 end
+
+-- 供 /porta diag 诊断读取的静态数据表 (只读引用)
+PlayerTeleports.Data = {
+    TELEPORT_ITEMS = TELEPORT_ITEMS,
+    CLASS_TELEPORT_SPELLS = CLASS_TELEPORT_SPELLS,
+    MYTHIC_PLUS_DUNGEON_SPELLS = MYTHIC_PLUS_DUNGEON_SPELLS,
+    DIRECT_DESTINATION_ITEMS = DIRECT_DESTINATION_ITEMS,
+    DIRECT_MAP_ITEMS = DIRECT_MAP_ITEMS,
+}

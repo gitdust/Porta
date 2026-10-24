@@ -43,15 +43,15 @@ local EDGE_COSTS = {
 
 -- 地下垂直层级地图定义 (与地表地图之间存在岩层遮挡，严禁无视入口的同大陆直线平原飞行)
 local UNDERGROUND_ZONES = {
-    [2133] = { surfaceContID = 1978, name = "查拉雷克洞窟" },
-    [2509] = { surfaceContID = 2537, name = "阿塔乌特克地窟" },
+    [2133] = { surfaceContID = 1978 }, -- 查拉雷克洞窟
+    [2509] = { surfaceContID = 2537 }, -- 阿塔乌特克地窟
     -- 卡兹阿加地底洞窟群 (与多恩岛地表被岩层隔开，需经奔涌要道/升降机出入)
-    [2214] = { surfaceContID = 2274, name = "喧鸣深渊" },
-    [2215] = { surfaceContID = 2274, name = "陨圣峪" },
-    [2255] = { surfaceContID = 2274, name = "艾基-卡赫特" },
-    [2256] = { surfaceContID = 2274, name = "艾基-卡赫特下层" },
-    [2213] = { surfaceContID = 2274, name = "千丝之城" },
-    [2216] = { surfaceContID = 2274, name = "千丝之城下层" },
+    [2214] = { surfaceContID = 2274 }, -- 喧鸣深渊
+    [2215] = { surfaceContID = 2274 }, -- 陨圣峪
+    [2255] = { surfaceContID = 2274 }, -- 艾基-卡赫特
+    [2256] = { surfaceContID = 2274 }, -- 艾基-卡赫特下层
+    [2213] = { surfaceContID = 2274 }, -- 千丝之城
+    [2216] = { surfaceContID = 2274 }, -- 千丝之城下层
 }
 
 -- 核心位面传送门的前置任务解锁补充清单
@@ -59,14 +59,15 @@ local UNDERGROUND_ZONES = {
 local PORTAL_QUEST_GATES = {
     -- 纳沙塔尔 (1355)
     [1355] = {
+        -- 传送门在完成纳沙塔尔开场剧情最后一个任务《回家的路》后开启 (部落 55053 / 联盟 54972)
         HORDE = {
-            questIDs = { 55095, 55122, 56043 }, -- 发送舰队 / 新生家园 / 下潜
+            questIDs = { 55053 }, -- 回家的路 (A Way Home, 部落)
             questName = L["GATE_NAZJATAR_H_QUEST"],
             startNPC = L["GATE_NAZJATAR_H_NPC"],
             unlockGuide = L["GATE_NAZJATAR_H_GUIDE"],
         },
         ALLIANCE = {
-            questIDs = { 54022, 55121, 56044, 55175 }, -- 发送舰队 / 麦扎梅尔
+            questIDs = { 54972 }, -- 回家的路 (A Way Home, 联盟)
             questName = L["GATE_NAZJATAR_A_QUEST"],
             startNPC = L["GATE_NAZJATAR_A_NPC"],
             unlockGuide = L["GATE_NAZJATAR_A_GUIDE"],
@@ -110,7 +111,8 @@ local PORTAL_GATE_EDGE_TYPES = {
 --   1. HandyNotes_MapNotes 节点原生携带的 questID / achievementID（由 _parser 自动提取至 MapNotesData.lua）
 --   2. 跨资料片主城镜像传送门补充表 PORTAL_QUEST_GATES（补全 MapNotes 未标注的资料片开门任务）
 --   3. 魔兽客户端原生 API 动态查询：C_QuestLog.IsQuestFlaggedCompleted / C_QuestLog.GetTitleForQuestID / GetAchievementInfo
-function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
+--   quick = true 时仅返回是否解锁 (供寻路热路径使用)，不发起任务数据请求、不构建提示信息
+function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction, quick)
     local edge = type(edgeOrToMapID) == "table" and edgeOrToMapID or nil
     local toMapID = edge and edge.to or edgeOrToMapID
     if not toMapID then return true, nil end
@@ -119,6 +121,7 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
     if edge and edge.achievementID and GetAchievementInfo then
         local ok, _, achName, _, completed, _, _, _, description = pcall(GetAchievementInfo, edge.achievementID)
         if ok and completed == false then
+            if quick then return false, nil end
             local displayAch = (achName and achName ~= "") and ns.FormatBracket(achName) or string.format(L["ACHIEVEMENT_FALLBACK_FMT"], tostring(edge.achievementID))
             local descHint = (description and description ~= "") and (" (" .. description .. ")") or ""
             return false, {
@@ -134,6 +137,7 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
     if edge and edge.questID and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
         local isCompleted = C_QuestLog.IsQuestFlaggedCompleted(edge.questID)
         if not isCompleted then
+            if quick then return false, nil end
             if C_QuestLog.RequestLoadQuestByID then
                 pcall(C_QuestLog.RequestLoadQuestByID, edge.questID)
             end
@@ -171,7 +175,7 @@ function Pathfinder:CheckPortalQuestStatus(edgeOrToMapID, playerFaction)
             isUnlocked = true
             break
         end
-        if not dynamicTitle and C_QuestLog.GetTitleForQuestID then
+        if not quick and not dynamicTitle and C_QuestLog.GetTitleForQuestID then
             if C_QuestLog.RequestLoadQuestByID then
                 pcall(C_QuestLog.RequestLoadQuestByID, qID)
             end
@@ -203,23 +207,6 @@ local function GetMapDisplayName(mapID)
     end
     return string.format(L["MAP_FALLBACK_FMT"], tostring(mapID))
 end
-
--- 检测千禧阈限 (The Timeways - 2266) 是否处于有效版本与赛季生命周期
-local function IsTimewaysActive()
-    if ns.config and ns.config.forceTimewaysActive ~= nil then
-        return ns.config.forceTimewaysActive
-    end
-    if GetBuildInfo then
-        local _, _, _, tocVersion = GetBuildInfo()
-        if tocVersion and tocVersion > 0 then
-            -- 仅在 11.x (地心之战) 大秘境赛季周期内有效；跨入 12.0 及更高版本 (如 12.1) 时下线
-            return tocVersion >= 110000 and tocVersion < 120000
-        end
-    end
-    -- 默认以当前 12.1 大秘境第一赛季环境为准，千禧阈限处于关闭下线状态
-    return false
-end
-Pathfinder.IsTimewaysActive = IsTimewaysActive
 
 -- 计算暗月马戏团当前活动状态 (每月第一个周日 00:01 ~ 次周六 23:59)
 local function GetDarkmoonFaireStatus()
@@ -275,8 +262,8 @@ Pathfinder.GetDarkmoonFaireStatus = GetDarkmoonFaireStatus
 local function GetHorrificVisionRotationStatus(visionType)
     local activeCity = nil
     -- 1. 优先尝试从多恩诺嘉尔 (2339) 实时地图 AreaPOI 探测当前激活的幻象
-    if C_AreaPoiInfo and C_AreaPoiInfo.GetAreaPOIsForPlayerByMapID and C_AreaPoiInfo.GetAreaPOIInfo then
-        local pois = C_AreaPoiInfo.GetAreaPOIsForPlayerByMapID(2339)
+    if C_AreaPoiInfo and C_AreaPoiInfo.GetAreaPOIForMap and C_AreaPoiInfo.GetAreaPOIInfo then
+        local pois = C_AreaPoiInfo.GetAreaPOIForMap(2339)
         if pois then
             for _, poiID in ipairs(pois) do
                 local poiInfo = C_AreaPoiInfo.GetAreaPOIInfo(2339, poiID)
@@ -319,17 +306,11 @@ local function GetHorrificVisionRotationStatus(visionType)
         nextResetDateStr = string.format(L["DARKMOON_NEXT_DATE_FMT"] or "%d/%d", resetDate.month, resetDate.day)
     end
 
-    -- 3. 若 POI 未能匹配，基于双周交替基准算法兜底
-    if not activeCity then
-        local weekIndex = math.floor(resetTimestamp / (7 * 86400))
-        if (weekIndex % 2) == 0 then
-            activeCity = "STORMWIND"
-        else
-            activeCity = "ORGRIMMAR"
-        end
+    -- 3. POI 未能识别时轮换状态未知 (isActive = nil)，不做猜测
+    local isActive = nil
+    if activeCity then
+        isActive = (visionType == activeCity)
     end
-
-    local isActive = (visionType == activeCity)
     return isActive, activeCity, nextResetDateStr
 end
 Pathfinder.GetHorrificVisionRotationStatus = GetHorrificVisionRotationStatus
@@ -346,17 +327,10 @@ function Pathfinder:GetDistanceInYards(mapID, targetX, targetY)
 
     -- 方案 A：通过暴雪原生世界空间坐标计算绝对真实码数 (Yards)
     if C_Map.GetWorldPosFromMapPos and CreateVector2D then
-        local ok1, playerWorld = pcall(function()
-            local _, pos = C_Map.GetWorldPosFromMapPos(mapID, playerPos)
-            return pos
-        end)
-        local ok2, targetWorld = pcall(function()
-            local targetVec = CreateVector2D(targetX, targetY)
-            local _, pos = C_Map.GetWorldPosFromMapPos(mapID, targetVec)
-            return pos
-        end)
+        local ok1, playerCont, playerWorld = pcall(C_Map.GetWorldPosFromMapPos, mapID, playerPos)
+        local ok2, targetCont, targetWorld = pcall(C_Map.GetWorldPosFromMapPos, mapID, CreateVector2D(targetX, targetY))
 
-        if ok1 and ok2 and playerWorld and targetWorld then
+        if ok1 and ok2 and playerWorld and targetWorld and playerCont == targetCont then
             local dx = playerWorld.x - targetWorld.x
             local dy = playerWorld.y - targetWorld.y
             local dist = math.sqrt(dx * dx + dy * dy)
@@ -412,16 +386,12 @@ function Pathfinder:FormatTeleportLink(kind, id, name)
         color = "|cff00ccff"
         if C_Item and C_Item.GetItemIconByID then
             icon = C_Item.GetItemIconByID(id)
-        elseif GetItemIcon then
-            icon = GetItemIcon(id)
         end
     else
         linkKind = "item"
         color = "|cff00ff99"
         if C_Item and C_Item.GetItemIconByID then
             icon = C_Item.GetItemIconByID(id)
-        elseif GetItemIcon then
-            icon = GetItemIcon(id)
         end
     end
 
@@ -478,9 +448,6 @@ local CONTIGUOUS_CONTINENTS = {
     [2274] = {
         2248, 2339, 2213, 2214, 2215, 2216, 2255, 2256
     },
-    [2400] = {
-        2401, 2402, 2403, 2404, 2405, 2406, 2407
-    },
     [2537] = {
         2393, 2395, 2405, 2413, 2424, 2437, 2444, 2509, 2512, 2536, 2576, 2613
     },
@@ -519,7 +486,6 @@ local CONTINENT_CAPITAL_HUBS = {
     [876] = { HORDE = {}, ALLIANCE = { 1161 } },
     [1978] = { HORDE = { 2112 }, ALLIANCE = { 2112 } },
     [2274] = { HORDE = { 2339 }, ALLIANCE = { 2339 } },
-    [2400] = { HORDE = { 2401 }, ALLIANCE = { 2401 } },
     [2537] = { HORDE = { 2393 }, ALLIANCE = { 2393 } },
 }
 
@@ -539,78 +505,65 @@ local DRAENOR_WAYGATES = {
 -- =========================================================================
 local SUBZONE_CONNECTIONS = {
     -- 【主城传送大厅直达枢纽】
-    { from = 85, to = 2401, x = 0.58, y = 0.90, type = "PORTAL", faction = "HORDE", note = "传送大厅：新银月城传送门", cost = 1.0 },
-    { from = 2401, to = 85, x = 0.50, y = 0.50, type = "PORTAL", faction = "HORDE", note = "新银月城：奥格瑞玛传送门", cost = 1.0 },
-    { from = 84, to = 2401, x = 0.41, y = 0.93, type = "PORTAL", faction = "ALLIANCE", note = "法师圣所：新银月城传送门", cost = 1.0 },
-    { from = 2401, to = 84, x = 0.50, y = 0.50, type = "PORTAL", faction = "ALLIANCE", note = "新银月城：暴风城传送门", cost = 1.0 },
-    { from = 85, to = 1163, x = 0.58, y = 0.90, type = "PORTAL", faction = "HORDE", note = "传送大厅：达萨罗传送门", cost = 1.0 },
-    { from = 1163, to = 85, x = 0.74, y = 0.70, type = "PORTAL", faction = "HORDE", note = "大封印：奥格瑞玛传送门", cost = 1.0 },
-    { from = 84, to = 1161, x = 0.41, y = 0.93, type = "PORTAL", faction = "ALLIANCE", note = "法师圣所：伯拉勒斯传送门", cost = 1.0 },
-    { from = 1161, to = 84, x = 0.70, y = 0.17, type = "PORTAL", faction = "ALLIANCE", note = "贤者要塞：暴风城传送门", cost = 1.0 },
-
+    { from = 85, to = 1163, x = 0.58, y = 0.90, type = "PORTAL", faction = "HORDE", cost = 1.0 }, -- 传送大厅：达萨罗传送门
+    { from = 1163, to = 85, x = 0.74, y = 0.70, type = "PORTAL", faction = "HORDE", cost = 1.0 }, -- 大封印：奥格瑞玛传送门
+    { from = 84, to = 1161, x = 0.41, y = 0.93, type = "PORTAL", faction = "ALLIANCE", cost = 1.0 }, -- 法师圣所：伯拉勒斯传送门
+    { from = 1161, to = 84, x = 0.70, y = 0.17, type = "PORTAL", faction = "ALLIANCE", cost = 1.0 }, -- 贤者要塞：暴风城传送门
     -- 祖达萨野外 (862) <-> 达萨罗巨石印章 (1163)
-    { from = 862, to = 1163, x = 0.58, y = 0.44, type = "TRANSPORT", faction = "HORDE", note = "前往达萨罗巨石印章", cost = 1.2 },
-    { from = 1163, to = 862, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "HORDE", note = "前往祖达萨野外", cost = 1.2 },
-
+    { from = 862, to = 1163, x = 0.58, y = 0.44, type = "TRANSPORT", faction = "HORDE", cost = 1.2 }, -- 前往达萨罗巨石印章
+    { from = 1163, to = 862, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "HORDE", cost = 1.2 }, -- 前往祖达萨野外
     -- 提拉加德海峡野外 (895) <-> 伯拉勒斯城内 (1161)
-    { from = 895, to = 1161, x = 0.67, y = 0.15, type = "TRANSPORT", faction = "ALLIANCE", note = "进入伯拉勒斯城内", cost = 1.2 },
-    { from = 1161, to = 895, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "ALLIANCE", note = "前往提拉加德海峡野外", cost = 1.2 },
-
+    { from = 895, to = 1161, x = 0.67, y = 0.15, type = "TRANSPORT", faction = "ALLIANCE", cost = 1.2 }, -- 进入伯拉勒斯城内
+    { from = 1161, to = 895, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "ALLIANCE", cost = 1.2 }, -- 前往提拉加德海峡野外
     -- 【纳沙塔尔 & 永恒王宫专属通道】
-    { from = 1355, to = 1528, x = 0.48, y = 0.24, type = "TRANSPORT", faction = "NEUTRAL", note = "永恒王宫入口通道", cost = 1.0 },
-    { from = 1528, to = 1355, x = 0.47, y = 0.32, type = "TRANSPORT", faction = "NEUTRAL", note = "永恒王宫出口通道", cost = 1.0 },
-
+    { from = 1355, to = 1528, x = 0.48, y = 0.24, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 永恒王宫入口通道
+    { from = 1528, to = 1355, x = 0.47, y = 0.32, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 永恒王宫出口通道
     -- 【黑石山完整体系】
-    { from = 36, to = 33, x = 0.21, y = 0.33, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石山大门入口", cost = 1.0 },
-    { from = 33, to = 36, x = 0.50, y = 0.85, type = "TRANSPORT", faction = "NEUTRAL", note = "走出黑石山前往燃烧平原", cost = 1.0 },
-    { from = 32, to = 33, x = 0.35, y = 0.84, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石山大门入口", cost = 1.0 },
-    { from = 33, to = 32, x = 0.45, y = 0.15, type = "TRANSPORT", faction = "NEUTRAL", note = "走出黑石山前往灼热峡谷", cost = 1.0 },
-    { from = 33, to = 35, x = 0.45, y = 0.47, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石深渊入口通道", cost = 1.0 },
-    { from = 35, to = 33, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "黑石深渊出口", cost = 1.0 },
-
+    { from = 36, to = 33, x = 0.21, y = 0.33, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 黑石山大门入口
+    { from = 33, to = 36, x = 0.50, y = 0.85, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 走出黑石山前往燃烧平原
+    { from = 32, to = 33, x = 0.35, y = 0.84, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 黑石山大门入口
+    { from = 33, to = 32, x = 0.45, y = 0.15, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 走出黑石山前往灼热峡谷
+    { from = 33, to = 35, x = 0.45, y = 0.47, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 黑石深渊入口通道
+    { from = 35, to = 33, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 黑石深渊出口
     -- 奥达曼 / 玛拉顿 / 诺莫瑞根
-    { from = 15, to = 16, x = 0.58, y = 0.43, type = "TRANSPORT", faction = "NEUTRAL", note = "奥达曼洞穴入口", cost = 1.0 },
-    { from = 16, to = 15, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "走出奥达曼洞穴", cost = 1.0 },
-    { from = 66, to = 67, x = 0.28, y = 0.62, type = "TRANSPORT", faction = "NEUTRAL", note = "玛拉顿毒菇洞穴入口", cost = 1.0 },
-    { from = 67, to = 66, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "走出玛拉顿洞穴", cost = 1.0 },
-    { from = 27, to = 469, x = 0.30, y = 0.37, type = "TRANSPORT", faction = "NEUTRAL", note = "诺莫瑞根升降梯入口", cost = 1.0 },
-    { from = 469, to = 27, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "乘升降梯返回丹莫罗", cost = 1.0 },
-
+    { from = 15, to = 16, x = 0.58, y = 0.43, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 奥达曼洞穴入口
+    { from = 16, to = 15, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 走出奥达曼洞穴
+    { from = 66, to = 67, x = 0.28, y = 0.62, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 玛拉顿毒菇洞穴入口
+    { from = 67, to = 66, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 走出玛拉顿洞穴
+    { from = 27, to = 469, x = 0.30, y = 0.37, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 诺莫瑞根升降梯入口
+    { from = 469, to = 27, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 乘升降梯返回丹莫罗
     -- 锦绣谷突袭位面 / 提瑞斯法历史位面 / 托达戈尔
-    { from = 390, to = 1530, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "锦绣谷突袭位面", cost = 1.0 },
-    { from = 1530, to = 390, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "常规锦绣谷位面", cost = 1.0 },
-    { from = 390, to = 433, x = 0.67, y = 0.43, type = "TRANSPORT", faction = "NEUTRAL", note = "永春台入口", cost = 1.0 },
-    { from = 18, to = 2070, x = 0.60, y = 0.67, type = "TRANSPORT", faction = "NEUTRAL", note = "提瑞斯法林地历史位面", cost = 1.0 },
-    { from = 2070, to = 18, x = 0.60, y = 0.67, type = "TRANSPORT", faction = "NEUTRAL", note = "现代提瑞斯法林地位面", cost = 1.0 },
-    { from = 895, to = 1169, x = 0.68, y = 0.58, type = "SHIP", faction = "NEUTRAL", note = "托达戈尔渡口", cost = 3.0 },
-    { from = 1169, to = 895, x = 0.50, y = 0.50, type = "SHIP", faction = "NEUTRAL", note = "返回提拉加德海峡", cost = 3.0 },
-
+    { from = 390, to = 1530, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 锦绣谷突袭位面
+    { from = 1530, to = 390, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 常规锦绣谷位面
+    { from = 390, to = 433, x = 0.67, y = 0.43, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 永春台入口
+    { from = 18, to = 2070, x = 0.60, y = 0.67, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 提瑞斯法林地历史位面
+    { from = 2070, to = 18, x = 0.60, y = 0.67, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 现代提瑞斯法林地位面
+    { from = 895, to = 1169, x = 0.68, y = 0.58, type = "SHIP", faction = "NEUTRAL", cost = 3.0 }, -- 托达戈尔渡口
+    { from = 1169, to = 895, x = 0.50, y = 0.50, type = "SHIP", faction = "NEUTRAL", cost = 3.0 }, -- 返回提拉加德海峡
     -- 【暗影界诸界连接】
-    { from = 1671, to = 1533, x = 0.63, y = 0.49, type = "PORTAL", faction = "NEUTRAL", note = "晋升堡垒之门/飞行路线", cost = 2.5 },
-    { from = 1533, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
-    { from = 1671, to = 1536, x = 0.49, y = 0.64, type = "PORTAL", faction = "NEUTRAL", note = "玛卓克萨斯之门/飞行路线", cost = 2.5 },
-    { from = 1536, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
-    { from = 1671, to = 1565, x = 0.37, y = 0.49, type = "PORTAL", faction = "NEUTRAL", note = "炽蓝仙野之门/飞行路线", cost = 2.5 },
-    { from = 1565, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
-    { from = 1671, to = 1525, x = 0.49, y = 0.35, type = "PORTAL", faction = "NEUTRAL", note = "雷文德斯之门/飞行路线", cost = 2.5 },
-    { from = 1525, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.5 },
-    { from = 1670, to = 1543, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "跃入噬渊", cost = 1.2 },
-    { from = 1670, to = 2016, x = 0.34, y = 0.66, type = "TRANSPORT", faction = "NEUTRAL", note = "塔扎维什飞艇渡口", cost = 2.0 },
-    { from = 2016, to = 1670, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回奥利波斯", cost = 2.0 },
-
+    { from = 1671, to = 1533, x = 0.63, y = 0.49, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 晋升堡垒之门/飞行路线
+    { from = 1533, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 返回奥利波斯
+    { from = 1671, to = 1536, x = 0.49, y = 0.64, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 玛卓克萨斯之门/飞行路线
+    { from = 1536, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 返回奥利波斯
+    { from = 1671, to = 1565, x = 0.37, y = 0.49, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 炽蓝仙野之门/飞行路线
+    { from = 1565, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 返回奥利波斯
+    { from = 1671, to = 1525, x = 0.49, y = 0.35, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 雷文德斯之门/飞行路线
+    { from = 1525, to = 1671, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 2.5 }, -- 返回奥利波斯
+    { from = 1670, to = 1543, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.2 }, -- 跃入噬渊
+    { from = 1670, to = 2016, x = 0.34, y = 0.66, type = "TRANSPORT", faction = "NEUTRAL", cost = 2.0 }, -- 塔扎维什飞艇渡口
+    { from = 2016, to = 1670, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 2.0 }, -- 返回奥利波斯
     -- 【阿古斯诸界连接】
-    { from = 627, to = 971, x = 0.69, y = 0.43, type = "PORTAL", faction = "NEUTRAL", note = "维迪卡尔圣光信标 (前往阿古斯)", cost = 1.0 },
-    { from = 971, to = 627, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "维迪卡尔返回达拉然传送门", cost = 1.0 },
-    { from = 971, to = 885, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "圣光矩阵：前往玛凯雷", cost = 1.0 },
-    { from = 971, to = 882, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", note = "圣光矩阵：前往安托兰废土", cost = 1.0 },
-
+    { from = 627, to = 971, x = 0.69, y = 0.43, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 维迪卡尔圣光信标 (前往阿古斯)
+    { from = 971, to = 627, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 维迪卡尔返回达拉然传送门
+    { from = 971, to = 885, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 圣光矩阵：前往玛凯雷
+    { from = 971, to = 882, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 圣光矩阵：前往安托兰废土
     -- 【银月城萨拉斯之门 / 秘蓝岛 / 查拉雷克洞窟 / 千丝之城】
-    { from = 23, to = 95, x = 0.55, y = 0.12, type = "PORTAL", faction = "NEUTRAL", note = "萨拉斯之门 (进入幽魂之地)", cost = 1.0 },
-    { from = 95, to = 23, x = 0.44, y = 0.90, type = "PORTAL", faction = "NEUTRAL", note = "萨拉斯之门 (进入东瘟疫之地)", cost = 1.0 },
-    { from = 95, to = 110, x = 0.50, y = 0.10, type = "TRANSPORT", faction = "HORDE", note = "银月城正门", cost = 1.0 },
-    { from = 110, to = 95, x = 0.50, y = 0.90, type = "TRANSPORT", faction = "HORDE", note = "离开银月城前往幽魂之地", cost = 1.0 },
-    { from = 62, to = 97, x = 0.56, y = 0.92, type = "PORTAL", faction = "ALLIANCE", note = "黑海岸渡口传送门 (前往秘蓝岛)", cost = 1.0 },
-    { from = 97, to = 103, x = 0.34, y = 0.21, type = "TRANSPORT", faction = "ALLIANCE", note = "埃索达正门", cost = 1.0 },
+    { from = 23, to = 95, x = 0.55, y = 0.12, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 萨拉斯之门 (进入幽魂之地)
+    { from = 95, to = 23, x = 0.44, y = 0.90, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 萨拉斯之门 (进入东瘟疫之地)
+    { from = 95, to = 110, x = 0.50, y = 0.10, type = "TRANSPORT", faction = "HORDE", cost = 1.0 }, -- 银月城正门
+    { from = 110, to = 95, x = 0.50, y = 0.90, type = "TRANSPORT", faction = "HORDE", cost = 1.0 }, -- 离开银月城前往幽魂之地
+    { from = 62, to = 97, x = 0.56, y = 0.92, type = "PORTAL", faction = "ALLIANCE", cost = 1.0 }, -- 黑海岸渡口传送门 (前往秘蓝岛)
+    { from = 97, to = 103, x = 0.34, y = 0.21, type = "TRANSPORT", faction = "ALLIANCE", cost = 1.0 }, -- 埃索达正门
     -- 【巨龙群岛：查拉雷克洞窟 (2133) 三大地面入口与内部出口】
     -- 1. 宏图通道 / 穿孔 (索德拉苏斯 2025 / 瓦德拉肯 2112 ⇋ 查拉雷克洞窟 2133 穿孔)
     { from = 2025, to = 2133, x = 0.298, y = 0.630, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_THROUGHWAY_NAME"], cost = 1.0 },
@@ -626,11 +579,10 @@ local SUBZONE_CONNECTIONS = {
     { from = 2024, to = 2133, x = 0.180, y = 0.230, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_LOOKOUT_NAME"], cost = 1.0 },
     { from = 2133, to = 2024, x = 0.391, y = 0.657, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_LOOKOUT_EXIT_NAME"], cost = 1.0 },
 
-    { from = 2216, to = 2256, x = 0.56, y = 0.38, type = "TRANSPORT", faction = "NEUTRAL", note = "千丝之城 / 尼鲁巴尔王宫下层通道", cost = 1.0 },
-    { from = 2256, to = 2216, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "返回艾基-卡赫特", cost = 1.0 },
-    { from = 2339, to = 2371, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "生态圆顶通道", cost = 1.0 },
-    { from = 2339, to = 2437, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", note = "纳洛拉克之穴通道", cost = 1.0 },
-
+    { from = 2216, to = 2256, x = 0.56, y = 0.38, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 千丝之城 / 尼鲁巴尔王宫下层通道
+    { from = 2256, to = 2216, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 返回艾基-卡赫特
+    { from = 2339, to = 2371, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 生态圆顶通道
+    { from = 2339, to = 2437, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 纳洛拉克之穴通道
     -- 【卡兹阿加：多恩岛 (2248) / 多恩诺嘉尔 (2339) ⇋ 喧鸣深渊 (2214) 地表与地下出入升降梯】
     -- 1. 奔涌要道 (多恩诺嘉尔 2339 / 多恩岛 2248 ⇋ 喧鸣深渊 2214 喧鸣大升降梯)
     { from = 2339, to = 2214, x = 0.3587, y = 0.5875, type = "ELEVATOR_DOWN", faction = "NEUTRAL", note = L["ELEVATOR_COREWAY_NAME"], cost = 1.0 },
@@ -655,9 +607,8 @@ local SUBZONE_CONNECTIONS = {
     { from = 2215, to = 2255, x = 0.7361, y = 0.6016, type = "TRANSPORT", faction = "NEUTRAL", note = L["CAVE_HALLOWFALL_TO_AZJ"], cost = 1.0 },
     { from = 2255, to = 2215, x = 0.6489, y = 0.1374, type = "TRANSPORT", faction = "NEUTRAL", note = L["CAVE_AZJ_TO_HALLOWFALL"], cost = 1.0 },
     -- 【奎尔萨拉斯：银月城阿斯塔洛的圣殿 (2393) ⇋ 盘卷蛇岛 (2512) ⇋ 阿塔乌特克地窟 (2509) ⇋ 地下坟茔 (2613)】
-    { from = 2393, to = 2512, x = 0.568, y = 0.674, type = "PORTAL", faction = "NEUTRAL", note = "通往盘卷蛇岛的传送门", cost = 1.0 },
-    { from = 2512, to = 2393, x = 0.582, y = 0.485, type = "PORTAL", faction = "NEUTRAL", note = "通往阿斯塔洛的圣殿的传送门", cost = 1.0 },
-
+    { from = 2393, to = 2512, x = 0.568, y = 0.674, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- Portal to the Coiled Isle (Porta 自行补充，MapNotes 未收录)
+    { from = 2512, to = 2393, x = 0.582, y = 0.485, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- Portal to Astalor's Sanctum (Porta 自行补充，MapNotes 未收录)
     -- 阿塔乌特克地窟三大地表大门与内部出口
     -- 1. 蛇眼之门 (北门)
     { from = 2512, to = 2509, x = 0.4372, y = 0.4419, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_ATAL_NORTH_NAME"], cost = 1.0 },
@@ -671,20 +622,18 @@ local SUBZONE_CONNECTIONS = {
     { from = 2512, to = 2509, x = 0.4567, y = 0.6490, type = "CAVE_ENTER", faction = "NEUTRAL", note = L["CAVE_ATAL_EAST_NAME"], cost = 1.0 },
     { from = 2509, to = 2512, x = 0.4590, y = 0.6493, type = "CAVE_EXIT", faction = "NEUTRAL", note = L["CAVE_ATAL_EAST_EXIT_NAME"], cost = 1.0 },
 
-    { from = 2509, to = 2613, x = 0.472, y = 0.450, type = "TRANSPORT", faction = "NEUTRAL", note = "进入地下坟茔 (基西克斯破封)", cost = 1.0 },
-    { from = 2613, to = 2509, x = 0.500, y = 0.500, type = "TRANSPORT", faction = "NEUTRAL", note = "返回阿塔乌特克地窟", cost = 1.0 },
-
+    { from = 2509, to = 2613, x = 0.472, y = 0.450, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 进入地下坟茔 (基西克斯破封)
+    { from = 2613, to = 2509, x = 0.500, y = 0.500, type = "TRANSPORT", faction = "NEUTRAL", cost = 1.0 }, -- 返回阿塔乌特克地窟
     -- 【暗月马戏团主城秘法师直达通道】
-    { from = 85, to = 407, x = 0.48, y = 0.70, type = "TRANSPORT", faction = "HORDE", note = "暗月马戏团秘法师 (力量谷入口)", isDarkmoon = true, cost = 1.0 },
-    { from = 88, to = 407, x = 0.54, y = 0.51, type = "TRANSPORT", faction = "HORDE", note = "暗月马戏团秘法师 (长者高地)", isDarkmoon = true, cost = 1.0 },
-    { from = 84, to = 407, x = 0.62, y = 0.32, type = "TRANSPORT", faction = "ALLIANCE", note = "暗月马戏团秘法师 (法师区)", isDarkmoon = true, cost = 1.0 },
-    { from = 87, to = 407, x = 0.61, y = 0.89, type = "TRANSPORT", faction = "ALLIANCE", note = "暗月马戏团秘法师 (平民区)", isDarkmoon = true, cost = 1.0 },
-
+    { from = 85, to = 407, x = 0.48, y = 0.70, type = "TRANSPORT", faction = "HORDE", isDarkmoon = true, cost = 1.0 }, -- 暗月马戏团秘法师 (力量谷入口)
+    { from = 88, to = 407, x = 0.54, y = 0.51, type = "TRANSPORT", faction = "HORDE", isDarkmoon = true, cost = 1.0 }, -- 暗月马戏团秘法师 (长者高地)
+    { from = 84, to = 407, x = 0.62, y = 0.32, type = "TRANSPORT", faction = "ALLIANCE", isDarkmoon = true, cost = 1.0 }, -- 暗月马戏团秘法师 (法师区)
+    { from = 87, to = 407, x = 0.61, y = 0.89, type = "TRANSPORT", faction = "ALLIANCE", isDarkmoon = true, cost = 1.0 }, -- 暗月马戏团秘法师 (平民区)
     -- 【死亡骑士职业大厅：阿彻鲁斯黑锋要塞 (647)】
-    { from = 647, to = 646, x = 0.50, y = 0.50, type = "FLY", faction = "NEUTRAL", note = "俯冲飞往破碎海滩野外", cost = 0.8 },
-    { from = 646, to = 647, x = 0.45, y = 0.60, type = "FLY", faction = "NEUTRAL", note = "飞往阿彻鲁斯：黑锋要塞", cost = 0.8 },
-    { from = 647, to = 627, x = 0.28, y = 0.35, type = "PORTAL", faction = "NEUTRAL", note = "阿彻鲁斯：达拉然传送门", cost = 1.0 },
-    { from = 627, to = 647, x = 0.68, y = 0.42, type = "PORTAL", faction = "NEUTRAL", note = "克拉苏斯平台：黑锋要塞传送门", cost = 1.0 },
+    { from = 647, to = 646, x = 0.50, y = 0.50, type = "FLY", faction = "NEUTRAL", cost = 0.8 }, -- 俯冲飞往破碎海滩野外
+    { from = 646, to = 647, x = 0.45, y = 0.60, type = "FLY", faction = "NEUTRAL", cost = 0.8 }, -- 飞往阿彻鲁斯：黑锋要塞
+    { from = 647, to = 627, x = 0.28, y = 0.35, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 阿彻鲁斯：达拉然传送门
+    { from = 627, to = 647, x = 0.68, y = 0.42, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 克拉苏斯平台：黑锋要塞传送门
 }
 
 -- =========================================================================
@@ -753,6 +702,34 @@ local function HeapReset()
         heapCosts[i] = nil
     end
     heapSize = 0
+end
+
+-- =========================================================================
+-- 千禧阈限 (The Timeways - 2266) 入口：传送门只开在当前资料片主城
+-- MapNotes 仍保留了往期主城 (多恩诺嘉尔 / 多恩岛) 的旧道标，这里按服务器资料片筛选，只放行当前主城的入口
+-- 新资料片上线时在此表追加一行即可
+-- =========================================================================
+local TIMEWAYS_MAP_ID = 2266
+-- expansion 为暴雪资料片序号常量 (经典旧世 = 0 起算)，不是补丁版本号：
+--   LE_EXPANSION_WAR_WITHIN = 10 → 地心之战 (11.x 补丁)
+--   LE_EXPANSION_MIDNIGHT   = 11 → 至暗之夜 (12.x 补丁)
+local TIMEWAYS_ENTRY_BY_EXPANSION = {
+    { expansion = LE_EXPANSION_WAR_WITHIN or 10, maps = { [2339] = true, [2248] = true } }, -- 地心之战 (11.x)：多恩诺嘉尔 / 多恩岛
+    { expansion = LE_EXPANSION_MIDNIGHT or 11, maps = { [2393] = true } },                -- 至暗之夜 (12.x)：银月城
+}
+
+-- 取不高于服务器资料片序号的最新一档；无法获取时按表中最新一档处理
+local function GetTimewaysEntryMaps()
+    local level = (GetServerExpansionLevel and GetServerExpansionLevel()) or (GetExpansionLevel and GetExpansionLevel())
+    local chosen = TIMEWAYS_ENTRY_BY_EXPANSION[#TIMEWAYS_ENTRY_BY_EXPANSION]
+    if level then
+        for _, entry in ipairs(TIMEWAYS_ENTRY_BY_EXPANSION) do
+            if entry.expansion <= level then
+                chosen = entry
+            end
+        end
+    end
+    return chosen.maps
 end
 
 -- 军团再临职业大厅专属地图（仅对应职业可进出，严禁跨职业借道）
@@ -878,18 +855,18 @@ local function GetGraphData(playerFaction)
     local _, _, playerRaceID = UnitRace("player")
     local isDarkIron = (playerRaceID == 34)
     local _, playerClass = UnitClass("player")
-    local isTimeways = IsTimewaysActive()
+    local timewaysEntryMaps = GetTimewaysEntryMaps()
 
     local function addEdge(fromNode, toNode, x, y, edgeType, faction, note, cost, questID, achievementID, isDarkmoon)
         if not fromNode or not toNode or fromNode == toNode then return end
         if edgeType == "MOLE_MACHINE" and not isDarkIron then return end
 
-        -- 1. 资料片与赛季生命周期守卫：千禧阈限 (2266)
-        if (fromNode == 2266 or toNode == 2266) and not isTimeways then
+        -- 千禧阈限只能从当前资料片主城进入；从千禧阈限出发的边 (返回主城 / 副本道标) 不受影响
+        if toNode == TIMEWAYS_MAP_ID and not timewaysEntryMaps[fromNode] then
             return
         end
 
-        -- 2. 职业专属大厅地图隔离（防止跨职业穿梭圣所/大厅通道）
+        -- 职业专属大厅地图隔离（防止跨职业穿梭圣所/大厅通道）
         local reqClass = CLASS_HALL_MAPS[fromNode] or CLASS_HALL_MAPS[toNode]
         if reqClass and reqClass ~= playerClass then
             return
@@ -972,14 +949,73 @@ local function GetGraphData(playerFaction)
 end
 
 -- =========================================================================
+-- 6.5 地图归一化：GetBestMapForUnit 常返回城内子区域/建筑内部等微型地图，
+--     沿 parentMapID 向上找到路网中已收录的地图，供寻路与自动推进使用
+-- =========================================================================
+local function IsGraphMap(mapID, fwdAdj, revAdj)
+    return ZONE_TO_CONTINENT[mapID] ~= nil or (fwdAdj and fwdAdj[mapID] ~= nil) or (revAdj and revAdj[mapID] ~= nil)
+end
+
+function Pathfinder:ResolveMapID(mapID)
+    if not mapID then return nil end
+    local revAdj, fwdAdj = GetGraphData()
+    local curr = mapID
+    for _ = 1, 8 do
+        if IsGraphMap(curr, fwdAdj, revAdj) then
+            return curr
+        end
+        local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(curr)
+        if not info or not info.parentMapID or info.parentMapID <= 0 then
+            break
+        end
+        curr = info.parentMapID
+    end
+    return mapID
+end
+
+-- 判断 mapID 是否为 targetMapID 本身或其下属子地图
+function Pathfinder:IsMapWithin(mapID, targetMapID)
+    if not mapID or not targetMapID then return false end
+    local curr = mapID
+    for _ = 1, 8 do
+        if curr == targetMapID then
+            return true
+        end
+        local info = C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(curr)
+        if not info or not info.parentMapID or info.parentMapID <= 0 then
+            return false
+        end
+        curr = info.parentMapID
+    end
+    return false
+end
+
+-- =========================================================================
 -- 7. 核心反推算法：从目的地逆向 Dijkstra 求解全局到达成本与后继指针
 -- =========================================================================
-function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
+-- sourceMapIDs：除当前地图外的额外出发点 (如传送落点)，用于建立其与目标大洲之间的地表飞行连通
+function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID, sourceMapIDs)
     if not destMapID then return {}, {}, {} end
 
     local revAdj, fwdAdj = GetGraphData(playerFaction)
     local dist = {}
     local nextEdge = {}
+    local gateCache = {}
+
+    local flySources = {}
+    local seenSources = {}
+    for _, src in ipairs({ currentMapID }) do
+        seenSources[src] = true
+        table.insert(flySources, src)
+    end
+    if sourceMapIDs then
+        for _, src in ipairs(sourceMapIDs) do
+            if src and not seenSources[src] then
+                seenSources[src] = true
+                table.insert(flySources, src)
+            end
+        end
+    end
 
     local isDarkmoonOpen = GetDarkmoonFaireStatus()
 
@@ -1008,7 +1044,11 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
 
                     -- 前置任务守卫：未解锁的任务/成就门禁止作为中转枢纽通道
                     if not skipEdge then
-                        local isUnlocked = self:CheckPortalQuestStatus(edge, playerFaction)
+                        local isUnlocked = gateCache[edge]
+                        if isUnlocked == nil then
+                            isUnlocked = self:CheckPortalQuestStatus(edge, playerFaction, true) and true or false
+                            gateCache[edge] = isUnlocked
+                        end
                         if not isUnlocked then
                             if edge.to ~= destMapID then
                                 skipEdge = true
@@ -1049,29 +1089,29 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                                 type = "FLY",
                                 faction = "NEUTRAL",
                                 cost = EDGE_COSTS.FLY or 2.0,
-                                note = "跨区域飞行前往",
                             }
                             HeapPush(h, flyCost)
                         end
                     end
                 end
 
-                -- 2b. 若当前玩家所在地图与当前探索节点同属该地表大洲，建立地表飞行连通
-                if currentMapID and currentMapID ~= curr and not UNDERGROUND_ZONES[currentMapID] and ZONE_TO_CONTINENT[currentMapID] == contID then
-                    local curFlyCost = currCost + (EDGE_COSTS.FLY or 2.0)
-                    if not dist[currentMapID] or curFlyCost < dist[currentMapID] then
-                        dist[currentMapID] = curFlyCost
-                        nextEdge[currentMapID] = {
-                            from = currentMapID,
-                            to = curr,
-                            x = 0.5,
-                            y = 0.5,
-                            type = "FLY",
-                            faction = "NEUTRAL",
-                            cost = EDGE_COSTS.FLY or 2.0,
-                            note = "飞行前往目标地表区域",
-                        }
-                        HeapPush(currentMapID, curFlyCost)
+                -- 2b. 出发点 (当前地图 / 传送落点) 与当前探索节点同属该地表大洲时，建立地表飞行连通
+                for _, src in ipairs(flySources) do
+                    if src ~= curr and not UNDERGROUND_ZONES[src] and ZONE_TO_CONTINENT[src] == contID then
+                        local srcFlyCost = currCost + (EDGE_COSTS.FLY or 2.0)
+                        if not dist[src] or srcFlyCost < dist[src] then
+                            dist[src] = srcFlyCost
+                            nextEdge[src] = {
+                                from = src,
+                                to = curr,
+                                x = 0.5,
+                                y = 0.5,
+                                type = "FLY",
+                                faction = "NEUTRAL",
+                                cost = EDGE_COSTS.FLY or 2.0,
+                            }
+                            HeapPush(src, srcFlyCost)
+                        end
                     end
                 end
 
@@ -1088,7 +1128,6 @@ function Pathfinder:ReverseDijkstra(destMapID, playerFaction, currentMapID)
                             type = "FLY",
                             faction = "NEUTRAL",
                             cost = EDGE_COSTS.FLY or 2.0,
-                            note = "在大洲内飞行前往目标区域",
                         }
                         HeapPush(contID, contFlyCost)
                     end
@@ -1315,10 +1354,6 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
     local statusTag = ""
     if not tp.hasItem then
         statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], tp.missingShortTag or L["TAG_MISSING"])
-    elseif not tp.isReady and (tp.cdSeconds or 0) > 0 then
-        statusTag = string.format(L["STATUS_CD_TAG_FMT"], tp.cdSeconds)
-    else
-        statusTag = L["STATUS_READY_TAG"]
     end
 
     local actionPrefix = L["ACTION_USE_ITEM"]
@@ -1399,17 +1434,14 @@ end
 -- 辅助：构建工程学虫洞发生器方案步骤（直接指引选择对应子区域）
 local function BuildWormholeRouteSteps(tp, destMapID, destination)
     local linkStr = Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)
-    local statusTag
+    local statusTag = ""
     if not tp.hasItem then
         statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], tp.missingShortTag or L["TAG_MISSING"])
-    elseif not tp.isReady and (tp.cdSeconds or 0) > 0 then
-        statusTag = string.format(L["STATUS_CD_TAG_FMT"], tp.cdSeconds)
-    else
-        statusTag = L["STATUS_READY_TAG"]
     end
 
     local destZoneName = GetMapDisplayName(destMapID)
-    local stepDesc = string.format(L["STEP_WORMHOLE"] or L["STEP_WORMHOLE_MENU"], linkStr, statusTag, destZoneName)
+    local stepFmt = (tp.wormholeMode == "RANDOM") and L["STEP_WORMHOLE_RANDOM"] or L["STEP_WORMHOLE_MENU"]
+    local stepDesc = string.format(stepFmt, linkStr, statusTag, destZoneName)
 
     return {
         {
@@ -1433,7 +1465,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
     local waygateInfo = DRAENOR_WAYGATES[waygateMapID]
     if not waygateInfo then return nil end
 
-    local currentMapID = C_Map.GetBestMapForUnit("player")
+    local currentMapID = Pathfinder:ResolveMapID(C_Map.GetBestMapForUnit("player"))
     local steps = {}
     local waygateZoneName = GetMapDisplayName(waygateMapID)
     local bName = (towerName and towerName ~= "") and towerName or L["BUILDING_MAGE_TOWER"]
@@ -1449,6 +1481,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
             toMapID = waygateMapID,
             action = "WAYGATE",
             description = stepDesc,
+            isWaygateStep = true, -- 要塞食人魔道标（区别于 MapNotes 通用 WAYGATE 边，如千禧阈限入口）
             isFinal = false,
         })
         table.insert(steps, BuildFinalArriveStep(2, destination))
@@ -1462,19 +1495,10 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
     if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
         hasHs, hsMissingReason = ns.PlayerTeleports:CheckTeleportOwnership("ITEM", hsID, hsName)
     end
-    local isReady, cdSeconds = true, 0
-    if ns.PlayerTeleports and ns.PlayerTeleports.GetItemCooldown then
-        isReady, cdSeconds = ns.PlayerTeleports:GetItemCooldown(hsID)
-    end
-
     local linkStr = Pathfinder:FormatTeleportLink("ITEM", hsID, hsName)
     local statusTag = ""
     if not hasHs then
         statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], L["TAG_MISSING"])
-    elseif not isReady and cdSeconds > 0 then
-        statusTag = string.format(L["STATUS_CD_TAG_FMT"], cdSeconds)
-    else
-        statusTag = L["STATUS_READY_TAG"]
     end
 
     local garrisonName = GetMapDisplayName(garrisonMapID)
@@ -1495,8 +1519,6 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
             name = hsName,
             type = "ITEM",
             hasItem = hasHs,
-            isReady = isReady,
-            cdSeconds = cdSeconds,
             missingReason = hsMissingReason,
         },
     })
@@ -1510,6 +1532,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
         toMapID = waygateMapID,
         action = "WAYGATE",
         description = waygateDesc,
+        isWaygateStep = true, -- 要塞食人魔道标（区别于 MapNotes 通用 WAYGATE 边，如千禧阈限入口）
         isFinal = false,
     })
 
@@ -1523,20 +1546,13 @@ end
 function Pathfinder:CalculateRoute(destination)
     if not destination or not destination.mapID then return nil end
 
-    local currentMapID = C_Map.GetBestMapForUnit("player")
+    local currentMapID = self:ResolveMapID(C_Map.GetBestMapForUnit("player"))
     if not currentMapID then
-        ns.Print(L["ERR_NO_PLAYER_MAP"])
         return nil
     end
 
     local playerFaction = ns.GetPlayerFaction()
     local destMapID = destination.mapID
-
-    -- 0. 检查千禧阈限 (2266) 是否在当前版本/赛季中有效开放
-    if destMapID == 2266 and not IsTimewaysActive() then
-        ns.Print(L["ERR_TIMEWAYS_INACTIVE"])
-        return nil
-    end
 
     -- =====================================================================
     -- 1. 已在同一地图：直接前往目标点
@@ -1589,8 +1605,8 @@ function Pathfinder:CalculateRoute(destination)
                 isActive = isActive,
                 activeCity = activeCity,
                 nextResetDate = nextResetDate,
-                tip = isActive and L["VISION_ACTIVE_DESC"] or string.format(L["VISION_INACTIVE_DESC_FMT"], nextResetDate),
-                tag = isActive and L["VISION_ACTIVE_TAG"] or string.format(L["VISION_INACTIVE_TAG_FMT"], nextResetDate),
+                tip = (isActive == nil and L["VISION_UNKNOWN_DESC"]) or (isActive and L["VISION_ACTIVE_DESC"]) or string.format(L["VISION_INACTIVE_DESC_FMT"], nextResetDate),
+                tag = (isActive == nil and L["VISION_UNKNOWN_TAG"]) or (isActive and L["VISION_ACTIVE_TAG"]) or string.format(L["VISION_INACTIVE_TAG_FMT"], nextResetDate),
             }
             directAlt.visionRotationInfo = visionRotationInfo
         end
@@ -1620,13 +1636,9 @@ function Pathfinder:CalculateRoute(destination)
             local linkStr = self:FormatTeleportLink(direct.type, direct.id, direct.name)
             local coordStr = self:FormatCoordLink(destMapID, destination.x, destination.y)
 
-            local statusTag
+            local statusTag = ""
             if not direct.hasItem then
                 statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], direct.missingShortTag or L["TAG_MISSING"])
-            elseif direct.isReady then
-                statusTag = L["STATUS_READY_TAG"]
-            else
-                statusTag = string.format(L["STATUS_CD_TAG_FMT"], direct.cdSeconds or 0)
             end
 
             local desc
@@ -1652,7 +1664,7 @@ function Pathfinder:CalculateRoute(destination)
                 }
             }
 
-            local directScore = (direct.hasItem and direct.isReady) and 0.5 or (0.5 + math.min((direct.cdSeconds or 0) / 30, 8.0))
+            local directScore = 0.5
             if not direct.hasItem then
                 directScore = directScore + 10.0
             end
@@ -1676,7 +1688,16 @@ function Pathfinder:CalculateRoute(destination)
     -- =====================================================================
     -- 3. 核心逆向反推 (Reverse Dijkstra)
     -- =====================================================================
-    local dist, nextEdge, fwdAdj = self:ReverseDijkstra(destMapID, playerFaction, currentMapID)
+    -- 传送落点作为额外出发点参与同大陆飞行扩展，使落在非枢纽区域的玩具/物品/技能也能接上后续路线
+    local availableTeleports = (ns.PlayerTeleports and ns.PlayerTeleports:GetAvailableTeleports()) or {}
+    local landingMapIDs = {}
+    for _, tp in ipairs(availableTeleports) do
+        if tp.toMap and not tp.isWormhole then
+            table.insert(landingMapIDs, tp.toMap)
+        end
+    end
+
+    local dist, nextEdge, fwdAdj = self:ReverseDijkstra(destMapID, playerFaction, currentMapID, landingMapIDs)
 
     local curContID = ZONE_TO_CONTINENT[currentMapID]
     local destContID = ZONE_TO_CONTINENT[destMapID]
@@ -1691,11 +1712,18 @@ function Pathfinder:CalculateRoute(destination)
     -- =====================================================================
     local validPhysical = {}
     local physicalCandidates = {}
-    local outEdges = fwdAdj[currentMapID] or {}
-
-    -- 若当前地图无固定交通设施边，但有跨大陆/区域飞行后继，加入候选
-    if #outEdges == 0 and nextEdge[currentMapID] then
-        table.insert(outEdges, nextEdge[currentMapID])
+    -- 复制一份出边列表 (避免污染常驻缓存的 fwdAdj)，并确保 Dijkstra 给出的最优后继 (如飞往枢纽) 始终在候选中
+    local outEdges = {}
+    local bestNext = nextEdge[currentMapID]
+    local hasBestNext = false
+    for _, edge in ipairs(fwdAdj[currentMapID] or {}) do
+        table.insert(outEdges, edge)
+        if edge == bestNext then
+            hasBestNext = true
+        end
+    end
+    if bestNext and not hasBestNext then
+        table.insert(outEdges, bestNext)
     end
 
     for _, edge in ipairs(outEdges) do
@@ -1853,15 +1881,10 @@ function Pathfinder:CalculateRoute(destination)
     -- 2) 工程学虫洞发生器因落点随机/不确定，不作为跨大陆通用中转枢纽，但在目的地位于对应大洲时作为补充备选方案提供。
     -- =====================================================================
     if ns.PlayerTeleports and not isAtDestinationStaging then
-        local availableTeleports = ns.PlayerTeleports:GetAvailableTeleports()
-
-        -- 预先排序：同一目标地图下，优先使用玩家已拥有、已就绪、优先级更高的传送手段
+        -- 预先排序：同一目标地图下，优先使用玩家已拥有、优先级更高的传送手段
         table.sort(availableTeleports, function(a, b)
             if (a.hasItem and true or false) ~= (b.hasItem and true or false) then
                 return a.hasItem and true or false
-            end
-            if (a.isReady and true or false) ~= (b.isReady and true or false) then
-                return a.isReady and true or false
             end
             return (a.priority or 5) > (b.priority or 5)
         end)
@@ -1886,7 +1909,7 @@ function Pathfinder:CalculateRoute(destination)
                 if allowTp and dist[tp.toMap] < (dist[currentMapID] or 999) then
                     seenTpTarget[tp.toMap] = true
 
-                    local itemCost = (tp.hasItem and tp.isReady) and 1.0 or (1.0 + math.min((tp.cdSeconds or 0) / 30, 8.0))
+                    local itemCost = 1.0
                     if not tp.hasItem then
                         itemCost = itemCost + 10.0
                     end
@@ -2022,48 +2045,7 @@ function Pathfinder:CalculateRoute(destination)
         end
     end
 
-    -- =====================================================================
-    -- 6. 若没有找到任何可行方案，尝试常规主城炉石兜底
-    -- =====================================================================
     if #alternatives == 0 then
-        local hubMapID = (playerFaction == "HORDE") and 85 or 84
-        if dist[hubMapID] then
-            local hsName = (ns.PlayerTeleports and ns.PlayerTeleports.GetItemDisplayName and ns.PlayerTeleports:GetItemDisplayName(6948, L["ITEM_NAME_6948"])) or L["ITEM_NAME_6948"]
-            local hasHearthstone, hsMissingReason = true, nil
-            if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
-                hasHearthstone, hsMissingReason = ns.PlayerTeleports:CheckTeleportOwnership("ITEM", 6948, hsName)
-            end
-            local hsInfo = {
-                type = "ITEM",
-                id = 6948,
-                name = hsName,
-                toMap = hubMapID,
-                x = 0.5,
-                y = 0.5,
-                hasItem = hasHearthstone,
-                missingReason = hsMissingReason,
-                isReady = true,
-                cdSeconds = 0,
-            }
-            local hubSteps = BuildTeleportRouteSteps(hsInfo, destMapID, destination, nextEdge, playerFaction)
-            if hubSteps then
-                table.insert(alternatives, {
-                    name = string.format(L["ALT_USE_FMT"], hsName),
-                    viaDesc = L["ALT_DESC_HEARTHSTONE"],
-                    distanceYards = 0,
-                    distanceText = L["ALT_DIST_HEARTHSTONE"],
-                    isMissingTeleport = (not hasHearthstone),
-                    missingReason = hsMissingReason,
-                    score = dist[hubMapID] + 5.0 + (hasHearthstone and 0 or 10.0),
-                    steps = hubSteps,
-                    totalSteps = #hubSteps,
-                })
-            end
-        end
-    end
-
-    if #alternatives == 0 then
-        ns.Print(string.format(L["ERR_NO_ROUTE_FOUND_FMT"], destination.name))
         return nil
     end
 
@@ -2091,12 +2073,12 @@ function Pathfinder:CalculateRoute(destination)
             isActive = isActive,
             activeCity = activeCity,
             nextResetDate = nextResetDate,
-            tip = isActive and L["VISION_ACTIVE_DESC"] or string.format(L["VISION_INACTIVE_DESC_FMT"], nextResetDate),
-            tag = isActive and L["VISION_ACTIVE_TAG"] or string.format(L["VISION_INACTIVE_TAG_FMT"], nextResetDate),
+            tip = (isActive == nil and L["VISION_UNKNOWN_DESC"]) or (isActive and L["VISION_ACTIVE_DESC"]) or string.format(L["VISION_INACTIVE_DESC_FMT"], nextResetDate),
+            tag = (isActive == nil and L["VISION_UNKNOWN_TAG"]) or (isActive and L["VISION_ACTIVE_TAG"]) or string.format(L["VISION_INACTIVE_TAG_FMT"], nextResetDate),
         }
         for _, alt in ipairs(alternatives) do
             alt.visionRotationInfo = visionRotationInfo
-            if not isActive then
+            if isActive == false then
                 alt.score = (alt.score or 2.0) + 5.0
             end
         end
@@ -2163,3 +2145,11 @@ function Pathfinder:FindShortestPath(startMapID, targetMapID, playerFaction)
     end
     return nil
 end
+
+-- 供 /porta diag 诊断读取的内部数据与函数 (只读引用)
+Pathfinder.Data = {
+    PORTAL_QUEST_GATES = PORTAL_QUEST_GATES,
+    ZONE_TO_CONTINENT = ZONE_TO_CONTINENT,
+    GetGraphData = GetGraphData,
+    GetTimewaysEntryMaps = GetTimewaysEntryMaps,
+}

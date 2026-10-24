@@ -174,21 +174,15 @@ function MinimapButton:Initialize()
 end
 
 -- 切换小地图按钮显隐
-function MinimapButton:Toggle(silent)
+function MinimapButton:Toggle()
     PortaDB = PortaDB or {}
     PortaDB.showMinimapButton = not PortaDB.showMinimapButton
     if button then
         if PortaDB.showMinimapButton then
             button:Show()
             UpdatePosition(PortaDB.minimapPos)
-            if not silent then
-                ns.Print(L["CMD_MINIMAP_TOGGLE_ON"])
-            end
         else
             button:Hide()
-            if not silent then
-                ns.Print(L["CMD_MINIMAP_TOGGLE_OFF"])
-            end
         end
     end
     return PortaDB.showMinimapButton

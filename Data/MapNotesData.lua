@@ -1,6 +1,6 @@
 -- =========================================================================
 -- Porta Data - Auto-generated from HandyNotes_MapNotes (Retail)
--- Build Date: 2026-10-23
+-- Build Date: 2026-10-25
 -- Destinations: 233
 -- Transport Edges: 660
 -- =========================================================================
@@ -9,7 +9,7 @@ local _, ns = ...
 
 ns.PortaData = {
     version = "1.0.0",
-    buildDate = "2026-10-23",
+    buildDate = "2026-10-25",
 
     -- Destinations: dungeon, raid and delve entrances
     -- id: journalInstanceID for dungeon/raid; internal uiMapID for delve

@@ -217,12 +217,14 @@ ns.L = L
     L["TAG_REQ_ENG"] = "Unusable"
     L["TAG_IN_BANK"] = "(Warband) Bank"
     L["TAG_MISSING"] = "Missing"
-    L["TAG_ROGUE_ONLY"] = "Rogue Only"
 
+    L["REASON_OWNERSHIP_UNKNOWN_FMT"] = "%s: Ownership not yet confirmed"
+    L["REASON_REQUIREMENTS_UNKNOWN_FMT"] = "%s: Eligibility not yet confirmed"
+    L["REASON_FACTION_FMT"] = "%s: Faction requirement not met"
+    L["REASON_CLASS_FMT"] = "%s: Class requirement not met"
     L["ERR_UNKNOWN_TELEPORT_ID"] = "Unknown teleport ID"
     L["REASON_SPELL_NOT_KNOWN_FMT"] = "Spell not learned: %s"
     L["REASON_TOY_NO_ENG_FMT"] = "%s: Collected; requires Engineering"
-    L["REASON_TOY_UNUSABLE_FMT"] = "%s: Collected; specialization, skill, or faction requirements not met"
     L["REASON_ITEM_NO_ENG_FMT"] = "%s: Owned; requires Engineering"
     L["REASON_TOY_MISSING_ENG_FMT"] = "%s: Not collected; requires Engineering"
     L["REASON_TOY_MISSING_FMT"] = "Toy not collected: %s"
@@ -370,6 +372,7 @@ ns.L = L
     L["HUD_WARN_PREREQ_FALLBACK"] = "Prerequisite Quest"
 
     -- 极简 HUD 状态与提示词条
+    L["STATUS_UNKNOWN"] = "Unconfirmed"
     L["STATUS_UNAVAILABLE"] = "Unavailable"
     L["STATUS_NOT_OWNED"] = "Not Owned"
     L["STATUS_IN_BANK"] = "In bank"

@@ -1202,7 +1202,7 @@ local function MarkRouteAvailability(alternative)
             end
             alternative.isMissingTeleport = true
             alternative.missingReason = alternative.missingReason or step.teleportInfo.missingReason
-            alternative.missingShortTag = alternative.missingShortTag or L["STATUS_UNAVAILABLE"]
+            alternative.missingShortTag = alternative.missingShortTag or step.teleportInfo.missingShortTag or L["STATUS_UNAVAILABLE"]
         end
     end
 end

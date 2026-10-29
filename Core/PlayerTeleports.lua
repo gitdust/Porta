@@ -670,284 +670,210 @@ end
 -- =========================================================================
 -- 辅助判断函数
 -- =========================================================================
-local function GetBagItemCount(itemID)
-    if not itemID then return 0 end
-    if C_Item and C_Item.GetItemCount then
-        return C_Item.GetItemCount(itemID, false) or 0
-    end
-    return 0
+-- 查询失败或未就绪返回 nil，和已确认的 false / 0 分开。
+local function QueryValue(fn, ...)
+    if type(fn) ~= "function" then return nil end
+    local ok, value = pcall(fn, ...)
+    if ok then return value end
+    return nil
 end
 
-local function GetTotalItemCountWithBank(itemID)
-    if not itemID then return 0 end
-    if C_Item and C_Item.GetItemCount then
-        -- includeBank, includeUses, includeReagentBank, includeAccountBank (战团银行)
-        return C_Item.GetItemCount(itemID, true, false, true, true) or 0
-    end
-    return 0
-end
-
-local function HasItem(itemID)
-    return GetBagItemCount(itemID) > 0
-end
-
-local function IsItemInBank(itemID)
-    local bagCount = GetBagItemCount(itemID)
-    local totalCount = GetTotalItemCountWithBank(itemID)
-    return (bagCount == 0) and (totalCount > 0)
-end
-
-local function HasToyCollected(toyID)
-    if not toyID then return false end
-    if PlayerHasToy and PlayerHasToy(toyID) then
-        return true
-    end
-    return false
-end
-
--- 检查法术是否习得 (优先采用 11.0 / 12.1 现代法术书 API，精准识别账号钥石直达门)
 local function IsSpellKnown(spellID)
     if not spellID then return false end
-    if C_SpellBook and C_SpellBook.IsSpellKnown then
-        if C_SpellBook.IsSpellKnown(spellID) then
-            return true
-        end
+    local known = QueryValue(C_SpellBook and C_SpellBook.IsSpellKnown, spellID)
+    if known == true then return true end
+    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player
+    local inBook
+    if bank then
+        inBook = QueryValue(C_SpellBook and C_SpellBook.IsSpellInSpellBook, spellID, bank, true)
     end
-    -- 含覆盖法术 (includeOverrides)，替代已弃用的 IsSpellKnownOrOverridesKnown / IsPlayerSpell
-    if C_SpellBook and C_SpellBook.IsSpellInSpellBook then
-        if C_SpellBook.IsSpellInSpellBook(spellID, Enum.SpellBookSpellBank.Player, true) then
-            return true
-        end
-    end
-    return false
+    if inBook == true then return true end
+    if known == false or inBook == false then return false end
+    return nil
 end
 
-local ENGINEERING_REQ_MAP = {}
-for _, item in ipairs(TELEPORT_ITEMS) do
-    if item.requiresEngineering then
-        if item.id then
-            ENGINEERING_REQ_MAP[item.id] = item
-        end
-        if item.ids then
-            for _, cid in ipairs(item.ids) do
-                ENGINEERING_REQ_MAP[cid] = item
-            end
-        end
-    end
-end
-
--- 检查当前角色是否学习了工程学专业 (以专业技能线 ID 202 为唯一依据，与客户端语言无关)
 local ENGINEERING_SKILL_LINE = 202
-
 local function HasEngineeringProfession()
-    if not GetProfessions or not GetProfessionInfo then
-        return false
-    end
-    local prof1, prof2 = GetProfessions()
+    if type(GetProfessions) ~= "function" or type(GetProfessionInfo) ~= "function" then return nil end
+    local ok, prof1, prof2 = pcall(GetProfessions)
+    if not ok then return nil end
+    local complete = true
     for slot = 1, 2 do
         local idx = select(slot, prof1, prof2)
         if idx then
-            local skillLine = select(7, GetProfessionInfo(idx))
-            if skillLine == ENGINEERING_SKILL_LINE then
-                return true
-            end
+            local infoOk, _, _, _, _, _, _, skillLine = pcall(GetProfessionInfo, idx)
+            if infoOk and skillLine == ENGINEERING_SKILL_LINE then return true end
+            if not infoOk or type(skillLine) ~= "number" then complete = false end
         end
     end
-    return false
+    if complete then return false end
+    return nil
 end
-
 PlayerTeleports.HasEngineeringProfession = HasEngineeringProfession
 
-local function IsToyUsableByPlayer(toyID)
-    if not toyID then return false end
-    -- 调用方已确认玩具归属。死亡之颅需选中小动物生成传送门，
-    -- 这类使用时的交互前提不应让已收集玩具退出路线或禁用 HUD 动作。
-    if toyID == 151016 then
-        return true
+-- 汇总所有登记处的永久资格，让路线与 HUD 按同一份元数据判断。
+local ITEM_METADATA, SPELL_METADATA = {}, {}
+local function RegisterAsset(entry, registry)
+    for _, id in ipairs(entry.ids or { entry.id }) do
+        local meta = registry[id]
+        if not meta then meta = {}; registry[id] = meta end
+        for key, value in pairs(entry) do
+            if key ~= "ids" and meta[key] == nil then meta[key] = value end
+        end
+        meta.id = id
+        if entry.requiresEngineering then meta.requiresEngineering = true end
+        if entry.class and entry.class ~= "ALL" then meta.class = entry.class end
+        if entry.faction and entry.faction ~= "NEUTRAL" then meta.faction = entry.faction end
     end
-    -- 若为工程学专属玩具且当前角色已学习工程学，直接视为可用（避免客户端刚登录或玩具箱未打开时 C_ToyBox.IsToyUsable 误返回 false/nil）
-    if ENGINEERING_REQ_MAP[toyID] and HasEngineeringProfession() then
-        return true
+end
+for _, entry in ipairs(TELEPORT_ITEMS) do RegisterAsset(entry, ITEM_METADATA) end
+for _, lists in ipairs({ DIRECT_DESTINATION_ITEMS, DIRECT_MAP_ITEMS }) do
+    for _, list in pairs(lists) do
+        for _, entry in ipairs(list) do RegisterAsset(entry, ITEM_METADATA) end
     end
-    if C_ToyBox and C_ToyBox.IsToyUsable then
-        local isUsable = C_ToyBox.IsToyUsable(toyID)
-        if isUsable ~= nil then
-            return isUsable
+end
+RegisterAsset({ id = 129929, kind = "TOY", name = L["TOY_NAME_129929"], faction = "NEUTRAL", missingGuide = L["MIRROR_MISSING_GUIDE"] }, ITEM_METADATA)
+for _, entry in ipairs(CLASS_TELEPORT_SPELLS) do RegisterAsset(entry, SPELL_METADATA) end
+
+local REASON_FORMATS = {
+    REASON_BANK_NO_ENG_FMT = L["REASON_BANK_NO_ENG_FMT"],
+    REASON_TOY_NO_ENG_FMT = L["REASON_TOY_NO_ENG_FMT"],
+    REASON_ITEM_NO_ENG_FMT = L["REASON_ITEM_NO_ENG_FMT"],
+    REASON_TOY_MISSING_ENG_FMT = L["REASON_TOY_MISSING_ENG_FMT"],
+    REASON_ITEM_MISSING_ENG_FMT = L["REASON_ITEM_MISSING_ENG_FMT"],
+    REASON_REQUIREMENTS_UNKNOWN_FMT = L["REASON_REQUIREMENTS_UNKNOWN_FMT"],
+    REASON_SPELL_NOT_KNOWN_FMT = L["REASON_SPELL_NOT_KNOWN_FMT"],
+    REASON_TOY_MISSING_FMT = L["REASON_TOY_MISSING_FMT"],
+    REASON_ITEM_MISSING_FMT = L["REASON_ITEM_MISSING_FMT"],
+}
+
+local function EvaluateAsset(entry, id)
+    local isSpell = entry.kind == "SPELL"
+    local meta = (isSpell and SPELL_METADATA or ITEM_METADATA)[id] or entry
+    local name = isSpell and PlayerTeleports:GetSpellDisplayName(id, entry.name)
+        or PlayerTeleports:GetItemDisplayName(id, entry.name, entry.suffixMapID, entry.suffixInstanceID)
+    local label = ns.FormatBracket(name)
+    -- requirementsKnown 仅表示已登记的资格规则已确认，不涵盖未建模的分支/等级。
+    local state = {
+        id = id, name = name, kind = entry.kind == "ITEM" and "ITEM" or "TOY",
+        inBank = false, hasItem = false, ownershipKnown = false, requirementsKnown = true,
+        missingEngineering = false, classMismatch = false, factionMismatch = false,
+        note = ResolveEntryNote(entry),
+    }
+    if isSpell then
+        state.kind = "SPELL"
+        state.isOwned = IsSpellKnown(id)
+        state.ownershipKnown = state.isOwned ~= nil
+    else
+        local toy = QueryValue(PlayerHasToy, id)
+        local bag = QueryValue(C_Item and C_Item.GetItemCount, id, false)
+        local total = QueryValue(C_Item and C_Item.GetItemCount, id, true, false, true, true)
+        if toy == true then
+            state.kind, state.isOwned, state.ownershipKnown = "TOY", true, true
+        elseif type(bag) == "number" and bag > 0 then
+            state.kind, state.isOwned, state.ownershipKnown = "ITEM", true, true
+        elseif type(total) == "number" and total > 0 then
+            state.kind, state.isOwned, state.ownershipKnown = "ITEM", true, true
+            -- 背包数量未知时不能确认物品只在银行，也不能安全绑定使用动作。
+            state.inBank = type(bag) == "number" and bag == 0
+            if bag == nil then state.ownershipKnown = false end
+        elseif toy == false and type(bag) == "number" and type(total) == "number" then
+            state.isOwned, state.ownershipKnown = false, true
+        end
+        -- 纯玩具登记必须先完成收藏；背包里的待收藏物品不是传送动作。
+        if (meta.kind or entry.kind) == "TOY" and toy ~= true then
+            state.collectionRequired = toy == false
+            if toy == nil then state.ownershipKnown = false end
         end
     end
-    return true
+
+    local class = meta.class or entry.class
+    if class and class ~= "ALL" then
+        local classOk, _, playerClass = pcall(function() return UnitClass("player") end)
+        if not classOk or not playerClass then
+            state.requirementsKnown = false
+        else
+            state.classMismatch = playerClass ~= class
+        end
+    end
+    local faction = meta.faction or entry.faction
+    if faction and faction ~= "NEUTRAL" then
+        local playerFaction = QueryValue(ns.GetPlayerFaction)
+        if playerFaction ~= "ALLIANCE" and playerFaction ~= "HORDE" then
+            state.requirementsKnown = false
+        else
+            state.factionMismatch = faction ~= playerFaction
+        end
+    end
+    if meta.requiresEngineering or entry.requiresEngineering then
+        local engineering = HasEngineeringProfession()
+        state.requiresEngineering = true
+        if engineering == nil then state.requirementsKnown = false
+        else state.missingEngineering = not engineering end
+    end
+
+    state.hasItem = state.isOwned == true and state.ownershipKnown and state.requirementsKnown
+        and not state.inBank and not state.collectionRequired
+        and not state.classMismatch and not state.factionMismatch and not state.missingEngineering
+    if not state.hasItem then
+        if state.classMismatch then
+            state.missingShortTag = L["TAG_UNUSABLE"]
+            state.missingReason = string.format(class == "ROGUE" and L["REASON_ROGUE_ONLY_FMT"] or L["REASON_CLASS_FMT"], label)
+        elseif state.factionMismatch then
+            state.missingShortTag = L["TAG_UNUSABLE"]
+            state.missingReason = string.format(L["REASON_FACTION_FMT"], label)
+        elseif state.missingEngineering then
+            state.missingShortTag = L["TAG_REQ_ENG"]
+            local key = state.inBank and "REASON_BANK_NO_ENG_FMT"
+                or (state.isOwned == true and (state.kind == "TOY" and "REASON_TOY_NO_ENG_FMT" or "REASON_ITEM_NO_ENG_FMT"))
+                or (state.isOwned == false and (state.kind == "TOY" and "REASON_TOY_MISSING_ENG_FMT" or "REASON_ITEM_MISSING_ENG_FMT"))
+                or "REASON_REQUIREMENTS_UNKNOWN_FMT"
+            state.missingReason = string.format(REASON_FORMATS[key], label)
+        elseif not state.requirementsKnown then
+            state.missingShortTag = L["STATUS_UNKNOWN"]
+            state.missingReason = string.format(L["REASON_REQUIREMENTS_UNKNOWN_FMT"], label)
+        elseif not state.ownershipKnown then
+            state.missingShortTag = L["STATUS_UNKNOWN"]
+            state.missingReason = string.format(L["REASON_OWNERSHIP_UNKNOWN_FMT"], label)
+        elseif state.inBank then
+            state.missingShortTag = L["TAG_IN_BANK"]
+            state.missingReason = string.format(L["REASON_BANK_FMT"], label)
+        elseif state.collectionRequired then
+            state.missingShortTag = L["TAG_MISSING"]
+            state.missingReason = entry.missingGuide or string.format(L["REASON_TOY_MISSING_FMT"], label)
+        else
+            state.missingShortTag = L["TAG_MISSING"]
+            local key = isSpell and "REASON_SPELL_NOT_KNOWN_FMT"
+                or (state.kind == "TOY" and "REASON_TOY_MISSING_FMT" or "REASON_ITEM_MISSING_FMT")
+            state.missingReason = entry.missingGuide or string.format(REASON_FORMATS[key], label)
+        end
+    end
+    state.type = state.kind
+    return state
 end
 
--- 供外部（如 HUD 点击/悬停时）实时检测某玩具、物品或技能当前是否拥有/可用
+local function InspectItemOrToyEntry(entry)
+    local best, bestRank
+    for _, id in ipairs(entry.ids or { entry.id }) do
+        local state = EvaluateAsset(entry, id)
+        local rank = state.hasItem and 4 or (state.inBank and 2 or (state.isOwned == true and 3 or (state.ownershipKnown and 0 or 1)))
+        if not best or rank > bestRank then best, bestRank = state, rank end
+    end
+    return best
+end
+
+-- 第三个返回值是完整状态，供 HUD 使用真实种类与未知状态。
 function PlayerTeleports:CheckTeleportOwnership(kind, id, displayName)
     if not id then return false, L["ERR_UNKNOWN_TELEPORT_ID"] end
     local uKind = string.upper(tostring(kind or "ITEM"))
-    local resolvedName = displayName
-    if not resolvedName or resolvedName == "" then
-        if uKind == "SPELL" then
-            resolvedName = self:GetSpellDisplayName(id)
-        else
-            resolvedName = self:GetItemDisplayName(id)
-        end
-    end
-    local label = ns.FormatBracket(resolvedName or ("#" .. tostring(id)))
-    local reqEng = (ENGINEERING_REQ_MAP[id] ~= nil)
-    local hasEng = (not reqEng) or HasEngineeringProfession()
-
-    local _, playerClass = UnitClass("player")
-    if id == 139590 and playerClass ~= "ROGUE" then
-        return false, string.format(L["REASON_ROGUE_ONLY_FMT"], label)
-    end
-
-    if uKind == "SPELL" then
-        if IsSpellKnown(id) then
-            return true, nil
-        end
-        return false, string.format(L["REASON_SPELL_NOT_KNOWN_FMT"], label)
-    elseif uKind == "TOY" then
-        if HasToyCollected(id) then
-            if reqEng and not hasEng then
-                return false, string.format(L["REASON_TOY_NO_ENG_FMT"], label)
-            end
-            if not IsToyUsableByPlayer(id) then
-                return false, string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
-            end
-            return true, nil
-        elseif HasItem(id) then
-            if reqEng and not hasEng then
-                return false, string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
-            end
-            return true, nil
-        end
-        if reqEng and not hasEng then
-            return false, string.format(L["REASON_TOY_MISSING_ENG_FMT"], label)
-        end
-        return false, string.format(L["REASON_TOY_MISSING_FMT"], label)
-    else
-        local ownedInBag = HasItem(id)
-        local ownedAsToy = HasToyCollected(id)
-        if ownedInBag or ownedAsToy then
-            if reqEng and not hasEng then
-                return false, string.format(L["REASON_ITEM_NO_ENG_FMT"], label)
-            end
-            if ownedAsToy and not ownedInBag and not IsToyUsableByPlayer(id) then
-                return false, string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
-            end
-            return true, nil
-        elseif IsItemInBank(id) then
-            if reqEng and not hasEng then
-                return false, string.format(L["REASON_BANK_NO_ENG_FMT"], label)
-            end
-            return false, string.format(L["REASON_BANK_FMT"], label)
-        end
-        if reqEng and not hasEng then
-            return false, string.format(L["REASON_ITEM_MISSING_ENG_FMT"], label)
-        end
-        return false, string.format(L["REASON_ITEM_MISSING_FMT"], label)
-    end
-end
-
--- 检查物品/玩具条目状态（不因未拥有或专业不符而丢弃，返回详细状态以供方案生成时提示）
-local function InspectItemOrToyEntry(entry)
-    local candidateIDs = entry.ids or { entry.id }
-    local matchedID = candidateIDs[1]
-    local actualKind = (entry.kind == "TOY" or entry.kind == "TOY_OR_ITEM") and "TOY" or "ITEM"
-    local isOwned = false
-    local inBank = false
-    local isToyUnusable = false
-
-    for _, id in ipairs(candidateIDs) do
-        if entry.kind == "TOY" then
-            if HasToyCollected(id) then
-                matchedID = id
-                actualKind = "TOY"
-                isOwned = true
-                if not IsToyUsableByPlayer(id) then
-                    isToyUnusable = true
-                else
-                    isToyUnusable = false
-                    break
-                end
-            end
-        elseif entry.kind == "ITEM" then
-            if HasItem(id) then
-                matchedID = id
-                actualKind = "ITEM"
-                isOwned = true
-                break
-            elseif IsItemInBank(id) then
-                matchedID = id
-                inBank = true
-            end
-        else -- TOY_OR_ITEM
-            if HasToyCollected(id) then
-                matchedID = id
-                actualKind = "TOY"
-                isOwned = true
-                if not IsToyUsableByPlayer(id) then
-                    isToyUnusable = true
-                else
-                    isToyUnusable = false
-                    break
-                end
-            elseif HasItem(id) then
-                matchedID = id
-                actualKind = "ITEM"
-                isOwned = true
-                break
-            elseif IsItemInBank(id) then
-                matchedID = id
-                actualKind = "ITEM"
-                inBank = true
-            end
-        end
-    end
-
-    local resolvedName = PlayerTeleports:GetItemDisplayName(matchedID, entry.name, entry.suffixMapID, entry.suffixInstanceID)
-    local label = ns.FormatBracket(resolvedName)
-
-    local reqEng = entry.requiresEngineering and true or false
-    local hasEng = (not reqEng) or HasEngineeringProfession()
-
-    local _, playerClass = UnitClass("player")
-    local reqClass = entry.class
-    local isClassMatched = (not reqClass) or (reqClass == playerClass)
-    local hasIt = isOwned and hasEng and isClassMatched and (not isToyUnusable)
-
-    local missingReason = nil
-    local missingShortTag = nil
-    if not hasIt then
-        if not isClassMatched then
-            missingShortTag = L["TAG_ROGUE_ONLY"] or L["TAG_UNUSABLE"]
-            missingReason = string.format(L["REASON_ROGUE_ONLY_FMT"], label)
-        elseif reqEng and not hasEng then
-            missingShortTag = L["TAG_REQ_ENG"]
-            missingReason = string.format(actualKind == "TOY" and L["REASON_TOY_NO_ENG_FMT"] or L["REASON_ITEM_NO_ENG_FMT"], label)
-        elseif isToyUnusable then
-            missingShortTag = L["TAG_UNUSABLE"]
-            missingReason = string.format(L["REASON_TOY_UNUSABLE_FMT"], label)
-        elseif inBank then
-            missingShortTag = L["TAG_IN_BANK"]
-            missingReason = string.format(L["REASON_BANK_FMT"], label)
-        else
-            missingShortTag = L["TAG_MISSING"]
-            missingReason = string.format(actualKind == "TOY" and L["REASON_TOY_MISSING_FMT"] or L["REASON_ITEM_MISSING_FMT"], label)
-        end
-    end
-
-    return {
-        hasItem = hasIt,
-        isOwned = isOwned,
-        id = matchedID,
-        name = resolvedName,
-        note = ResolveEntryNote(entry),
-        kind = actualKind,
-        inBank = inBank,
-        isToyUnusable = isToyUnusable,
-        missingEngineering = (reqEng and not hasEng),
-        missingShortTag = missingShortTag,
-        missingReason = missingReason,
-    }
+    local meta = (uKind == "SPELL" and SPELL_METADATA or ITEM_METADATA)[id]
+    local entry = {}
+    if meta then for key, value in pairs(meta) do entry[key] = value end end
+    entry.id, entry.name = id, displayName or entry.name
+    if uKind == "SPELL" then entry.kind = "SPELL"
+    elseif not entry.kind then entry.kind = uKind end
+    local state = EvaluateAsset(entry, id)
+    return state.hasItem, state.missingReason, state
 end
 
 -- =========================================================================
@@ -979,8 +905,12 @@ function PlayerTeleports:GetAvailableTeleports()
                 priority = item.priority or 5,
                 hasItem = state.hasItem,
                 isOwned = state.isOwned,
+                ownershipKnown = state.ownershipKnown,
+                requirementsKnown = state.requirementsKnown,
+                classMismatch = state.classMismatch,
+                factionMismatch = state.factionMismatch,
+                collectionRequired = state.collectionRequired,
                 inBank = state.inBank,
-                isToyUnusable = state.isToyUnusable,
                 missingEngineering = state.missingEngineering,
                 missingShortTag = state.missingShortTag,
                 missingReason = state.missingReason,
@@ -1007,6 +937,9 @@ function PlayerTeleports:GetAvailableTeleports()
                 y = spell.y or 0.50,
                 priority = spell.priority or 5,
                 hasItem = true,
+                isOwned = true,
+                ownershipKnown = true,
+                requirementsKnown = true,
             })
         end
     end
@@ -1042,6 +975,9 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                         id = spellID,
                         name = spellName,
                         hasItem = true,
+                        isOwned = true,
+                        ownershipKnown = true,
+                        requirementsKnown = true,
                     })
                     break
                 end
@@ -1062,9 +998,13 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                     note = state.note,
                     hasItem = state.hasItem,
                     isOwned = state.isOwned,
+                    ownershipKnown = state.ownershipKnown,
+                    requirementsKnown = state.requirementsKnown,
+                    classMismatch = state.classMismatch,
+                    factionMismatch = state.factionMismatch,
+                    collectionRequired = state.collectionRequired,
                     inBank = state.inBank,
-                    isToyUnusable = state.isToyUnusable,
-                    missingEngineering = state.missingEngineering,
+                        missingEngineering = state.missingEngineering,
                     missingShortTag = state.missingShortTag,
                     missingReason = state.missingReason,
                     requiresEngineering = itemEntry.requiresEngineering or false,
@@ -1086,9 +1026,13 @@ function PlayerTeleports:GetDirectDestinationTeleports(destination)
                     note = state.note,
                     hasItem = state.hasItem,
                     isOwned = state.isOwned,
+                    ownershipKnown = state.ownershipKnown,
+                    requirementsKnown = state.requirementsKnown,
+                    classMismatch = state.classMismatch,
+                    factionMismatch = state.factionMismatch,
+                    collectionRequired = state.collectionRequired,
                     inBank = state.inBank,
-                    isToyUnusable = state.isToyUnusable,
-                    missingEngineering = state.missingEngineering,
+                        missingEngineering = state.missingEngineering,
                     missingShortTag = state.missingShortTag,
                     missingReason = state.missingReason,
                     requiresEngineering = itemEntry.requiresEngineering or false,
@@ -1197,35 +1141,7 @@ end
 -- 7. 时空漫游玩具：百变之镜 (Ever-Shifting Mirror, ID: 129929) 状态感知
 -- =========================================================================
 function PlayerTeleports:GetMirrorToyInfo()
-    local toyID = 129929
-    local toyName = self:GetItemDisplayName(toyID, L["TOY_NAME_129929"])
-    local hasToy, missingReason = false, nil
-
-    if PlayerHasToy and PlayerHasToy(toyID) then
-        local usable = true
-        if C_ToyBox and C_ToyBox.IsToyUsable then
-            usable = C_ToyBox.IsToyUsable(toyID)
-        end
-        if usable then
-            hasToy = true
-        else
-            hasToy = false
-            missingReason = L["STATUS_UNAVAILABLE"]
-        end
-    else
-        hasToy = false
-        missingReason = L["MIRROR_MISSING_GUIDE"] or L["STATUS_NOT_OWNED"]
-    end
-
-    return {
-        id = toyID,
-        type = "TOY",
-        kind = "TOY",
-        name = toyName,
-        hasItem = hasToy,
-        missingReason = missingReason,
-        missingShortTag = L["TAG_MISSING"],
-    }
+    return InspectItemOrToyEntry(ITEM_METADATA[129929])
 end
 
 -- 供 /porta diag 诊断读取的静态数据表 (只读引用)

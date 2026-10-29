@@ -207,12 +207,14 @@ if not L then return end
     L["TAG_REQ_ENG"] = "不可用"
     L["TAG_IN_BANK"] = "（战团）银行中"
     L["TAG_MISSING"] = "未拥有"
-    L["TAG_ROGUE_ONLY"] = "仅限潜行者"
 
+    L["REASON_OWNERSHIP_UNKNOWN_FMT"] = "%s：拥有状态未确认"
+    L["REASON_REQUIREMENTS_UNKNOWN_FMT"] = "%s：使用资格未确认"
+    L["REASON_FACTION_FMT"] = "%s：不符合阵营要求"
+    L["REASON_CLASS_FMT"] = "%s：不符合职业要求"
     L["ERR_UNKNOWN_TELEPORT_ID"] = "未知的传送编号"
     L["REASON_SPELL_NOT_KNOWN_FMT"] = "未习得%s"
     L["REASON_TOY_NO_ENG_FMT"] = "已收集%s；需工程学"
-    L["REASON_TOY_UNUSABLE_FMT"] = "已收集%s；不满足专业分支、点数或阵营等使用条件"
     L["REASON_ITEM_NO_ENG_FMT"] = "已拥有%s；需工程学"
     L["REASON_TOY_MISSING_ENG_FMT"] = "未收集%s；需工程学"
     L["REASON_TOY_MISSING_FMT"] = "未收集玩具%s"
@@ -355,6 +357,7 @@ if not L then return end
     L["HUD_WARN_PREREQ_FALLBACK"] = "前置任务"
 
     -- 极简 HUD 状态与提示词条
+    L["STATUS_UNKNOWN"] = "状态未确认"
     L["STATUS_UNAVAILABLE"] = "不可用"
     L["STATUS_NOT_OWNED"] = "未拥有"
     L["STATUS_IN_BANK"] = "在银行中"

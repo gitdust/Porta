@@ -679,7 +679,8 @@ local function UpdateAlternativeButtons(route, stepIndex)
         local isSelected = (i == selectedIdx)
         local radio = isSelected and "|cff00ffff●|r " or "|cff888888○|r "
         local recTag = (i == 1) and (" " .. L["HUD_ALT_TAG_RECOMMENDED"]) or ""
-        local missingTag = alt.isMissingTeleport and string.format(" |cffff4444[%s]|r", L["STATUS_UNAVAILABLE"]) or ""
+        local missingLabel = alt.missingShortTag == L["STATUS_UNKNOWN"] and L["STATUS_UNKNOWN"] or L["STATUS_UNAVAILABLE"]
+        local missingTag = alt.isMissingTeleport and string.format(" |cffff4444[%s]|r", missingLabel) or ""
         local label = string.format("%s%s%s%s", radio, alt.name or string.format(L["ALT_OPTION_FALLBACK_FMT"], i), recTag, missingTag)
 
         btn.text:SetText(label)
@@ -747,6 +748,18 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     if not currentStep then return end
     stepTextFrame.currentStep = currentStep
 
+    -- 使用同一次资产评估更新状态与动作类型，避免路线快照和按钮各自判定。
+    local tp = currentStep.teleportInfo
+    local hasIt, missingReason, teleportState = true, nil, nil
+    if tp and tp.id then
+        local kind = tp.type or tp.kind or ((currentStep.action == "MIRROR") and "TOY" or currentStep.action)
+        if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
+            hasIt, missingReason, teleportState = ns.PlayerTeleports:CheckTeleportOwnership(kind, tp.id, tp.name)
+        else
+            hasIt, missingReason, teleportState = tp.hasItem, tp.missingReason, tp
+        end
+    end
+
     -- 确保导航控制按钮恢复可见并绑定默认行为
     hudFrame.prevBtn:Show()
     hudFrame.viewMapBtn:Show()
@@ -784,14 +797,16 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     -- 3. 下方区域：构建精简提示文案
     local tipBlocks = {}
 
-    -- 缺失传送道具/不可用检测
-    if currentStep.isMissingTeleport and currentStep.teleportInfo then
-        local tpInfo = currentStep.teleportInfo
-        if currentStep.action == "MIRROR" or tpInfo.id == 129929 then
+    -- 未知状态不能标成未拥有；银行和角色资格与收集状态分别展示。
+    if tp and hasIt ~= true then
+        local state = teleportState or tp
+        if state.ownershipKnown == false or state.requirementsKnown == false then
+            table.insert(tipBlocks, "|cffffaa00" .. L["STATUS_UNKNOWN"] .. "|r")
+        elseif currentStep.action == "MIRROR" or tp.id == 129929 then
             table.insert(tipBlocks, "|cffff4444" .. L["STATUS_UNAVAILABLE"] .. "|r")
-        elseif tpInfo.inBank then
+        elseif state.inBank then
             table.insert(tipBlocks, "|cffffaa00" .. L["STATUS_IN_BANK"] .. "|r")
-        elseif tpInfo.missingEngineering or tpInfo.isToyUnusable then
+        elseif state.missingEngineering or state.classMismatch or state.factionMismatch or state.isOwned == true then
             table.insert(tipBlocks, "|cffff4444" .. L["STATUS_UNAVAILABLE"] .. "|r")
         else
             table.insert(tipBlocks, "|cffff4444" .. L["STATUS_NOT_OWNED"] .. "|r")
@@ -837,25 +852,18 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     tipText:SetText(finalTipStr)
 
     -- 4. 下方区域：操作图标识别与解析（仅当存在真实技能/物品/装备/玩具时才展示图标）
-    local tp = currentStep.teleportInfo
     local hasTeleportAction = false
     local parsedLink = nil
 
     if tp and tp.id and (currentStep.action == "SPELL" or currentStep.action == "TOY" or currentStep.action == "ITEM" or currentStep.action == "MIRROR" or tp.type) then
         hasTeleportAction = true
-        local k = tp.type or ((currentStep.action == "MIRROR") and "TOY" or currentStep.action)
+        local k = (teleportState and teleportState.kind) or tp.type or tp.kind or ((currentStep.action == "MIRROR") and "TOY" or currentStep.action)
         parsedLink = ParsePortaHyperlink(string.format("porta:%s:%d", string.lower(k), tp.id))
     end
 
     actionSlotBtn.parsedLink = parsedLink
     actionSlotBtn.currentStep = currentStep
 
-    local hasIt, missingReason = true, nil
-    if parsedLink then
-        if ns.PlayerTeleports and ns.PlayerTeleports.CheckTeleportOwnership then
-            hasIt, missingReason = ns.PlayerTeleports:CheckTeleportOwnership(parsedLink.kind, parsedLink.id)
-        end
-    end
     actionSlotBtn.hasIt = hasIt
     actionSlotBtn.missingReason = missingReason
 

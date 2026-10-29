@@ -100,7 +100,7 @@ local function CreateSearchItem(id, name, zoneName, mapID, x, y, itemType, tag, 
     local noArtSpaced, noArtCompact = NormalizeTextForms(noArticle)
     local commentLower = (comment and comment ~= "") and string.lower(TrimText(comment)) or nil
     local tagLower = (tag and tag ~= "") and string.lower(TrimText(tag)) or nil
-    local resultKey = tostring(itemType or "") .. ":" .. nameLower .. ":" .. string.lower(zoneName or "")
+    local resultKey = tostring(itemType or "") .. ":" .. tostring(mapID or 0) .. ":" .. nameLower .. ":" .. string.lower(zoneName or "")
 
     local normalizedAliases = nil
     if aliases and #aliases > 0 then
@@ -270,7 +270,7 @@ function SearchEngine:Initialize()
     local seenDestTypeNames = {}
     local seenInstanceNames = {}
     local seenContinentZoneNames = {}
-    local seenGlobalZoneNames = {}
+    local seenLandmarkNames = {}
     local delveItemsByName = {}
 
     -- 0. 建立特殊地标与核心任务枢纽索引 (如心之密室、暗月岛、重访惊魂幻象等)
@@ -310,7 +310,7 @@ function SearchEngine:Initialize()
         if not lm.isSubPoint then
             seenMapIDs[lm.mapID] = true
         end
-        seenGlobalZoneNames[string.lower(lmName)] = true
+        seenLandmarkNames[string.lower(lmName)] = true
 
         local item = CreateSearchItem(
             0,
@@ -523,9 +523,8 @@ function SearchEngine:Initialize()
             if contInfo and contInfo.name and contInfo.name ~= "" then
                 contName = TrimText(contInfo.name)
                 local contNameLower = string.lower(contName)
-                if contID ~= AZEROTH_MAP_ID and not seenMapIDs[contID] and not seenGlobalZoneNames[contNameLower] then
+                if contID ~= AZEROTH_MAP_ID and not seenMapIDs[contID] and not seenLandmarkNames[contNameLower] then
                     seenMapIDs[contID] = true
-                    seenGlobalZoneNames[contNameLower] = true
                     table.insert(searchIndex, CreateSearchItem(
                         0,
                         contName,
@@ -561,11 +560,10 @@ function SearchEngine:Initialize()
                         )
                         if not isVisionMap and not isIgnoredPhaseOrTest then
                             local contZoneKey = tostring(contID) .. ":" .. childNameLower
-                            -- 同一大洲内同名多楼层/多相位区域仅保留一条，且不与同名副本或全局已收录地标冲突
-                            if not seenContinentZoneNames[contZoneKey] and not seenGlobalZoneNames[childNameLower] and not seenInstanceNames[childNameLower] then
+                            -- 同大陆同名楼层/位面合并；跨大陆同名区域保留，以大陆标签区分。
+                            if not seenContinentZoneNames[contZoneKey] and not seenLandmarkNames[childNameLower] and not seenInstanceNames[childNameLower] then
                                 seenMapIDs[childMapID] = true
                                 seenContinentZoneNames[contZoneKey] = true
-                                seenGlobalZoneNames[childNameLower] = true
                                 local zoneLabel = contName
                                 if contID == AZEROTH_MAP_ID and child.parentMapID then
                                     local parentInfo = C_Map.GetMapInfo(child.parentMapID)
@@ -611,9 +609,8 @@ function SearchEngine:Initialize()
                             string.find(mapNameLower, "debug") or
                             string.find(mapNameLower, "deprecated")
                         )
-                        if not isIgnoredMapType and not isIgnoredPhaseOrTest and not seenGlobalZoneNames[mapNameLower] and not seenInstanceNames[mapNameLower] then
+                        if not isIgnoredMapType and not isIgnoredPhaseOrTest and not seenLandmarkNames[mapNameLower] and not seenInstanceNames[mapNameLower] then
                             seenMapIDs[targetMapID] = true
-                            seenGlobalZoneNames[mapNameLower] = true
                             table.insert(searchIndex, CreateSearchItem(
                                 0,
                                 mapName,

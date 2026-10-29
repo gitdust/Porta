@@ -200,12 +200,6 @@ local function InitFrame()
         debounceElapsed = 0
     end)
 
-    editBox:SetScript("OnEnterPressed", function()
-        hasPendingSearch = false
-        UpdateSearchResults(true)
-        SearchDialog:ConfirmSelection()
-    end)
-
     editBox:SetScript("OnEscapePressed", function()
         hasPendingSearch = false
         frame:Hide()
@@ -297,7 +291,6 @@ end
 
 -- 确认选中的目的地并启动导航
 function SearchDialog:ConfirmSelection()
-    UpdateSearchResults(false)
     local item = currentResults[selectedIndex]
     if not item then return end
 

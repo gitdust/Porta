@@ -9,6 +9,7 @@ ns.Pathfinder = Pathfinder
 -- =========================================================================
 local TRANSPORT_TEXT = {
     PORTAL        = L["TRANSPORT_PORTAL"],
+    BEACON        = L["TRANSPORT_BEACON"],
     ZEPPELIN      = L["TRANSPORT_ZEPPELIN"],
     SHIP          = L["TRANSPORT_SHIP"],
     WAYGATE       = L["TRANSPORT_WAYGATE"],
@@ -26,6 +27,7 @@ local TRANSPORT_TEXT = {
 
 local EDGE_COSTS = {
     PORTAL        = 1.0,
+    BEACON        = 1.0,
     WAYGATE       = 1.0,
     MIRROR        = 1.0,
     CLASS_PORTAL  = 1.0,
@@ -73,8 +75,8 @@ local PORTAL_QUEST_GATES = {
             unlockGuide = L["GATE_NAZJATAR_A_GUIDE"],
         },
     },
-    -- 阿古斯维迪卡尔 (971 / 885 / 882)
-    [971] = {
+    -- 阿古斯维迪卡尔（克罗库恩上层；971 实际为泰洛古斯裂隙）
+    [831] = {
         HORDE = { questIDs = { 47221, 47835, 48440 }, questName = L["GATE_ARGUS_QUEST"], startNPC = L["GATE_ARGUS_NPC"], unlockGuide = L["GATE_ARGUS_GUIDE"] },
         ALLIANCE = { questIDs = { 47221, 47835, 48440 }, questName = L["GATE_ARGUS_QUEST"], startNPC = L["GATE_ARGUS_NPC"], unlockGuide = L["GATE_ARGUS_GUIDE"] },
     },
@@ -101,6 +103,7 @@ local PORTAL_QUEST_GATES = {
 -- 补充任务门只应用于实际“进入式”交通设施；船只/飞艇/通道不能因为目标地图的镜像门任务被误判为锁定
 local PORTAL_GATE_EDGE_TYPES = {
     PORTAL = true,
+    BEACON = true,
     WAYGATE = true,
     MIRROR = true,
     CLASS_PORTAL = true,
@@ -433,9 +436,6 @@ local CONTIGUOUS_CONTINENTS = {
     [619] = {
         627, 630, 634, 641, 646, 647, 650, 680, 790
     },
-    [905] = {
-        830, 882, 885, 971
-    },
     [875] = {
         862, 863, 864, 1163, 1165
     },
@@ -481,7 +481,6 @@ local CONTINENT_CAPITAL_HUBS = {
     [572] = { HORDE = { 624, 590 }, ALLIANCE = { 622, 582 } },
     [101] = { HORDE = { 111 }, ALLIANCE = { 111 } },
     [619] = { HORDE = { 627, 630 }, ALLIANCE = { 627, 630 } },
-    [905] = { HORDE = { 971 }, ALLIANCE = { 971 } },
     [875] = { HORDE = { 1163, 862 }, ALLIANCE = {} },
     [876] = { HORDE = {}, ALLIANCE = { 1161 } },
     [1978] = { HORDE = { 2112 }, ALLIANCE = { 2112 } },
@@ -552,11 +551,8 @@ local SUBZONE_CONNECTIONS = {
     { from = 1670, to = 1543, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.2 }, -- 跃入噬渊
     { from = 1670, to = 2016, x = 0.34, y = 0.66, type = "TRANSPORT", faction = "NEUTRAL", cost = 2.0 }, -- 塔扎维什飞艇渡口
     { from = 2016, to = 1670, x = 0.50, y = 0.50, type = "TRANSPORT", faction = "NEUTRAL", cost = 2.0 }, -- 返回奥利波斯
-    -- 【阿古斯诸界连接】
-    { from = 627, to = 971, x = 0.69, y = 0.43, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 维迪卡尔圣光信标 (前往阿古斯)
-    { from = 971, to = 627, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 维迪卡尔返回达拉然传送门
-    { from = 971, to = 885, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 圣光矩阵：前往玛凯雷
-    { from = 971, to = 882, x = 0.50, y = 0.50, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 圣光矩阵：前往安托兰废土
+    -- 【阿古斯入口】达拉然圣光信标；831/832 是维迪卡尔上下层，971 是泰洛古斯裂隙。
+    { from = 627, to = 831, x = 0.69, y = 0.43, type = "BEACON", faction = "NEUTRAL", cost = 1.0 },
     -- 【银月城萨拉斯之门 / 秘蓝岛 / 查拉雷克洞窟 / 千丝之城】
     { from = 23, to = 95, x = 0.55, y = 0.12, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 萨拉斯之门 (进入幽魂之地)
     { from = 95, to = 23, x = 0.44, y = 0.90, type = "PORTAL", faction = "NEUTRAL", cost = 1.0 }, -- 萨拉斯之门 (进入东瘟疫之地)
@@ -842,6 +838,16 @@ local cachedRevAdj = nil
 local cachedFwdAdj = nil
 local cachedGraphFaction = nil
 
+-- 阿古斯三个地表区域彼此不能自由飞行；使用已解锁的圣光信标网络。
+-- 地图身份取自 MapNotes 的 RetailSearchLocaleNames / MapNotesNodesInfo。
+-- 上游不提供信标设施坐标，保持 nil，不能把地图中心伪装为交通设施。
+local ARGUS_SURFACE_MAPS = { 830, 882, 885 } -- 克罗库恩、艾瑞达斯、安托兰废土
+local ARGUS_VINDICAAR_MAPS = { 831, 832, 883, 884, 886, 887, 940, 941 }
+local ARGUS_VINDICAAR_SET = {}
+for _, mapID in ipairs(ARGUS_VINDICAAR_MAPS) do
+    ARGUS_VINDICAAR_SET[mapID] = true
+end
+
 local function GetGraphData(playerFaction)
     playerFaction = playerFaction or ns.GetPlayerFaction()
     if cachedRevAdj and cachedGraphFaction == playerFaction then
@@ -875,11 +881,15 @@ local function GetGraphData(playerFaction)
         local fMatch = (faction == "NEUTRAL") or (faction == playerFaction)
         if not fMatch then return end
 
+        local edgeX, edgeY = x, y
+        if edgeType ~= "BEACON" and not ARGUS_VINDICAAR_SET[fromNode] then
+            edgeX, edgeY = x or 0.5, y or 0.5
+        end
         local edge = {
             from = fromNode,
             to = toNode,
-            x = x or 0.5,
-            y = y or 0.5,
+            x = edgeX,
+            y = edgeY,
             type = edgeType or "TRANSPORT",
             faction = faction or "NEUTRAL",
             note = note or "",
@@ -909,7 +919,7 @@ local function GetGraphData(playerFaction)
         -- 同一地图上的同一交互点可能同时来自 MapNotes 与手工拓扑；保留第一条，并只补齐缺失的前置 ID
         local edgeKey = string.format(
             '%d|%d|%.6f|%.6f|%s|%s',
-            edge.from, edge.to, edge.x, edge.y, edge.type, edge.faction
+            edge.from, edge.to, edge.x or -1, edge.y or -1, edge.type, edge.faction
         )
         local existing = edgeSet[edgeKey]
         if existing then
@@ -933,6 +943,20 @@ local function GetGraphData(playerFaction)
     -- 优先加载手工定义的高精通道 (SUBZONE_CONNECTIONS)
     for _, s in ipairs(SUBZONE_CONNECTIONS) do
         addEdge(s.from, s.to, s.x, s.y, s.type, s.faction, s.note, s.cost or EDGE_COSTS[s.type], s.questID, s.achievementID, s.isDarkmoon)
+    end
+
+    -- 信标按区域建模：前往当地已解锁信标后选择目标区域/维迪卡尔，不生成未知坐标。
+    for _, fromMap in ipairs(ARGUS_SURFACE_MAPS) do
+        for _, toMap in ipairs(ARGUS_SURFACE_MAPS) do
+            addEdge(fromMap, toMap, nil, nil, "BEACON", "NEUTRAL")
+        end
+        for _, shipMap in ipairs(ARGUS_VINDICAAR_MAPS) do
+            addEdge(fromMap, shipMap, nil, nil, "BEACON", "NEUTRAL")
+            addEdge(shipMap, fromMap, nil, nil, "BEACON", "NEUTRAL")
+        end
+    end
+    for _, shipMap in ipairs(ARGUS_VINDICAAR_MAPS) do
+        addEdge(shipMap, 627, nil, nil, "PORTAL", "NEUTRAL")
     end
 
     if ns.PortaData and ns.PortaData.transports then
@@ -1157,9 +1181,80 @@ local function GetEdgeVerbText(edgeType)
     return TRANSPORT_TEXT[edgeType] or L["TRANSPORT_DEFAULT"]
 end
 
+-- 交通步骤的施放资产；镜子必须在标记位置使用玩具生成传送门。
+local function GetEdgeTeleportInfo(edge)
+    if edge.type == "MIRROR" then
+        if ns.PlayerTeleports and ns.PlayerTeleports.GetMirrorToyInfo then
+            return ns.PlayerTeleports:GetMirrorToyInfo()
+        end
+        return { type = "TOY", id = 129929, name = L["TOY_NAME_129929"], hasItem = false, missingReason = L["STATUS_UNAVAILABLE"] }
+    elseif edge.type == "MOLE_MACHINE" then
+        return { type = "SPELL", id = 265225, name = GetMoleMachineName(), hasItem = true }
+    end
+end
+
+-- 不能只检查起手道具：后续中转所需的玩具也决定整个方案是否可用。
+local function MarkRouteAvailability(alternative)
+    for _, step in ipairs(alternative.steps) do
+        if step.isMissingTeleport and step.teleportInfo then
+            if not alternative.isMissingTeleport then
+                alternative.score = alternative.score + 10
+            end
+            alternative.isMissingTeleport = true
+            alternative.missingReason = alternative.missingReason or step.teleportInfo.missingReason
+            alternative.missingShortTag = alternative.missingShortTag or L["STATUS_UNAVAILABLE"]
+        end
+    end
+end
+
+-- 首步和中转共用动作模板；解锁、拥有情况、距离和备注由 HUD 单独展示。
+local function FormatTransportStep(edge, teleportInfo)
+    local fromName, toName = GetMapDisplayName(edge.from), GetMapDisplayName(edge.to)
+    local coord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
+    local location = coord ~= "" and (" " .. coord) or ""
+    if edge.type == "SHIP" or edge.type == "ZEPPELIN" then
+        local facility = edge.type == "SHIP" and L["TRANSPORT_LOCATION_DOCK"] or L["TRANSPORT_LOCATION_TOWER"]
+        location = " " .. facility .. location
+    end
+    if edge.to == 407 and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
+        return string.format(L["STEP_DARKMOON_NPC"], fromName, coord)
+    elseif edge.type == "MIRROR" then
+        local link = Pathfinder:FormatTeleportLink("TOY", teleportInfo.id, teleportInfo.name)
+        return string.format(L["STEP_MIRROR_FMT"], fromName, location, link, toName)
+    elseif edge.type == "ELEVATOR_DOWN" or edge.type == "ELEVATOR_UP" then
+        local liftName = edge.note ~= "" and edge.note or nil
+        liftName = liftName or L["HUD_ACTION_" .. edge.type]
+        local direction = edge.type == "ELEVATOR_UP" and L["ELEVATOR_DIRECTION_UP"] or L["ELEVATOR_DIRECTION_DOWN"]
+        return string.format(L["STEP_ELEVATOR_FMT"], fromName, location, liftName, direction, toName)
+    elseif edge.type == "FLY" then
+        return string.format(L["STEP_MOVE_FMT"], fromName, toName)
+    end
+    return string.format(L["STEP_TRANSPORT_FMT"], fromName, location, GetEdgeVerbText(edge.type), toName)
+end
+
+local function GetTeleportActionPrefix(kind)
+    if kind == "SPELL" then return L["ACTION_CAST_SPELL"] end
+    if kind == "TOY" then return L["ACTION_USE_TOY"] end
+    return L["ACTION_USE_ITEM"]
+end
+
+-- 这些物品有消耗或额外交互条件，备注同时作为下方显式提示，避免只藏在悬停说明。
+local TELEPORT_WARNING_ITEMS = { [58487] = true, [200613] = true, [151016] = true }
+local function GetTeleportWarning(tp)
+    return TELEPORT_WARNING_ITEMS[tp.id] and tp.note or nil
+end
+
+local function GetTransportWarning(edge)
+    if edge.to == 407 and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
+        local isOpen, nextDate = GetDarkmoonFaireStatus()
+        if not isOpen then return string.format(L["DARKMOON_FAIRE_CLOSED_TAG_FMT"], nextDate) end
+    end
+end
+
 -- 辅助：构建最终到达终点步骤（内嵌可点击坐标链接）
 local function BuildFinalArriveStep(stepIndex, destination)
     local finalDesc
+    local arriveNote
     local isMoltenCore = (destination.id == 741)
 
     if destination.isHorrificVision then
@@ -1176,14 +1271,11 @@ local function BuildFinalArriveStep(stepIndex, destination)
         finalDesc = string.format(L["STEP_ARRIVE_INSTANCE"], destination.name, entryCoord)
         if isMoltenCore then
             local mcNpcCoord = Pathfinder:FormatCoordLink(33, 0.543, 0.848)
-            finalDesc = finalDesc .. string.format(L["STEP_ARRIVE_MC_HINT"], mcNpcCoord)
+            arriveNote = string.format(L["STEP_ARRIVE_MC_HINT"], mcNpcCoord)
         end
     end
 
     local phaseInfo = Pathfinder:GetPhaseShiftInfo(destination.mapID)
-    if phaseInfo then
-        finalDesc = finalDesc .. string.format(L["STEP_ARRIVE_PHASE_HINT"], phaseInfo.coordLink, phaseInfo.npcName)
-    end
 
     return {
         stepIndex = stepIndex,
@@ -1192,6 +1284,7 @@ local function BuildFinalArriveStep(stepIndex, destination)
         y = destination.y,
         action = "ARRIVE",
         description = finalDesc,
+        note = arriveNote,
         isFinal = true,
         isPhaseShiftZone = (phaseInfo ~= nil),
         phaseShiftInfo = phaseInfo,
@@ -1208,50 +1301,10 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
     local currNode = startEdge.to
     stepCount = stepCount + 1
 
-    local fromName = GetMapDisplayName(startEdge.from)
-    local toName = GetMapDisplayName(startEdge.to)
-    local verb = GetEdgeVerbText(startEdge.type)
     local distYards = Pathfinder:GetDistanceInYards(startEdge.from, startEdge.x, startEdge.y)
-    local distTag = distYards and string.format(L["STEP_DIST_TAG_FMT"], FormatDistanceText(distYards)) or ""
-    local startCoord = Pathfinder:FormatCoordLink(startEdge.from, startEdge.x, startEdge.y)
-
     local firstUnlocked, firstGate = Pathfinder:CheckPortalQuestStatus(startEdge, playerFaction)
-
-    local isDarkmoonStart = (startEdge.to == 407) and (startEdge.from == 85 or startEdge.from == 84 or startEdge.from == 88 or startEdge.from == 87)
-    local isDarkmoonOpen, nextDarkmoonDate = GetDarkmoonFaireStatus()
-
-    local firstDesc
-    if isDarkmoonStart then
-        local statusNotice = isDarkmoonOpen and L["DARKMOON_FAIRE_OPEN_TAG"] or string.format(L["DARKMOON_FAIRE_CLOSED_TAG_FMT"], nextDarkmoonDate)
-        firstDesc = string.format(L["STEP_DARKMOON_NPC"], fromName, startCoord, distTag, statusNotice)
-    elseif startEdge.type == "FLY" then
-        firstDesc = string.format(L["STEP_START_FLY"], fromName, toName)
-    elseif startEdge.type == "PORTAL" then
-        firstDesc = string.format(L["STEP_START_PORTAL"], fromName, startCoord, distTag, toName)
-    elseif startEdge.type == "SHIP" then
-        firstDesc = string.format(L["STEP_START_SHIP"], fromName, startCoord, distTag, toName)
-    elseif startEdge.type == "ZEPPELIN" then
-        firstDesc = string.format(L["STEP_START_ZEPPELIN"], fromName, startCoord, distTag, toName)
-    elseif startEdge.type == "CAVE_ENTER" then
-        firstDesc = string.format(L["STEP_START_CAVE_ENTER"], fromName, startCoord, distTag, toName)
-    elseif startEdge.type == "CAVE_EXIT" then
-        firstDesc = string.format(L["STEP_START_CAVE_EXIT"], fromName, startCoord, distTag, toName)
-    elseif startEdge.type == "ELEVATOR_DOWN" then
-        local elevatorName = (startEdge.note and startEdge.note ~= "") and startEdge.note or L["HUD_ACTION_ELEVATOR_DOWN"]
-        firstDesc = string.format(L["STEP_START_ELEVATOR_DOWN"], fromName, startCoord, distTag, elevatorName, toName)
-    elseif startEdge.type == "ELEVATOR_UP" then
-        local elevatorName = (startEdge.note and startEdge.note ~= "") and startEdge.note or L["HUD_ACTION_ELEVATOR_UP"]
-        firstDesc = string.format(L["STEP_START_ELEVATOR_UP"], fromName, startCoord, distTag, elevatorName, toName)
-    elseif startEdge.type == "TRANSPORT" then
-        firstDesc = string.format(L["STEP_START_TRANSPORT"], fromName, startCoord, distTag, toName)
-    else
-        firstDesc = string.format(L["STEP_START_GENERIC"], fromName, startCoord, distTag, verb, toName)
-    end
-    if not firstUnlocked and firstGate then
-        firstDesc = firstDesc .. L["QUEST_GATE_INLINE_TAG"]
-    end
-
-    local moleName = (startEdge.type == "MOLE_MACHINE") and GetMoleMachineName() or nil
+    local startTeleport = GetEdgeTeleportInfo(startEdge)
+    local firstDesc = FormatTransportStep(startEdge, startTeleport)
 
     table.insert(steps, {
         stepIndex = stepCount,
@@ -1261,11 +1314,14 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         toMapID = startEdge.to,
         action = startEdge.type,
         description = firstDesc,
+        warning = GetTransportWarning(startEdge),
         isFinal = false,
         distanceYards = distYards,
+        distanceText = FormatDistanceText(distYards),
         isQuestGated = (not firstUnlocked and firstGate ~= nil),
         questGateInfo = (not firstUnlocked and firstGate ~= nil) and firstGate or nil,
-        teleportInfo = (startEdge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = moleName, hasItem = true } or nil,
+        teleportInfo = startTeleport,
+        isMissingTeleport = startTeleport and not startTeleport.hasItem or false,
     })
 
     -- 沿后继指针继续推导
@@ -1282,39 +1338,10 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
         local edge = nextEdge[currNode]
         stepCount = stepCount + 1
 
-        local fName = GetMapDisplayName(edge.from)
-        local tName = GetMapDisplayName(edge.to)
-        local v = GetEdgeVerbText(edge.type)
         local isUnlocked, gateConfig = Pathfinder:CheckPortalQuestStatus(edge, playerFaction)
-        local questTag = (not isUnlocked and gateConfig) and L["QUEST_GATE_INLINE_TAG"] or ""
-
-        local desc
-        if (edge.to == 407) and (edge.from == 85 or edge.from == 84 or edge.from == 88 or edge.from == 87) then
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            local statusNotice = isDarkmoonOpen and L["DARKMOON_FAIRE_OPEN_TAG"] or string.format(L["DARKMOON_FAIRE_CLOSED_TAG_FMT"], nextDarkmoonDate)
-            desc = string.format(L["STEP_DARKMOON_NPC_HOP"], fName, edgeCoord, statusNotice)
-        elseif edge.type == "FLY" then
-            desc = string.format(L["STEP_HOP_FLY"], fName, tName, questTag)
-        elseif edge.type == "CAVE_ENTER" then
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            desc = string.format(L["STEP_HOP_CAVE_ENTER"], fName, edgeCoord, tName, questTag)
-        elseif edge.type == "CAVE_EXIT" then
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            desc = string.format(L["STEP_HOP_CAVE_EXIT"], fName, edgeCoord, tName, questTag)
-        elseif edge.type == "ELEVATOR_DOWN" then
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            local elevatorName = (edge.note and edge.note ~= "") and edge.note or L["HUD_ACTION_ELEVATOR_DOWN"]
-            desc = string.format(L["STEP_HOP_ELEVATOR_DOWN"], fName, edgeCoord, elevatorName, tName, questTag)
-        elseif edge.type == "ELEVATOR_UP" then
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            local elevatorName = (edge.note and edge.note ~= "") and edge.note or L["HUD_ACTION_ELEVATOR_UP"]
-            desc = string.format(L["STEP_HOP_ELEVATOR_UP"], fName, edgeCoord, elevatorName, tName, questTag)
-        else
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            desc = string.format(L["STEP_HOP_GENERIC"], fName, edgeCoord, v, tName, questTag)
-        end
-
-        local hopMoleName = (edge.type == "MOLE_MACHINE") and GetMoleMachineName() or nil
+        local edgeTeleport = GetEdgeTeleportInfo(edge)
+        local desc = FormatTransportStep(edge, edgeTeleport)
+        local hopDistance = Pathfinder:GetDistanceInYards(edge.from, edge.x, edge.y)
 
         table.insert(steps, {
             stepIndex = stepCount,
@@ -1324,10 +1351,14 @@ local function BuildStepsFromStart(startEdge, destMapID, destination, nextEdge, 
             toMapID = edge.to,
             action = edge.type,
             description = desc,
+            warning = GetTransportWarning(edge),
+            distanceYards = hopDistance,
+            distanceText = FormatDistanceText(hopDistance),
             isFinal = false,
             isQuestGated = (not isUnlocked and gateConfig ~= nil),
             questGateInfo = (not isUnlocked and gateConfig ~= nil) and gateConfig or nil,
-            teleportInfo = (edge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = hopMoleName, hasItem = true } or nil,
+            teleportInfo = edgeTeleport,
+            isMissingTeleport = edgeTeleport and not edgeTeleport.hasItem or false,
         })
 
         currNode = edge.to
@@ -1349,22 +1380,8 @@ end
 local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, playerFaction)
     local tpSteps = {}
     local linkStr = Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)
-    local coordStr = Pathfinder:FormatCoordLink(tp.toMap, tp.x or 0.5, tp.y or 0.5)
-
-    local statusTag = ""
-    if not tp.hasItem then
-        statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], tp.missingShortTag or L["TAG_MISSING"])
-    end
-
-    local actionPrefix = L["ACTION_USE_ITEM"]
-    if tp.type == "SPELL" then
-        actionPrefix = L["ACTION_CAST_SPELL"]
-    elseif tp.type == "TOY" then
-        actionPrefix = L["ACTION_USE_TOY"]
-    end
-
+    local actionPrefix = GetTeleportActionPrefix(tp.type)
     local toMapName = GetMapDisplayName(tp.toMap)
-    local noteSuffix = (tp.note and tp.note ~= "") and (" (" .. tp.note .. ")") or ""
 
     table.insert(tpSteps, {
         stepIndex = 1,
@@ -1373,7 +1390,9 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
         y = tp.y or 0.5,
         toMapID = tp.toMap,
         action = tp.type,
-        description = string.format(L["STEP_TELEPORT_USE"], actionPrefix, linkStr, statusTag, toMapName, coordStr, noteSuffix),
+        description = string.format(L["STEP_TELEPORT_FMT"], actionPrefix, linkStr, toMapName),
+        note = tp.note,
+        warning = GetTeleportWarning(tp),
         isFinal = false,
         isMissingTeleport = (not tp.hasItem),
         teleportInfo = tp,
@@ -1391,21 +1410,10 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
         end
         visitedTpMaps[edge.to] = true
 
-        local fName = GetMapDisplayName(edge.from)
-        local tName = GetMapDisplayName(edge.to)
-        local v = GetEdgeVerbText(edge.type)
         local isUnlocked, gateConfig = Pathfinder:CheckPortalQuestStatus(edge, playerFaction)
-        local questTag = (not isUnlocked and gateConfig) and L["QUEST_GATE_INLINE_TAG"] or ""
-
-        local stepDesc
-        if edge.type == "FLY" then
-            stepDesc = string.format(L["STEP_HOP_FLY"], fName, tName, questTag)
-        else
-            local edgeCoord = Pathfinder:FormatCoordLink(edge.from, edge.x, edge.y)
-            stepDesc = string.format(L["STEP_HOP_GENERIC"], fName, edgeCoord, v, tName, questTag)
-        end
-
-        local hopMoleName = (edge.type == "MOLE_MACHINE") and GetMoleMachineName() or nil
+        local edgeTeleport = GetEdgeTeleportInfo(edge)
+        local stepDesc = FormatTransportStep(edge, edgeTeleport)
+        local hopDistance = Pathfinder:GetDistanceInYards(edge.from, edge.x, edge.y)
 
         table.insert(tpSteps, {
             stepIndex = #tpSteps + 1,
@@ -1415,10 +1423,14 @@ local function BuildTeleportRouteSteps(tp, destMapID, destination, nextEdge, pla
             toMapID = edge.to,
             action = edge.type,
             description = stepDesc,
+            warning = GetTransportWarning(edge),
+            distanceYards = hopDistance,
+            distanceText = FormatDistanceText(hopDistance),
             isFinal = false,
             isQuestGated = (not isUnlocked and gateConfig ~= nil),
             questGateInfo = (not isUnlocked and gateConfig ~= nil) and gateConfig or nil,
-            teleportInfo = (edge.type == "MOLE_MACHINE") and { kind = "SPELL", id = 265225, name = hopMoleName, hasItem = true } or nil,
+            teleportInfo = edgeTeleport,
+            isMissingTeleport = edgeTeleport and not edgeTeleport.hasItem or false,
         })
         curr = edge.to
     end
@@ -1434,14 +1446,9 @@ end
 -- 辅助：构建工程学虫洞发生器方案步骤（直接指引选择对应子区域）
 local function BuildWormholeRouteSteps(tp, destMapID, destination)
     local linkStr = Pathfinder:FormatTeleportLink(tp.type, tp.id, tp.name)
-    local statusTag = ""
-    if not tp.hasItem then
-        statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], tp.missingShortTag or L["TAG_MISSING"])
-    end
-
     local destZoneName = GetMapDisplayName(destMapID)
     local stepFmt = (tp.wormholeMode == "RANDOM") and L["STEP_WORMHOLE_RANDOM"] or L["STEP_WORMHOLE_MENU"]
-    local stepDesc = string.format(stepFmt, linkStr, statusTag, destZoneName)
+    local stepDesc = string.format(stepFmt, linkStr, "", destZoneName)
 
     return {
         {
@@ -1452,6 +1459,7 @@ local function BuildWormholeRouteSteps(tp, destMapID, destination)
             toMapID = destMapID,
             action = tp.type,
             description = stepDesc,
+            note = tp.note,
             isFinal = false,
             isMissingTeleport = (not tp.hasItem),
             teleportInfo = tp,
@@ -1472,7 +1480,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
 
     -- 情况 1：玩家当前已经在德拉诺要塞内
     if currentMapID == garrisonMapID then
-        local stepDesc = string.format(L["STEP_ENTER_WAYGATE_FMT"], bName, waygateZoneName) .. "\n" .. ns.FormatBracket(L["STEP_WAYGATE_HINT"])
+        local stepDesc = string.format(L["STEP_ENTER_WAYGATE_FMT"], bName, waygateZoneName)
         table.insert(steps, {
             stepIndex = 1,
             mapID = garrisonMapID,
@@ -1496,13 +1504,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
         hasHs, hsMissingReason = ns.PlayerTeleports:CheckTeleportOwnership("ITEM", hsID, hsName)
     end
     local linkStr = Pathfinder:FormatTeleportLink("ITEM", hsID, hsName)
-    local statusTag = ""
-    if not hasHs then
-        statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], L["TAG_MISSING"])
-    end
-
     local garrisonName = GetMapDisplayName(garrisonMapID)
-    local garrisonCoordStr = Pathfinder:FormatCoordLink(garrisonMapID, 0.50, 0.50)
 
     table.insert(steps, {
         stepIndex = 1,
@@ -1511,7 +1513,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
         y = 0.50,
         toMapID = garrisonMapID,
         action = "ITEM",
-        description = string.format(L["STEP_TELEPORT_USE"], L["ACTION_USE_ITEM"], linkStr, statusTag, garrisonName, garrisonCoordStr, ""),
+        description = string.format(L["STEP_TELEPORT_FMT"], L["ACTION_USE_ITEM"], linkStr, garrisonName),
         isFinal = false,
         isMissingTeleport = (not hasHs),
         teleportInfo = {
@@ -1523,7 +1525,7 @@ local function BuildGarrisonWaygateRouteSteps(destination, waygateMapID, garriso
         },
     })
 
-    local waygateDesc = string.format(L["STEP_ENTER_WAYGATE_FMT"], bName, waygateZoneName) .. "\n" .. ns.FormatBracket(L["STEP_WAYGATE_HINT"])
+    local waygateDesc = string.format(L["STEP_ENTER_WAYGATE_FMT"], bName, waygateZoneName)
     table.insert(steps, {
         stepIndex = 2,
         mapID = garrisonMapID,
@@ -1572,9 +1574,6 @@ function Pathfinder:CalculateRoute(destination)
             arriveDesc = string.format(L["STEP_ALREADY_IN_MAP_INSTANCE"], destination.name, coordLink)
         end
         local phaseInfo = self:GetPhaseShiftInfo(destMapID)
-        if phaseInfo then
-            arriveDesc = arriveDesc .. string.format(L["STEP_ARRIVE_PHASE_HINT"], phaseInfo.coordLink, phaseInfo.npcName)
-        end
         local directSteps = {
             {
                 stepIndex = 1,
@@ -1634,21 +1633,9 @@ function Pathfinder:CalculateRoute(destination)
             seenTeleportIDs[direct.id] = true
 
             local linkStr = self:FormatTeleportLink(direct.type, direct.id, direct.name)
-            local coordStr = self:FormatCoordLink(destMapID, destination.x, destination.y)
-
-            local statusTag = ""
-            if not direct.hasItem then
-                statusTag = string.format(L["STATUS_MISSING_TAG_FMT"], direct.missingShortTag or L["TAG_MISSING"])
-            end
-
-            local desc
-            if direct.type == "SPELL" then
-                desc = string.format(L["STEP_DIRECT_SPELL"], linkStr, statusTag, destination.name, coordStr)
-            else
-                local kindText = (direct.type == "TOY") and L["KIND_TELEPORT_TOY"] or L["KIND_TELEPORT_ITEM"]
-                local noteSuffix = (direct.note and direct.note ~= "") and (" (" .. direct.note .. ")") or ""
-                desc = string.format(L["STEP_DIRECT_ITEM_OR_TOY"], kindText, linkStr, statusTag, destination.name, coordStr, noteSuffix)
-            end
+            local destinationCoord = self:FormatCoordLink(destMapID, destination.x, destination.y)
+            local destinationLabel = destination.name .. (destinationCoord ~= "" and (" " .. destinationCoord) or "")
+            local desc = string.format(L["STEP_TELEPORT_FMT"], GetTeleportActionPrefix(direct.type), linkStr, destinationLabel)
 
             local directSteps = {
                 {
@@ -1658,6 +1645,8 @@ function Pathfinder:CalculateRoute(destination)
                     y = destination.y,
                     action = direct.type,
                     description = desc,
+                    note = direct.note,
+                    warning = GetTeleportWarning(direct),
                     isFinal = true,
                     isMissingTeleport = (not direct.hasItem),
                     teleportInfo = direct,
@@ -1766,6 +1755,11 @@ function Pathfinder:CalculateRoute(destination)
                     elseif edge.type == "ELEVATOR_UP" then
                         local edgeNote = (edge.note and edge.note ~= "") and edge.note or targetName
                         branchName = string.format(L["ALT_VIA_ELEVATOR_UP_FMT"], edgeNote, targetName)
+                    elseif edge.type == "MIRROR" or edge.type == "MOLE_MACHINE" then
+                        local asset = branchSteps[1].teleportInfo
+                        branchName = asset and asset.name or GetEdgeVerbText(edge.type)
+                    elseif edge.type == "BEACON" then
+                        branchName = L["ALT_VIA_BEACON_FMT"]
                     elseif edge.type == "PORTAL" then
                         branchName = string.format(L["ALT_VIA_PORTAL_FMT"], targetName)
                     elseif edge.type == "SHIP" then
@@ -1778,10 +1772,14 @@ function Pathfinder:CalculateRoute(destination)
                         branchName = string.format(L["ALT_VIA_GENERIC_FMT"], targetName)
                     end
 
+                    local viaDesc = edge.type == "BEACON" and L["ALT_DESC_BEACON"] or branchName
+                    if edge.x and edge.y then
+                        viaDesc = string.format(L["ALT_VIA_COORD_FMT"], edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or ""))
+                    end
                     table.insert(physicalCandidates, {
                         edge = edge,
                         name = branchName,
-                        viaDesc = string.format(L["ALT_VIA_COORD_FMT"], edge.x * 100, edge.y * 100, (distText ~= "" and (" [" .. distText .. "]") or "")),
+                        viaDesc = viaDesc,
                         distanceYards = distYards,
                         distanceText = distText,
                         score = totalScore,
@@ -1793,8 +1791,15 @@ function Pathfinder:CalculateRoute(destination)
         end
     end
 
-    -- 物理候选方案按评分排序
+    for _, candidate in ipairs(physicalCandidates) do
+        MarkRouteAvailability(candidate)
+    end
+
+    -- 物理候选方案按拥有情况、评分排序
     table.sort(physicalCandidates, function(a, b)
+        if (a.isMissingTeleport or false) ~= (b.isMissingTeleport or false) then
+            return not a.isMissingTeleport
+        end
         return a.score < b.score
     end)
 
@@ -1805,8 +1810,9 @@ function Pathfinder:CalculateRoute(destination)
         -- 寻找具有独立意义的第 2 物理备选方案
         for i = 2, #physicalCandidates do
             local cand = physicalCandidates[i]
-            local dx = math.abs(cand.edge.x - best.edge.x)
-            local dy = math.abs(cand.edge.y - best.edge.y)
+            local hasCoordinates = cand.edge.x and cand.edge.y and best.edge.x and best.edge.y
+            local dx = hasCoordinates and math.abs(cand.edge.x - best.edge.x) or 0
+            local dy = hasCoordinates and math.abs(cand.edge.y - best.edge.y) or 0
             local isCaveEdge = (cand.edge.type == "CAVE_ENTER" or cand.edge.type == "CAVE_EXIT" or
                                 cand.edge.type == "ELEVATOR_DOWN" or cand.edge.type == "ELEVATOR_UP" or
                                 best.edge.type == "CAVE_ENTER" or best.edge.type == "CAVE_EXIT" or
@@ -1849,7 +1855,7 @@ function Pathfinder:CalculateRoute(destination)
                 y = destination.y,
                 toMapID = destMapID,
                 action = "FLY",
-                description = string.format(L["STEP_SAME_CONT_FLY"], GetMapDisplayName(currentMapID), destName),
+                description = string.format(L["STEP_MOVE_FMT"], GetMapDisplayName(currentMapID), destName),
                 isFinal = false,
             },
             BuildFinalArriveStep(2, destination),
@@ -1857,7 +1863,7 @@ function Pathfinder:CalculateRoute(destination)
         -- 若存在物理交通/传送门捷径，直接飞行评分略低于捷径（捷径优先推荐，直飞作为备选）；若无捷径，直接飞行作为首选推荐 (score 2.0)
         local flyScore = (#validPhysical > 0) and (validPhysical[1].score + 1.2) or 2.0
         table.insert(validPhysical, {
-            name = string.format(L["ALT_FLY_DIRECT_FMT"], destName),
+            name = L["ALT_FLY_DIRECT_FMT"],
             viaDesc = L["ALT_DESC_SAME_CONT_FLY"],
             distanceYards = nil,
             distanceText = L["ALT_DIST_SAME_CONT_FLY"],
@@ -2029,7 +2035,7 @@ function Pathfinder:CalculateRoute(destination)
                     end
 
                     table.insert(alternatives, {
-                        name = string.format(L["ALT_WAYGATE_FMT"], waygateZoneName),
+                        name = L["ALT_WAYGATE_FMT"],
                         viaDesc = string.format(L["ALT_DESC_WAYGATE"], bName),
                         distanceYards = 0,
                         distanceText = L["ALT_DIST_WAYGATE"],
@@ -2089,6 +2095,10 @@ function Pathfinder:CalculateRoute(destination)
     -- 1) 玩家当前真实可用方案 (not isMissingTeleport) 必须绝对优先于缺失/未拥有方案
     -- 2) 综合评分更低者优先（耗时短、路径快、无冷却）
     -- 3) 步骤数更少者优先
+    for _, alternative in ipairs(alternatives) do
+        MarkRouteAvailability(alternative)
+    end
+
     table.sort(alternatives, function(a, b)
         local aMissing = a.isMissingTeleport and true or false
         local bMissing = b.isMissingTeleport and true or false

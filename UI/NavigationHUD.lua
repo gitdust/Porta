@@ -37,6 +37,7 @@ end
 
 local ACTION_LABELS = {
     PORTAL       = L["HUD_ACTION_PORTAL"],
+    BEACON       = L["HUD_ACTION_BEACON"],
     ZEPPELIN     = L["HUD_ACTION_ZEPPELIN"],
     SHIP         = L["HUD_ACTION_SHIP"],
     WAYGATE      = L["HUD_ACTION_WAYGATE"],
@@ -119,8 +120,19 @@ local function OpenTeleportDetailView(parsed)
     end)
 end
 
+-- 剥离超链接与图标控制码，生成纯文本
+local function StripHyperlinksAndIcons(text)
+    if type(text) ~= "string" then return "" end
+    return text
+        :gsub("|T[^|]*|t", "")
+        :gsub("|c%x%x%x%x%x%x%x%x", "")
+        :gsub("|r", "")
+        :gsub("|H[^|]*|h", "")
+        :gsub("|h", "")
+end
+
 -- 在 GameTooltip 中渲染玩具、物品、技能或坐标的悬停说明
-local function ShowPortaLinkTooltip(owner, parsed)
+local function ShowPortaLinkTooltip(owner, parsed, step)
     if not parsed then return end
     GameTooltip:SetOwner(owner or hudFrame or UIParent, "ANCHOR_TOP")
     GameTooltip:ClearLines()
@@ -168,18 +180,10 @@ local function ShowPortaLinkTooltip(owner, parsed)
         GameTooltip:AddLine(L["HUD_TOOLTIP_CLICK_DETAIL"], 0.0, 0.85, 1.0)
     end
 
+    if step and step.note and step.note ~= "" then
+        GameTooltip:AddLine(StripHyperlinksAndIcons(step.note), 0.9, 0.9, 0.9, true)
+    end
     GameTooltip:Show()
-end
-
--- 剥离超链接与图标控制码，生成纯文本
-local function StripHyperlinksAndIcons(text)
-    if type(text) ~= "string" then return "" end
-    return text
-        :gsub("|T[^|]*|t", "")
-        :gsub("|c%x%x%x%x%x%x%x%x", "")
-        :gsub("|r", "")
-        :gsub("|H[^|]*|h", "")
-        :gsub("|h", "")
 end
 
 -- 非传送步骤悬停提示
@@ -192,6 +196,9 @@ local function ShowStepActionTooltip(owner, step)
     if step.description then
         GameTooltip:AddLine(StripHyperlinksAndIcons(step.description), 0.9, 0.9, 0.9, true)
     end
+    if step.note and step.note ~= "" then
+        GameTooltip:AddLine(StripHyperlinksAndIcons(step.note), 0.9, 0.9, 0.9, true)
+    end
     if step.mapID and step.x and step.y and step.x > 0 and step.y > 0 then
         GameTooltip:AddLine(L["HUD_TOOLTIP_COORD_CLICK"], 0.0, 1.0, 0.4)
     end
@@ -202,15 +209,22 @@ end
 local function BindHyperlinkScripts(targetFrame)
     targetFrame:SetHyperlinksEnabled(true)
 
-    targetFrame:SetScript("OnHyperlinkEnter", function(_, link)
+    targetFrame:SetScript("OnHyperlinkEnter", function(self, link)
+        self.hoveredHyperlink = true
         local parsed = ParsePortaHyperlink(link)
         if parsed then
             ShowPortaLinkTooltip(hudFrame, parsed)
         end
     end)
 
-    targetFrame:SetScript("OnHyperlinkLeave", function()
-        GameTooltip:Hide()
+    targetFrame:SetScript("OnHyperlinkLeave", function(self)
+        self.hoveredHyperlink = false
+        local step = self.currentStep
+        if self.noteHovered and step and step.note and step.note ~= "" then
+            ShowStepActionTooltip(self, step)
+        else
+            GameTooltip:Hide()
+        end
     end)
 
     targetFrame:SetScript("OnHyperlinkClick", function(_, link)
@@ -389,6 +403,19 @@ local function InitHUD()
     stepTextFrame:SetPoint("RIGHT", upperSection, "RIGHT", 0, 0)
     stepTextFrame:SetHeight(20)
     BindHyperlinkScripts(stepTextFrame)
+    stepTextFrame:EnableMouse(true)
+    stepTextFrame:SetScript("OnEnter", function(self)
+        self.noteHovered = true
+        local step = self.currentStep
+        if not self.hoveredHyperlink and step and step.note and step.note ~= "" then
+            ShowStepActionTooltip(self, step)
+        end
+    end)
+    stepTextFrame:SetScript("OnLeave", function(self)
+        self.noteHovered = false
+        self.hoveredHyperlink = false
+        GameTooltip:Hide()
+    end)
 
     currentStepText = stepTextFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlightMedium")
     currentStepText:SetPoint("TOPLEFT", stepTextFrame, "TOPLEFT", 0, 0)
@@ -453,7 +480,7 @@ local function InitHUD()
 
     actionSlotBtn:SetScript("OnEnter", function(self)
         if self.parsedLink then
-            ShowPortaLinkTooltip(self, self.parsedLink)
+            ShowPortaLinkTooltip(self, self.parsedLink, self.currentStep)
         elseif self.currentStep then
             ShowStepActionTooltip(self, self.currentStep)
         end
@@ -500,7 +527,7 @@ local function InitHUD()
     end)
     secureActionBtn:SetScript("OnEnter", function()
         if actionSlotBtn and actionSlotBtn.parsedLink then
-            ShowPortaLinkTooltip(actionSlotBtn, actionSlotBtn.parsedLink)
+            ShowPortaLinkTooltip(actionSlotBtn, actionSlotBtn.parsedLink, actionSlotBtn.currentStep)
         elseif actionSlotBtn and actionSlotBtn.currentStep then
             ShowStepActionTooltip(actionSlotBtn, actionSlotBtn.currentStep)
         end
@@ -652,7 +679,7 @@ local function UpdateAlternativeButtons(route, stepIndex)
         local isSelected = (i == selectedIdx)
         local radio = isSelected and "|cff00ffff●|r " or "|cff888888○|r "
         local recTag = (i == 1) and (" " .. L["HUD_ALT_TAG_RECOMMENDED"]) or ""
-        local missingTag = alt.isMissingTeleport and string.format(" |cffff4444[%s]|r", alt.missingShortTag or L["STATUS_UNAVAILABLE"]) or ""
+        local missingTag = alt.isMissingTeleport and string.format(" |cffff4444[%s]|r", L["STATUS_UNAVAILABLE"]) or ""
         local label = string.format("%s%s%s%s", radio, alt.name or string.format(L["ALT_OPTION_FALLBACK_FMT"], i), recTag, missingTag)
 
         btn.text:SetText(label)
@@ -718,6 +745,7 @@ function NavigationHUD:UpdateStep(route, stepIndex)
 
     local currentStep = route.steps[stepIndex]
     if not currentStep then return end
+    stepTextFrame.currentStep = currentStep
 
     -- 确保导航控制按钮恢复可见并绑定默认行为
     hudFrame.prevBtn:Show()
@@ -759,13 +787,19 @@ function NavigationHUD:UpdateStep(route, stepIndex)
     -- 缺失传送道具/不可用检测
     if currentStep.isMissingTeleport and currentStep.teleportInfo then
         local tpInfo = currentStep.teleportInfo
-        if tpInfo.inBank then
+        if currentStep.action == "MIRROR" or tpInfo.id == 129929 then
+            table.insert(tipBlocks, "|cffff4444" .. L["STATUS_UNAVAILABLE"] .. "|r")
+        elseif tpInfo.inBank then
             table.insert(tipBlocks, "|cffffaa00" .. L["STATUS_IN_BANK"] .. "|r")
         elseif tpInfo.missingEngineering or tpInfo.isToyUnusable then
             table.insert(tipBlocks, "|cffff4444" .. L["STATUS_UNAVAILABLE"] .. "|r")
         else
             table.insert(tipBlocks, "|cffff4444" .. L["STATUS_NOT_OWNED"] .. "|r")
         end
+    end
+
+    if currentStep.warning and currentStep.warning ~= "" then
+        table.insert(tipBlocks, "|cffffaa00" .. currentStep.warning .. "|r")
     end
 
     -- 前置任务门控检测
@@ -780,15 +814,6 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         table.insert(tipBlocks, "|cffffaa00" .. L["WAYGATE_SHORT_TIP"] .. "|r")
     end
 
-    -- 百变之镜使用与前置提示
-    if currentStep.action == "MIRROR" or (currentStep.teleportInfo and currentStep.teleportInfo.id == 129929) then
-        if currentStep.isMissingTeleport then
-            table.insert(tipBlocks, "|cffff4444" .. L["MIRROR_SHORT_TIP"] .. "|r")
-        else
-            table.insert(tipBlocks, "|cff00ff00" .. L["HUD_TIP_USE_MIRROR"] .. "|r")
-        end
-    end
-
     -- 历史时间线位面切换提醒
     local phaseInfo = currentStep.phaseShiftInfo or (currentStep.isFinal and route.phaseShiftInfo)
     if phaseInfo then
@@ -796,9 +821,16 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         table.insert(tipBlocks, string.format(L["HUD_PHASE_SHORT_FMT"] or "|cffffaa00需与【%s】对话切换至对应历史位面|r", npc))
     end
 
-    -- 终点阶段距离
-    if currentStep.isFinal and currentStep.distanceText and currentStep.distanceText ~= "" then
-        table.insert(tipBlocks, string.format(L["HUD_DISTANCE_FMT"], currentStep.distanceText))
+    -- 当前步骤距离：直接展示单位文本，避免重复正文。
+    local distanceText = currentStep.distanceText
+    if (not distanceText or distanceText == "") and currentStep.distanceYards then
+        local yards = currentStep.distanceYards
+        distanceText = (yards >= 1000)
+            and string.format(L["DIST_KYARDS_FMT"], yards / 1000)
+            or string.format(L["DIST_YARDS_FMT"], math.floor(yards + 0.5))
+    end
+    if distanceText and distanceText ~= "" then
+        table.insert(tipBlocks, distanceText)
     end
 
     local finalTipStr = (#tipBlocks > 0) and table.concat(tipBlocks, "\n") or ""
@@ -891,7 +923,6 @@ function NavigationHUD:UpdateStep(route, stepIndex)
         UpdateSecureActionClickRegistration()
         secureActionBtn:ClearAllPoints()
         secureActionBtn:SetAllPoints(actionSlotBtn)
-        RegisterStateDriver(secureActionBtn, "visibility", "[combat] hide; show")
 
         secureActionBtn:SetAttribute("type", nil)
         secureActionBtn:SetAttribute("type1", nil)
@@ -919,8 +950,11 @@ function NavigationHUD:UpdateStep(route, stepIndex)
                 secureActionBtn:SetAttribute("type1", "item")
                 secureActionBtn:SetAttribute("item1", "item:" .. tostring(parsedLink.id))
             end
+            RegisterStateDriver(secureActionBtn, "visibility", "[combat] hide; show")
             secureActionBtn:Show()
         else
+            -- 隐藏前注销驱动，避免其在下一次状态刷新时重新显示透明点击层。
+            UnregisterStateDriver(secureActionBtn, "visibility")
             secureActionBtn:Hide()
         end
     end

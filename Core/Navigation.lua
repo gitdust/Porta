@@ -218,6 +218,9 @@ function Navigation:ApplyCurrentStep()
         elseif step.x and step.y and step.mapID then
             SetBlizzardWaypoint(step.mapID, step.x, step.y)
             SetTomTomWaypoint(step.mapID, step.x, step.y, step.description)
+        else
+            -- 信标等步骤没有可靠坐标时，仅显示交通指引，不沿用上一步的航标。
+            self:ClearWaypoints()
         end
     else
         -- 最终步骤直接指向终点

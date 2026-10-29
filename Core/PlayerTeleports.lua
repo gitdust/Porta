@@ -744,7 +744,8 @@ local function HasEngineeringProfession()
         return false
     end
     local prof1, prof2 = GetProfessions()
-    for _, idx in ipairs({ prof1, prof2 }) do
+    for slot = 1, 2 do
+        local idx = select(slot, prof1, prof2)
         if idx then
             local skillLine = select(7, GetProfessionInfo(idx))
             if skillLine == ENGINEERING_SKILL_LINE then
@@ -759,6 +760,11 @@ PlayerTeleports.HasEngineeringProfession = HasEngineeringProfession
 
 local function IsToyUsableByPlayer(toyID)
     if not toyID then return false end
+    -- 调用方已确认玩具归属。死亡之颅需选中小动物生成传送门，
+    -- 这类使用时的交互前提不应让已收集玩具退出路线或禁用 HUD 动作。
+    if toyID == 151016 then
+        return true
+    end
     -- 若为工程学专属玩具且当前角色已学习工程学，直接视为可用（避免客户端刚登录或玩具箱未打开时 C_ToyBox.IsToyUsable 误返回 false/nil）
     if ENGINEERING_REQ_MAP[toyID] and HasEngineeringProfession() then
         return true
@@ -1121,13 +1127,6 @@ function PlayerTeleports:GetGarrisonMageTowerInfo()
         return cachedMageTowerInfo.hasBuilding, cachedMageTowerInfo.rank, cachedMageTowerInfo.buildingName, cachedMageTowerInfo.buildingID
     end
 
-    cachedMageTowerInfo = {
-        hasBuilding = false,
-        rank = 0,
-        buildingName = nil,
-        buildingID = nil,
-    }
-
     if not C_Garrison or not C_Garrison.GetBuildings then
         return false, 0, nil, nil
     end
@@ -1138,10 +1137,19 @@ function PlayerTeleports:GetGarrisonMageTowerInfo()
         return false, 0, nil, nil
     end
 
+    local mageTowerInfo = {
+        hasBuilding = false,
+        rank = 0,
+        buildingName = nil,
+        buildingID = nil,
+    }
+    local queryFailed = false
+
     for _, b in ipairs(buildings) do
         local bID = b.buildingID
         if bID then
             local infoOk, _, name, textureKit = pcall(C_Garrison.GetBuildingInfo, bID)
+            if not infoOk then queryFailed = true end
             local bName = infoOk and tostring(name or "") or ""
             local bNameLower = string.lower(bName)
             local texLower = infoOk and string.lower(tostring(textureKit or "")) or ""
@@ -1163,16 +1171,20 @@ function PlayerTeleports:GetGarrisonMageTowerInfo()
                 or string.find(bNameLower, "靈魂之閣")
 
             if isMageTower then
-                cachedMageTowerInfo.hasBuilding = true
-                cachedMageTowerInfo.rank = rank
-                cachedMageTowerInfo.buildingName = (bName ~= "") and bName or L["BUILDING_MAGE_TOWER"]
-                cachedMageTowerInfo.buildingID = bID
+                mageTowerInfo.hasBuilding = true
+                mageTowerInfo.rank = rank
+                mageTowerInfo.buildingName = (bName ~= "") and bName or L["BUILDING_MAGE_TOWER"]
+                mageTowerInfo.buildingID = bID
                 break
             end
         end
     end
 
-    return cachedMageTowerInfo.hasBuilding, cachedMageTowerInfo.rank, cachedMageTowerInfo.buildingName, cachedMageTowerInfo.buildingID
+    -- 查询失败不能确认建筑缺失；保留未缓存状态，让下次算路重试。
+    if mageTowerInfo.hasBuilding or not queryFailed then
+        cachedMageTowerInfo = mageTowerInfo
+    end
+    return mageTowerInfo.hasBuilding, mageTowerInfo.rank, mageTowerInfo.buildingName, mageTowerInfo.buildingID
 end
 
 -- 兼容老接口
